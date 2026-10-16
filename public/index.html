@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>ABUJA LIFE: GRAND THEFT PROTOCOL — 3D FCT Life, Court, Games &amp; Naira Engine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,500;0,600;0,700;1,700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "/vendor/three.module.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="app" class="gta-shell">
+
+    <!-- Network "Go-Slow" Auto-Recovery Pill (Inspired by lagoslife.app resilience) -->
+    <div id="net-status-pill" class="net-status-pill" hidden>
+      <span>⏳ FCT network hit a small go-slow… reconnecting</span>
+      <button id="btn-force-resync" class="btn-xs">Re-sync Now</button>
+    </div>
+
+    <!-- ================================================================== -->
+    <!-- TOP GTA HUD BAR: LOGO + RADIO + CLOCK + WANTED STARS + NAIRA STACK -->
+    <!-- ================================================================== -->
+    <header class="gta-topbar">
+      <div class="brand-cluster">
+        <div class="gta-badge-logo">
+          <span class="badge-top">FCT</span>
+          <span class="badge-main">ABUJA</span>
+          <span class="badge-sub">GRAND PROTOCOL</span>
+        </div>
+        <div class="player-id-card">
+          <div id="hud-avatar-slot" class="hud-avatar-slot"></div>
+          <div class="player-id-meta">
+            <div class="player-id-row">
+              <span id="hud-player-name" class="hud-player-name">Citizen</span>
+              <span id="hud-online-pill" class="hud-online-pill" title="Connected FCT Players">● 8 ONLINE</span>
+              <span id="hud-bae-pill" class="hud-bae-pill" hidden>💍 Bae</span>
+            </div>
+            <span id="hud-career-badge" class="hud-career-badge">Hustler</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- FCT FM Radio & Clock Center Strip -->
+      <div class="gta-center-hud">
+        <div class="gta-radio-pill" id="btn-cycle-radio" title="Click to switch Abuja FM Station">
+          <span class="radio-icon">📻</span>
+          <div class="radio-text">
+            <span class="radio-station" id="hud-radio-station">WAZOBIA 99.5 FM ABUJA</span>
+            <span class="radio-track" id="hud-radio-ticker">Traffic hold-up along Airport Road • Mind your particulars</span>
+          </div>
+        </div>
+
+        <div class="clock-controls-cluster">
+          <div class="clock-readout">
+            <span id="hud-clock" class="clock-time">Day 1 • Mon • 08:00</span>
+            <span id="hud-weather" class="clock-weather">☀️ Clear FCT Sky</span>
+          </div>
+          <div class="sim-speed-btns">
+            <button id="btn-pause" class="speed-btn" title="Pause / Resume">⏸</button>
+            <button id="btn-speed-1" class="speed-btn active" data-speed="1">1×</button>
+            <button id="btn-speed-2" class="speed-btn" data-speed="2">2×</button>
+            <button id="btn-speed-4" class="speed-btn" data-speed="4">4×</button>
+            <button id="btn-advance-hr" class="speed-btn step-btn" title="Advance +1 Hour">+1h</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- GTA Top-Right: 5-Star Wanted Heat + Realistic Physical Naira Wallet -->
+      <div class="gta-right-hud">
+        <div class="wanted-stars-box" id="hud-wanted-box" title="VIO / FRSC / Task Force Heat Level">
+          <span class="wanted-label">HEAT</span>
+          <div class="wanted-stars" id="hud-wanted-stars">
+            <span class="star">★</span>
+            <span class="star">★</span>
+            <span class="star">★</span>
+            <span class="star">★</span>
+            <span class="star">★</span>
+          </div>
+          <span class="wanted-pct" id="hud-heat-val">0%</span>
+        </div>
+
+        <!-- Realistic Physical Naira Banknote Wallet Card (Click to open CBN Vault) -->
+        <div class="naira-hud-wallet" id="btn-open-vault" title="Click to inspect your physical CBN Naira banknotes &amp; wire cash">
+          <div class="naira-mini-note-preview" id="hud-naira-note-art"></div>
+          <div class="naira-wallet-numbers">
+            <div class="naira-wallet-top">
+              <span class="cbn-tag">CBN NAIRA VAULT</span>
+              <span class="naira-bundle-pill" id="hud-naira-bundles">Cash + Bank</span>
+            </div>
+            <div class="naira-amount-row">
+              <span id="hud-funds-val" class="gta-cash-readout">₦510,000</span>
+              <span id="hud-funds-delta" class="cash-delta-popup"></span>
+            </div>
+          </div>
+        </div>
+
+        <button id="btn-new-char" class="gta-icon-btn" title="Character Select / Reset">👤</button>
+      </div>
+    </header>
+
+    <!-- ================================================================== -->
+    <!-- MAIN WORKSPACE: 3D THREE.JS CITY STAGE (LEFT) + COMMAND DECK (RIGHT) -->
+    <!-- ================================================================== -->
+    <main class="gta-main-stage">
+
+      <!-- LEFT: INTERACTIVE 3D ABUJA WORLD & GTA RADAR HUD -->
+      <section class="world-stage-panel">
+        <!-- Three.js 3D Viewport -->
+        <div id="world3d-viewport" class="world3d-viewport"></div>
+
+        <!-- Optional 2D Vector Tactical Map Overlay -->
+        <div id="map2d-overlay" class="map2d-overlay" hidden>
+          <svg id="abuja-map" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+            <defs>
+              <radialGradient id="zone1Glow" cx="56%" cy="44%" r="30%">
+                <stop offset="0%" stop-color="rgba(245, 158, 11, 0.25)" />
+                <stop offset="100%" stop-color="rgba(245, 158, 11, 0)" />
+              </radialGradient>
+            </defs>
+            <circle cx="56" cy="44" r="26" fill="url(#zone1Glow)" />
+            <g id="map-routes"></g>
+            <g id="map-nodes"></g>
+          </svg>
+        </div>
+
+        <!-- Top-Left GTA District Postcard Artwork & Controls -->
+        <div class="stage-top-left-overlay">
+          <div class="district-postcard-card">
+            <div id="district-art-banner" class="district-art-banner"></div>
+            <div class="district-postcard-body">
+              <div class="dp-header">
+                <div>
+                  <span id="banner-sector-tag" class="sector-pill zone-2">Zone 2</span>
+                  <h2 id="banner-district-name">Kubwa</h2>
+                </div>
+                <button id="btn-spray-naira" class="btn-spray-naira" title="Spray Naira notes in 3D (+Clout)">
+                  💸 Spray ₦5k
+                </button>
+              </div>
+              <p id="banner-district-vibe" class="dp-vibe">Civil servants' starter homes, a train link into town and a restless young crowd.</p>
+              <div id="banner-landmarks" class="dp-landmarks"></div>
+            </div>
+          </div>
+
+          <!-- 3D Camera, Driving & Low-Power Cool Phone Controls -->
+          <div class="world3d-control-pills">
+            <button id="btn-toggle-drive" class="w3d-ctrl-btn active" title="Toggle SUV vs Walking (Shortcut: F)">
+              🚙 SUV Mode (F)
+            </button>
+            <button id="btn-toggle-cam" class="w3d-ctrl-btn" title="Switch Chase vs Helicopter Camera (Shortcut: V)">
+              🎥 Chase Cam (V)
+            </button>
+            <button id="btn-toggle-2dmap" class="w3d-ctrl-btn" title="Toggle 2D Satellite Blueprint Map">
+              🗺️ 2D Grid
+            </button>
+            <button id="btn-toggle-lowpower" class="w3d-ctrl-btn" title="Cool Phone / Low-Power Mode (Reduces GPU heat)">
+              ❄️ Cool Mode
+            </button>
+          </div>
+        </div>
+
+        <!-- Bottom-Left GTA V Radar Minimap + 3-Segment Health/Energy/Protocol Bars -->
+        <div class="gta-radar-dock">
+          <div class="gta-radar-frame">
+            <canvas id="gta-radar-canvas" width="210" height="145"></canvas>
+            <div class="radar-north-badge">N</div>
+            <div class="radar-gps-label" id="radar-gps-label">GPS • KUBWA</div>
+          </div>
+          <div class="gta-radar-bars">
+            <div class="radar-bar-slot" title="Sanity / Composure">
+              <div class="radar-bar-fill sanity" id="hud-sanity-bar" style="width:70%"></div>
+            </div>
+            <div class="radar-bar-slot" title="Energy / Stamina">
+              <div class="radar-bar-fill energy" id="hud-energy-bar" style="width:90%"></div>
+            </div>
+            <div class="radar-bar-slot" title="Protocol / Clout">
+              <div class="radar-bar-fill clout" id="hud-clout-bar" style="width:12%"></div>
+            </div>
+          </div>
+          <div class="gta-radar-stats-legend">
+            <span>🧠 Sanity <strong id="hud-sanity-val">70</strong></span>
+            <span>⚡ Energy <strong id="hud-energy-val">90</strong></span>
+            <span>🏛️ Clout <strong id="hud-clout-val">12</strong></span>
+            <span>🤝 Links <strong id="hud-network-val">3</strong></span>
+          </div>
+        </div>
+
+        <!-- Bottom-Right On-Screen Driving Pad -->
+        <div class="gta-drive-pad" id="gta-drive-pad">
+          <button class="dpad-btn up" data-dir="w" title="Drive Forward (W)">▲</button>
+          <div class="dpad-mid-row">
+            <button class="dpad-btn left" data-dir="a" title="Steer Left (A)">◀</button>
+            <span class="dpad-center">WASD</span>
+            <button class="dpad-btn right" data-dir="d" title="Steer Right (D)">▶</button>
+          </div>
+          <button class="dpad-btn down" data-dir="s" title="Reverse / Brake (S)">▼</button>
+        </div>
+      </section>
+
+      <!-- RIGHT: COMMAND DECK & REAL-TIME MULTIPLAYER HUB -->
+      <section class="command-deck-panel">
+
+        <!-- Visual Naira Cash Drawer Strip at Top of Command Deck -->
+        <div class="naira-visual-strip">
+          <div class="nvs-left">
+            <span class="nvs-title">PHYSICAL NAIRA STACK (SIMULATION CURRENCY)</span>
+            <span class="nvs-sub" id="nvs-breakdown-text">510 × ₦1,000 CBN Notes</span>
+          </div>
+          <div class="nvs-notes-fan" id="nvs-notes-fan"></div>
+          <button class="nvs-wire-btn" id="btn-quick-wire" title="Send Naira to another player">
+            💸 Wire ₦
+          </button>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <nav class="deck-tabs" role="tablist">
+          <button class="tab-btn active" data-tab="actions">⚡ Hustle</button>
+          <button class="tab-btn" data-tab="commute">🛣️ Commute</button>
+          <button class="tab-btn" data-tab="career">💼 Career</button>
+          <button class="tab-btn" data-tab="housing">🏗️ House/Land</button>
+          <button class="tab-btn" data-tab="network">📋 Tasks/Links</button>
+          <button class="tab-btn" data-tab="games">🎲 Lifestyle</button>
+          <button class="tab-btn" data-tab="court">⚖️ Court</button>
+          <button class="tab-btn tab-btn-live" data-tab="multiplayer">
+            💬 Chat <span id="chat-unread-badge" class="chat-badge">LIVE</span>
+          </button>
+          <button class="tab-btn" data-tab="feed">📻 Log</button>
+        </nav>
+
+        <!-- TAB 1: DISTRICT HUSTLE, DAILY MISSIONS & ACTIONS -->
+        <div id="tab-actions" class="tab-pane active">
+          <!-- "Today's Hustle" Daily Missions & Streak Card -->
+          <div id="daily-hustle-box" class="daily-hustle-box"></div>
+
+          <div class="pane-header">
+            <h3 id="actions-pane-title">Available Moves in District</h3>
+            <p class="pane-subtitle">Enter a landmark spot or execute street moves in your current district.</p>
+          </div>
+          <div id="actions-list" class="cards-list"></div>
+        </div>
+
+        <!-- TAB 2: COMMUTE & HIGHWAY CORRIDORS (Triggers 3D GTA Sky-Cam!) -->
+        <div id="tab-commute" class="tab-pane">
+          <div class="pane-header">
+            <h3>FCT Highway Corridors &amp; Metro</h3>
+            <p id="commute-traffic-status" class="pane-subtitle">Select a destination to launch a 3D Sky-Cam commute or drive manually with WASD.</p>
+          </div>
+          <div id="commute-list" class="cards-list"></div>
+        </div>
+
+        <!-- TAB 3: CAREER PATHWAYS & PROCUREMENT TENDERS -->
+        <div id="tab-career" class="tab-pane">
+          <div id="career-summary" class="career-summary-box"></div>
+          <div class="pane-header">
+            <h3>Active Contracts, Invoices &amp; Gigs</h3>
+            <p class="pane-subtitle">Track your ongoing BPP tenders, supply runs, and remote USD milestones.</p>
+          </div>
+          <div id="contracts-list" class="cards-list"></div>
+          <div class="pane-header" style="margin-top: 14px;">
+            <h3>Switch Socioeconomic Track</h3>
+          </div>
+          <div id="tracks-list" class="cards-list"></div>
+        </div>
+
+        <!-- TAB 4: BUILD HOUSE, AGIS LAND REGISTRY & TENANCIES -->
+        <div id="tab-housing" class="tab-pane">
+          <div id="housing-status-box" class="housing-status-box"></div>
+
+          <!-- NEW: ABUJA LAND ACQUISITION, C-OF-O & 5-STAGE HOUSE BUILDER -->
+          <div class="pane-header" style="margin-top: 4px;">
+            <h3>🏗️ Build House &amp; AGIS Land Registry (3D Plots)</h3>
+            <p class="pane-subtitle">Buy FCT plots, secure AGIS C-of-O against FCDA Red-X demolition, build your own Duplex/Mansion in 3D, or hire players to supply granite!</p>
+          </div>
+          <div id="house-builder-section" class="cards-list"></div>
+
+          <div class="pane-header" style="margin-top: 10px;">
+            <h3>🔑 Rent Apartments Across Abuja</h3>
+            <p class="pane-subtitle">Or rent in Satellite Belts (Zone 2) vs. Maitama/Asokoro (Zone 1) while building your own estate.</p>
+          </div>
+          <div id="housing-list" class="cards-list"></div>
+        </div>
+
+        <!-- TAB 5: P2P PAID TASK MARKETPLACE & NETWORK ROLODEX -->
+        <div id="tab-network" class="tab-pane">
+          <!-- NEW: ASSIGN PAID TASKS TO PLAYERS AT A NAIRA COST -->
+          <div class="career-summary-box" style="border-color: rgba(16, 185, 129, 0.6);">
+            <div class="card-top">
+              <div>
+                <span class="card-badge">📋 PLAYER-TO-PLAYER PAID TASK ESCROW</span>
+                <h3 class="card-title" style="margin-top:4px;">Assign Paid Task to Another Player</h3>
+              </div>
+            </div>
+            <p class="card-desc">Pay another FCT player in Naira to run errands for you: haul Mpape granite to your building site (+25% House Progress), push a Secretariat file (+6 Clout), clear VIO heat (-35 Heat), or bring Wuse 2 Shawarma (+Energy/Sanity)!</p>
+
+            <form id="assign-task-form" class="court-file-form" style="display:flex; flex-direction:column; gap:7px; margin-top:4px;">
+              <div class="form-row-2col">
+                <div class="form-group" style="margin-bottom:0;">
+                  <label>Assign To Player</label>
+                  <select id="task-assignee-select"></select>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                  <label>Task Type &amp; In-Game Benefit</label>
+                  <select id="task-type-select">
+                    <option value="haul_granite" data-cost="30000">🪨 Supply Mpape Granite to My House Site (+25% House Build)</option>
+                    <option value="push_file" data-cost="20000">📄 Push File on Director's Table at CBD (+6 Protocol Clout)</option>
+                    <option value="clear_vio" data-cost="15000">🛂 Clear My VIO / FRSC Vehicle Heat (-35 Legal Heat)</option>
+                    <option value="shawarma_vip" data-cost="10000">🌯 VIP Wuse 2 Shawarma &amp; Zobo Delivery (+25⚡ &amp; +20🧠)</option>
+                    <option value="agis_cofo" data-cost="35000">🏛️ Verify AGIS Land File &amp; C-of-O (+C-of-O &amp; +8 Clout)</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row-2col">
+                <div class="form-group" style="margin-bottom:0;">
+                  <label>Custom Task Instructions</label>
+                  <input id="task-title-input" type="text" placeholder="e.g. Deliver 30-ton granite to my Guzape plot sharp-sharp" />
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                  <label>Naira Bounty (Escrow Cost ₦)</label>
+                  <input id="task-reward-input" type="number" min="5000" max="500000" step="5000" value="30000" required />
+                </div>
+              </div>
+              <button type="submit" class="btn-primary btn-block">💸 Post &amp; Escrow Paid Task</button>
+            </form>
+          </div>
+
+          <div class="pane-header" style="margin-top: 6px;">
+            <h3>⚡ Live FCT Paid Tasks Board (Accept to Earn ₦)</h3>
+            <p class="pane-subtitle">Execute tasks posted by other players &amp; Abuja big men for instant Naira cash!</p>
+          </div>
+          <div id="p2p-tasks-list" class="cards-list"></div>
+
+          <div class="pane-header" style="margin-top: 10px;">
+            <h3>🤝 FCT Contact Ledger &amp; Linked Players</h3>
+            <p class="pane-subtitle">Call in favors from civil servants, contractors, and real players you've linked up with.</p>
+          </div>
+          <div id="contacts-list" class="cards-list"></div>
+        </div>
+
+        <!-- TAB 6: ABUJA LIFESTYLE, GARAGE, NAIJA WHOT/LUDO, COURSES & BAE -->
+        <div id="tab-games" class="tab-pane">
+          <!-- Relationship / Ask to be Bae Banner -->
+          <div id="bae-relationship-box" class="career-summary-box"></div>
+
+          <!-- NEW: ABUJA GARAGE & WHIP DEALERSHIP + POWER/NIGHTLIFE LIFESTYLE -->
+          <div class="pane-header" style="margin-top: 4px;">
+            <h3>🚗 Abuja Garage &amp; Whip Upgrades (3D Vehicle)</h3>
+            <p class="pane-subtitle">Upgrade from Along Taxi to Tokunbo Corolla Muscle, Lexus RX350, Land Cruiser Prado, or G63 Brabus!</p>
+          </div>
+          <div id="garage-list" class="cards-list"></div>
+
+          <div class="pane-header" style="margin-top: 8px;">
+            <h3>🍢 Real Abuja Lifestyle, Nightlife &amp; Solar Power</h3>
+            <p class="pane-subtitle">Experience Yahuza Suya nights, Jabi Boat Club, Asokoro Bush Bar catfish, ICC Owambe spraying, and rooftop solar inverters.</p>
+          </div>
+          <div id="lifestyle-rituals-list" class="cards-list"></div>
+
+          <!-- Naija Whot! & Abuja Ludo Stakes Table -->
+          <div class="game-card" style="border-color: rgba(234, 179, 8, 0.55); margin-top: 6px;">
+            <div class="card-top">
+              <span class="card-title">🃏 Naija Whot! &amp; 🎲 Abuja Ludo Lounge</span>
+              <span class="card-badge">₦10,000 POT</span>
+            </div>
+            <p class="card-desc">Challenge Wuse 2 &amp; Jabi players to classic Naija Whot (Hold On, Pick Two, General Market) or Ludo Dice Duel for instant Naira stakes!</p>
+            <div class="card-meta-row" style="gap: 8px;">
+              <button id="btn-play-whot" class="btn-primary" style="flex:1;">🃏 Play Naija Whot! (₦5k Stake)</button>
+              <button id="btn-play-ludo" class="btn-secondary" style="flex:1; border-color:#facc15; color:#fde047;">🎲 Roll Abuja Ludo (₦5k Stake)</button>
+            </div>
+            <div id="minigame-stage" class="minigame-stage" hidden></div>
+          </div>
+
+          <!-- Abuja University & Public Service Short Courses -->
+          <div class="pane-header" style="margin-top:6px;">
+            <h3>🎓 FCT Short Courses &amp; Certifications</h3>
+            <p class="pane-subtitle">Pass short certification exams to permanently boost your Protocol Clout &amp; career earnings.</p>
+          </div>
+          <div id="courses-list" class="cards-list"></div>
+        </div>
+
+        <!-- TAB 7: LIVE FCT HIGH COURT (MAITAMA) & FCT POLICY POLLS -->
+        <div id="tab-court" class="tab-pane">
+          <div class="career-summary-box" style="border-color: rgba(56, 189, 248, 0.55);">
+            <div class="card-top">
+              <div>
+                <span class="card-badge">⚖️ FCT HIGH COURT • MAITAMA THREE ARMS ZONE</span>
+                <h3 class="card-title" style="margin-top:4px;">File Lawsuit or Preside as Jury</h3>
+              </div>
+              <button id="btn-toggle-lawsuit-form" class="btn-primary">+ File New Suit</button>
+            </div>
+            <p class="card-desc">Sue greedy 2-year-rent landlords, unlawful checkpoint officers, or contract defaulters. Hire a Senior Advocate (SAN) and win Naira damages!</p>
+
+            <form id="court-file-form" class="court-file-form" style="display:flex; flex-direction:column; gap:7px; margin-top:4px;">
+              <div class="form-row-2col">
+                <div class="form-group" style="margin-bottom:0;">
+                  <label>Defendant (Player, Landlord, or Agency)</label>
+                  <input id="court-defendant-input" type="text" placeholder="e.g. Lugbe Landlord / VIO Patrol" required />
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                  <label>Damages Claimed (₦)</label>
+                  <input id="court-claim-input" type="number" min="20000" max="2000000" step="10000" value="250000" required />
+                </div>
+              </div>
+              <div class="form-row-2col">
+                <div class="form-group" style="margin-bottom:0;">
+                  <label>Charge / Claim Category</label>
+                  <select id="court-charge-select">
+                    <option value="Unlawful 2-Year Rent Hike Without Power">Unlawful 2-Year Rent Hike Without Power</option>
+                    <option value="Breach of BPP Subcontract & Escrow">Breach of BPP Subcontract &amp; Escrow</option>
+                    <option value="Wrongful VIO / FRSC Vehicle Impoundment">Wrongful VIO / FRSC Vehicle Impoundment</option>
+                    <option value="Fake AGIS Land Allocation Paper">Fake AGIS Land Allocation Paper</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                  <label>Legal Counsel</label>
+                  <select id="court-lawyer-select">
+                    <option value="Barr. Tunde Ogunleye (SAN)">Barr. Tunde Ogunleye (SAN) — Fee ₦5,000</option>
+                    <option value="Barr. Chidi Nwosu (NBA Garki)">Barr. Chidi Nwosu (NBA Garki)</option>
+                  </select>
+                </div>
+              </div>
+              <button type="submit" class="btn-primary btn-block">⚖️ File Suit at FCT High Court (₦5,000 Fee)</button>
+            </form>
+          </div>
+
+          <div id="court-cases-list" class="cards-list"></div>
+
+          <div class="pane-header" style="margin-top: 10px;">
+            <h3>🗳️ FCT Minister &amp; CBN Referendum Polls</h3>
+            <p class="pane-subtitle">Vote on active Abuja economic policies with fellow citizens.</p>
+          </div>
+          <div id="polls-list" class="cards-list"></div>
+        </div>
+
+        <!-- TAB 8: REAL-TIME MULTIPLAYER CHAT & PLAYER CONNECTION HUB -->
+        <div id="tab-multiplayer" class="tab-pane">
+          <div class="mp-hub-layout">
+            <!-- Anti-Scam Safety Notice -->
+            <div class="safety-shield-banner">
+              🛡️ <strong>FCT Safety:</strong> Official team will NEVER DM you for passwords or money. Virtual Naira (₦) is strictly in-game currency.
+            </div>
+
+            <!-- Connected Players Roster -->
+            <div class="mp-players-section">
+              <div class="mp-section-header">
+                <h4>🟢 Connected FCT Players (<span id="mp-online-count">0</span>)</h4>
+                <span class="mp-hint">1-Click: Chat, Assign Paid Task, Connect, or Wire ₦</span>
+              </div>
+              <div id="mp-players-list" class="mp-players-carousel"></div>
+            </div>
+
+            <!-- Multi-Channel Real-Time Chat Box (High-Unread Safe!) -->
+            <div class="mp-chat-section">
+              <div class="mp-channel-tabs">
+                <button class="mp-chan-btn active" data-channel="global">
+                  📻 Global <span id="unread-global" class="chan-unread-pill" hidden>0</span>
+                </button>
+                <button class="mp-chan-btn" data-channel="district">
+                  📍 District <span id="unread-district" class="chan-unread-pill" hidden>0</span>
+                </button>
+                <button class="mp-chan-btn" data-channel="dm" id="mp-dm-tab-btn">
+                  🔒 Direct Msg <span id="unread-dm" class="chan-unread-pill" hidden>0</span>
+                </button>
+              </div>
+
+              <!-- Unread Messages Recovery Bar -->
+              <div id="chat-unread-recovery-bar" class="chat-unread-recovery-bar" hidden>
+                <span id="chat-unread-summary">You have unread messages waiting</span>
+                <div style="display:flex; gap:6px;">
+                  <button type="button" id="btn-load-older-chat" class="btn-xs">⬆ Load Older</button>
+                  <button type="button" id="btn-mark-all-read" class="btn-xs">✓ Mark All Read</button>
+                </div>
+              </div>
+
+              <div id="mp-dm-threads" class="mp-dm-threads-bar" hidden></div>
+
+              <div id="mp-dm-target-bar" class="mp-dm-target-bar" hidden>
+                <span>Direct Messaging: <strong id="mp-dm-target-name">None</strong></span>
+                <button id="btn-clear-dm" class="btn-xs">Back to Global</button>
+              </div>
+
+              <div id="mp-chat-messages" class="mp-chat-messages"></div>
+
+              <!-- 1-Click Quick Abuja Chat & Task Prompts -->
+              <div class="chat-quick-Chips" id="chat-quick-chips" style="display:flex; gap:5px; padding:5px 8px; overflow-x:auto; background:rgba(15,23,42,0.85); border-top:1px solid var(--border-subtle);">
+                <button type="button" class="btn-xs btn-quick-phrase" data-text="How far Abuja people! Who dey online for deal today?">👋 How far?</button>
+                <button type="button" class="btn-xs btn-quick-phrase" data-text="I need someone to supply Mpape granite to my house site! Paying ₦30,000 in 📋 Tasks!">🪨 Need Granite (₦30k)</button>
+                <button type="button" class="btn-xs btn-quick-phrase" data-text="Who can help push my file on the Director's table at CBD Secretariat? Paying sharp Naira!">📄 Push File</button>
+                <button type="button" class="btn-xs btn-quick-phrase" data-text="Meet me at Wuse 2 Yahuza Suya & Whot lounge tonight! 🍾">🍢 Wuse 2 Linkup</button>
+                <button type="button" class="btn-xs" id="btn-chat-open-task" style="border-color:#10b981; color:#4ade80;">📋 + Assign Paid Task</button>
+              </div>
+
+              <form id="mp-chat-form" class="mp-chat-form">
+                <input
+                  id="mp-chat-input"
+                  type="text"
+                  maxlength="240"
+                  placeholder="Chat with players, negotiate deals, or DM a friend..."
+                  autocomplete="off"
+                />
+                <button type="submit" class="btn-primary mp-send-btn">Send</button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 9: FCT CHRONICLE LOG -->
+        <div id="tab-feed" class="tab-pane">
+          <div class="pane-header">
+            <h3>FCT Street &amp; Bureaucracy Log</h3>
+            <p class="pane-subtitle">Live audit trail of your Naira transactions, checkpoints, and promotions.</p>
+          </div>
+          <div id="feed-log-list" class="feed-log-list"></div>
+        </div>
+
+        <!-- Persistent Always-Available Quick-Chat Bar & Live Ticker Footer (Chat from ANY tab!) -->
+        <div class="deck-quick-chat-bar">
+          <span class="qcb-badge">💬 LIVE</span>
+          <div id="quick-chat-preview" class="qcb-preview">Connecting to Abuja FCT Comms...</div>
+          <form id="quick-chat-inline-form" style="display:flex; gap:4px; flex:1.1; max-width:260px;">
+            <input
+              id="quick-chat-inline-input"
+              type="text"
+              maxlength="180"
+              placeholder="Quick chat to FCT..."
+              style="flex:1; background:#090d16; border:1px solid var(--border-subtle); border-radius:5px; padding:4px 7px; color:#fff; font-size:11px;"
+            />
+            <button type="submit" class="btn-xs" style="border-color:#10b981; color:#4ade80;">Send</button>
+          </form>
+          <button id="btn-jump-chat" class="btn-xs">Full Chat</button>
+        </div>
+      </section>
+    </main>
+
+    <!-- ================================================================== -->
+    <!-- MODAL 1: ENCOUNTER / CHECKPOINT DECISION MODAL                     -->
+    <!-- ================================================================== -->
+    <div id="encounter-modal" class="modal-backdrop" hidden>
+      <div class="modal-card encounter-card">
+        <div class="modal-badge">⚠️ ABUJA SITUATION ALERT</div>
+        <h2 id="encounter-title">Roadblock Ahead</h2>
+        <p id="encounter-desc"></p>
+        <div id="encounter-choices" class="encounter-choices"></div>
+      </div>
+    </div>
+
+    <!-- ================================================================== -->
+    <!-- MODAL 2: CBN PHYSICAL NAIRA VAULT & INTER-PLAYER WIRE TRANSFER     -->
+    <!-- ================================================================== -->
+    <div id="naira-vault-modal" class="modal-backdrop" hidden>
+      <div class="modal-card vault-modal-card">
+        <div class="vault-modal-header">
+          <div>
+            <span class="modal-badge cbn-badge">🏦 CENTRAL BANK OF NIGERIA • FCT TREASURY</span>
+            <h2>Physical Naira Vault &amp; Instant Wire</h2>
+          </div>
+          <button id="btn-close-vault" class="gta-icon-btn">✕</button>
+        </div>
+
+        <div class="vault-balance-banner">
+          <div>
+            <span class="vb-label">TOTAL LIQUID NAIRA BALANCE (IN-GAME SIMULATION)</span>
+            <div class="vb-amount" id="vault-total-amount">₦510,000</div>
+          </div>
+          <div class="vb-straps" id="vault-strap-summary">5 × ₦100k CBN Straps</div>
+        </div>
+
+        <!-- Full-Size Authentic Naira Banknote Showcase -->
+        <div class="vault-notes-showcase" id="vault-notes-showcase"></div>
+
+        <!-- Peer-to-Peer Naira Wire Transfer Form -->
+        <div class="vault-wire-section">
+          <h3>💸 Instant Naira (₦) Transfer to Connected Player</h3>
+          <p class="pane-subtitle">Send virtual Naira from your wallet to any online player in Abuja to build alliances or settle deals.</p>
+          <form id="vault-wire-form" class="vault-wire-form">
+            <div class="form-row-2col">
+              <div class="form-group">
+                <label for="wire-recipient-select">Recipient Player</label>
+                <select id="wire-recipient-select" required></select>
+              </div>
+              <div class="form-group">
+                <label for="wire-amount-input">Amount in Naira (₦)</label>
+                <input id="wire-amount-input" type="number" min="500" step="500" value="5000" required />
+              </div>
+            </div>
+            <div class="wire-quick-presets">
+              <button type="button" class="preset-naira-btn" data-amt="2000">+₦2,000</button>
+              <button type="button" class="preset-naira-btn" data-amt="5000">+₦5,000</button>
+              <button type="button" class="preset-naira-btn" data-amt="20000">+₦20,000</button>
+              <button type="button" class="preset-naira-btn" data-amt="100000">+₦100,000</button>
+            </div>
+            <div class="form-group">
+              <label for="wire-note-input">Transfer Memo / Protocol Note</label>
+              <input id="wire-note-input" type="text" maxlength="100" placeholder="e.g. Fuel support / Wuse 2 table contribution" />
+            </div>
+            <button type="submit" class="btn-primary btn-block">Authorize CBN Naira Wire (₦)</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================================================================== -->
+    <!-- MODAL 3: NEW CHARACTER / SOCIOECONOMIC TRACK SELECTOR              -->
+    <!-- ================================================================== -->
+    <div id="new-char-modal" class="modal-backdrop" hidden>
+      <div class="modal-card">
+        <div class="modal-badge">🇳🇬 FEDERAL CAPITAL TERRITORY ENTRY</div>
+        <h2>Initialize Your Abuja Life</h2>
+        <p>Every Abuja resident starts somewhere—from the Mararaba expressway hustle to the marble gates of the Federal Secretariat.</p>
+        <form id="new-char-form">
+          <div class="form-group">
+            <label for="char-name-input">Your Name / Alias</label>
+            <input id="char-name-input" type="text" placeholder="e.g. Tunde, Amina, Chidi, Zaynab" maxlength="24" required />
+          </div>
+          <div class="form-group">
+            <label>Select Starting Socioeconomic Track</label>
+            <div id="starter-track-options" class="starter-track-grid"></div>
+          </div>
+          <div class="modal-actions">
+            <button type="button" id="btn-cancel-new-char" class="btn-secondary">Cancel</button>
+            <button type="submit" class="btn-primary">Enter 3D Abuja</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="toast-container"></div>
+  </div>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

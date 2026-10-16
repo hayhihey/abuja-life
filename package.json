@@ -1,0 +1,17 @@
+{
+  "name": "abuja-life",
+  "version": "0.1.0",
+  "description": "Abuja Life - a browser-first social life simulation and economy engine set in Nigeria's FCT.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node tests/sim.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "three": "^0.186.1"
+  }
+}
