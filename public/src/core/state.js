@@ -10,6 +10,7 @@ import { rankFor } from '../data/voice.js';
 import { uid } from './util.js';
 
 import { NIGERIAN_LIFESTYLES, GENDERS } from '../data/lifestyles.js';
+import { initSimsState } from './sims.js';
 
 export const SAVE_VERSION = 1;
 
@@ -151,6 +152,7 @@ export function newState({
     outages: { power: {}, isp: {} },
     flags: { tipOff: false, vipTable: false, freeRide: false, layLow: false, protocolFavours: 0 },
     stats: { trips: 0, actions: 0, bribes: 0, shocksSurvived: 0, detentions: 0, burnouts: 0, peakNet: 0 },
+    sims: initSimsState({ estateName: `${D.name} Residents Association` }),
     log: [],
     rngState: rng.s,
   };

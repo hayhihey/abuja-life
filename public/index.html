@@ -865,7 +865,7 @@
           </div>
 
           <div class="modal-actions" style="margin-top:10px;">
-            <button type="button" id="btn-cancel-new-char" class="btn-secondary">▶️ Continue Saved Citizen</button>
+            <button type="button" id="btn-cancel-new-char" class="btn-secondary" onclick="(function(){var m=document.getElementById('new-char-modal');if(m){m.hidden=true;m.style.display='none';}try{if(window.abujaApp?.game?.s?.meta){window.abujaApp.game.s.meta.originConfigured=true;window.abujaApp._saveGame?.();}}catch(e){}})()">▶️ Continue Saved Citizen</button>
             <button type="submit" class="btn-primary">🚀 Complete Sign Up &amp; Launch Abuja Life</button>
           </div>
         </form>

@@ -4699,56 +4699,77 @@ class AbujaClientApp {
     document.getElementById('btn-hud-profile')?.addEventListener('click', () => {
       this._openNewCharModal();
     });
-    document.getElementById('btn-cancel-new-char')?.addEventListener('click', () => {
-      this.game.s.meta.originConfigured = true;
+    document.getElementById('btn-cancel-new-char')?.addEventListener('click', (e) => {
+      e?.preventDefault?.();
+      const modal = document.getElementById('new-char-modal');
+      if (modal) {
+        modal.hidden = true;
+        modal.style.display = 'none';
+      }
+      if (this.game?.s?.meta) {
+        this.game.s.meta.originConfigured = true;
+      }
       this._saveGame();
-      document.getElementById('new-char-modal').hidden = true;
+      this.showToast('▶️ Resumed saved citizen in 3D Abuja!');
     });
     document.getElementById('new-char-form')?.addEventListener('submit', (e) => {
       e.preventDefault();
-      const name = document.getElementById('char-name-input').value.trim() || 'Alhaji Musa';
-      const trackId = TRACKS[this.selectedStarterTrack] ? this.selectedStarterTrack : 'contractor';
-      const ageVal = Number(document.getElementById('char-age-input')?.value) || this.selectedAge || 26;
-      const propMode = document.getElementById('char-prev-prop-select')?.value || this.selectedPrevProp || 'default';
-
-      this.game = Game.create({
-        name,
-        track: trackId,
-        gender: this.selectedGender || 'male',
-        age: ageVal,
-        lifeStage: ageVal < 18 ? 'child' : ageVal <= 25 ? 'young_adult' : ageVal <= 44 ? 'adult' : 'elder',
-        lifestyle: this.selectedLifestyle || 'alhaji',
-        prevProperty: propMode
-      }, {
-        decide: (decision) => this._promptDecisionModal(decision)
-      });
-
-      this.game.s.meta.originConfigured = true;
-      this._ensureExtendedPlayerState();
-      this._initGameListenersAfterReset();
-      this.lastFunds = this.game.funds();
-      document.getElementById('new-char-modal').hidden = true;
-
-      if (this.world3d) {
-        this.world3d.flyToDistrict(this.game.s.loc.district);
-        this.world3d.syncPlayerHouses(Object.values(this.game.s.social.plots || {}));
-        if (this.game.s.social.car && typeof this.world3d.setPlayerVehicleAppearance === 'function') {
-          this.world3d.setPlayerVehicleAppearance(this.game.s.social.car);
-        }
-        this.world3d.spawnNairaRain(35);
+      const modal = document.getElementById('new-char-modal');
+      if (modal) {
+        modal.hidden = true;
+        modal.style.display = 'none';
       }
+      try {
+        const name = document.getElementById('char-name-input')?.value?.trim() || 'Alhaji Musa';
+        const trackId = TRACKS[this.selectedStarterTrack] ? this.selectedStarterTrack : 'contractor';
+        const ageVal = Number(document.getElementById('char-age-input')?.value) || this.selectedAge || 26;
+        const propMode = document.getElementById('char-prev-prop-select')?.value || this.selectedPrevProp || 'default';
 
-      const ls = NIGERIAN_LIFESTYLES[this.selectedLifestyle] || NIGERIAN_LIFESTYLES.alhaji;
-      this.game.log(
-        `Started Abuja Life as ${name} (${GENDERS[this.selectedGender]?.short || 'Citizen'}, ${ageVal} yrs) • Caliber: ${ls.name} (${ls.caliber})!`,
-        'good',
-        '🇳🇬'
-      );
+        this.game = Game.create({
+          name,
+          track: trackId,
+          gender: this.selectedGender || 'male',
+          age: ageVal,
+          lifeStage: ageVal < 18 ? 'child' : ageVal <= 25 ? 'young_adult' : ageVal <= 44 ? 'adult' : 'elder',
+          lifestyle: this.selectedLifestyle || 'alhaji',
+          prevProperty: propMode
+        }, {
+          decide: (decision) => this._promptDecisionModal(decision)
+        });
 
-      this._renderAll();
-      this._saveGame();
-      this._sendHeartbeat();
-      this.showToast(`🇳🇬 Welcome to 3D Abuja, ${name}! Caliber: ${ls.name.split(' (')[0]} (${formatNairaFull(netWorth(this.game.s))} Worth)`);
+        this.game.s.meta.originConfigured = true;
+        this._ensureExtendedPlayerState();
+        this._initGameListenersAfterReset();
+        this.lastFunds = this.game.funds();
+
+        if (this.world3d) {
+          try {
+            this.world3d.flyToDistrict(this.game.s.loc.district);
+            this.world3d.syncPlayerHouses(Object.values(this.game.s.social.plots || {}));
+            if (this.game.s.social.car && typeof this.world3d.setPlayerVehicleAppearance === 'function') {
+              this.world3d.setPlayerVehicleAppearance(this.game.s.social.car);
+            }
+            this.world3d.spawnNairaRain(35);
+          } catch (wErr) {
+            console.warn('3D world update warning on character creation:', wErr);
+          }
+        }
+
+        const ls = NIGERIAN_LIFESTYLES[this.selectedLifestyle] || NIGERIAN_LIFESTYLES.alhaji;
+        this.game.log(
+          `Started Abuja Life as ${name} (${GENDERS[this.selectedGender]?.short || 'Citizen'}, ${ageVal} yrs) • Caliber: ${ls.name} (${ls.caliber})!`,
+          'good',
+          '🇳🇬'
+        );
+
+        this._renderAll();
+        this._saveGame();
+        this._sendHeartbeat();
+        this.showToast(`🇳🇬 Welcome to 3D Abuja, ${name}! Caliber: ${ls.name.split(' (')[0]} (${formatNairaFull(netWorth(this.game.s))} Worth)`);
+      } catch (err) {
+        console.error('Error completing character sign-up:', err);
+        this._renderAll();
+      }
     });
   }
 
@@ -5007,6 +5028,7 @@ class AbujaClientApp {
     }
 
     modal.hidden = false;
+    modal.style.display = 'flex';
   }
 
   showToast(message) {

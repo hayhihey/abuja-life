@@ -16,6 +16,7 @@ import { newState, fundsOf, SAVE_VERSION } from './state.js';
 import { dailyTick, hourlyTick, startDay } from './economy.js';
 import { rollEvents } from './events.js';
 import { ACTIONS_BY_ID } from './actions.js';
+import { tickSimsState } from './sims.js';
 
 export class Game {
   constructor(state, hooks = {}) {
@@ -159,6 +160,7 @@ export class Game {
       }
 
       if (Math.floor(t0 / 60) !== Math.floor(s.t / 60)) hourlyTick(this);
+      tickSimsState(this, step);
       if (Math.floor(t0 / 1440) !== Math.floor(s.t / 1440)) await dailyTick(this);
       await this._thresholds();
     }
