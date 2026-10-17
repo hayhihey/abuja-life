@@ -116,6 +116,7 @@ export class AbujaWorld3D {
     this.windowMaterials = [];
     this.raycaster = new THREE.Raycaster();
     this.pointerNDC = new THREE.Vector2();
+    this.collisionBoxes = [];
 
     this._initLights();
     this._buildTerrainAndWater();
@@ -130,6 +131,61 @@ export class AbujaWorld3D {
 
     this._animate = this._animate.bind(this);
     this.animFrameId = requestAnimationFrame(this._animate);
+  }
+
+  // ── Collision Resolution System (Prevents Car/Ped Entering Buildings) ──
+  _addCollisionBox(x, z, width, depth, label = 'building') {
+    this.collisionBoxes.push({
+      x,
+      z,
+      hw: (width * 0.5) + 0.5,
+      hd: (depth * 0.5) + 0.5,
+      label
+    });
+  }
+
+  _resolveCollisions(pos, radius = 2.4) {
+    let hit = false;
+    for (let i = 0; i < this.collisionBoxes.length; i++) {
+      const b = this.collisionBoxes[i];
+      const minX = b.x - b.hw - radius;
+      const maxX = b.x + b.hw + radius;
+      const minZ = b.z - b.hd - radius;
+      const maxZ = b.z + b.hd + radius;
+
+      if (pos.x >= minX && pos.x <= maxX && pos.z >= minZ && pos.z <= maxZ) {
+        hit = true;
+        const penLeft = pos.x - minX;
+        const penRight = maxX - pos.x;
+        const penBack = pos.z - minZ;
+        const penFront = maxZ - pos.z;
+
+        const minPen = Math.min(penLeft, penRight, penBack, penFront);
+        if (minPen === penLeft) pos.x = minX;
+        else if (minPen === penRight) pos.x = maxX;
+        else if (minPen === penBack) pos.z = minZ;
+        else pos.z = maxZ;
+      }
+    }
+    return hit;
+  }
+
+  _spawnCollisionSparks(x, z) {
+    if (this.lowPowerMode) return;
+    for (let i = 0; i < 7; i++) {
+      const spGeo = new THREE.SphereGeometry(0.14, 4, 4);
+      const spMat = new THREE.MeshBasicMaterial({ color: Math.random() > 0.4 ? 0xfacc15 : 0xf97316 });
+      const sp = new THREE.Mesh(spGeo, spMat);
+      sp.position.set(x + (Math.random() - 0.5) * 1.8, 0.8 + Math.random() * 0.9, z + (Math.random() - 0.5) * 1.8);
+      this.scene.add(sp);
+      this.nairaParticles.push({
+        mesh: sp,
+        life: 0.32,
+        vy: 1.8 + Math.random() * 2.2,
+        rx: Math.random() * 6,
+        rz: Math.random() * 6
+      });
+    }
   }
 
   // ── Procedural Texture Helpers ───────────────────────────────────────────────
@@ -772,6 +828,105 @@ export class AbujaWorld3D {
       house.add(cap);
     }
 
+    // ── AUTHENTIC NIGERIAN COMPOUND ELEMENTS ─────────────────────────────
+    const wallPlasterMat = new THREE.MeshStandardMaterial({ color: 0xdedede, roughness: 0.85 });
+    const wallCopingMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 });
+    const razorWireMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.3, metalness: 0.9 });
+    const gateIronMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.35, metalness: 0.8 });
+    const goldTrimMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.25, metalness: 0.85 });
+
+    const cW = width + 5.5;
+    const cD = depth + 6.5;
+
+    // Back compound wall with razor wire
+    const backWall = new THREE.Mesh(new THREE.BoxGeometry(cW, 2.8, 0.45), wallPlasterMat);
+    backWall.position.set(0, 1.4, -cD * 0.5);
+    const backCoping = new THREE.Mesh(new THREE.BoxGeometry(cW + 0.2, 0.2, 0.65), wallCopingMat);
+    backCoping.position.set(0, 2.9, -cD * 0.5);
+    const backRazor = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, cW, 8), razorWireMat);
+    backRazor.rotation.z = Math.PI / 2;
+    backRazor.position.set(0, 3.15, -cD * 0.5);
+    house.add(backWall, backCoping, backRazor);
+
+    // Left compound wall
+    const leftWall = new THREE.Mesh(new THREE.BoxGeometry(0.45, 2.8, cD), wallPlasterMat);
+    leftWall.position.set(-cW * 0.5, 1.4, 0);
+    const leftCoping = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.2, cD + 0.2), wallCopingMat);
+    leftCoping.position.set(-cW * 0.5, 2.9, 0);
+    const leftRazor = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, cD, 8), razorWireMat);
+    leftRazor.rotation.x = Math.PI / 2;
+    leftRazor.position.set(-cW * 0.5, 3.15, 0);
+    house.add(leftWall, leftCoping, leftRazor);
+
+    // Right compound wall
+    const rightWall = new THREE.Mesh(new THREE.BoxGeometry(0.45, 2.8, cD), wallPlasterMat);
+    rightWall.position.set(cW * 0.5, 1.4, 0);
+    const rightCoping = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.2, cD + 0.2), wallCopingMat);
+    rightCoping.position.set(cW * 0.5, 2.9, 0);
+    const rightRazor = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, cD, 8), razorWireMat);
+    rightRazor.rotation.x = Math.PI / 2;
+    rightRazor.position.set(cW * 0.5, 3.15, 0);
+    house.add(rightWall, rightCoping, rightRazor);
+
+    // Front Sliding Black & Gold Iron Gate
+    const gatePanelL = new THREE.Mesh(new THREE.BoxGeometry(cW * 0.32, 2.6, 0.15), gateIronMat);
+    gatePanelL.position.set(-cW * 0.18, 1.3, cD * 0.5);
+    const gateTrimL = new THREE.Mesh(new THREE.BoxGeometry(cW * 0.32, 0.18, 0.2), goldTrimMat);
+    gateTrimL.position.set(-cW * 0.18, 1.3, cD * 0.5);
+    house.add(gatePanelL, gateTrimL);
+
+    // Security Gateman Gatehouse at entrance
+    const gatehouse = new THREE.Mesh(new THREE.BoxGeometry(2.4, 2.5, 2.4), wallPlasterMat);
+    gatehouse.position.set(cW * 0.5 - 1.5, 1.25, cD * 0.5 - 1.5);
+    const ghRoof = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.2, 2.8), wallCopingMat);
+    ghRoof.position.set(cW * 0.5 - 1.5, 2.6, cD * 0.5 - 1.5);
+    const ghWindow = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.8, 0.1), glassMat);
+    ghWindow.position.set(cW * 0.5 - 1.5, 1.5, cD * 0.5 - 0.25);
+    house.add(gatehouse, ghRoof, ghWindow);
+
+    // Overhead Steel Scaffolding Water Tank Tower with twin GeePee tanks
+    const waterTower = new THREE.Group();
+    waterTower.position.set(-cW * 0.5 + 2.2, 0, -cD * 0.5 + 2.2);
+    const legGeo = new THREE.CylinderGeometry(0.08, 0.08, 6.2, 6);
+    const steelMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.3, metalness: 0.8 });
+    for (const lx of [-0.85, 0.85]) {
+      for (const lz of [-0.85, 0.85]) {
+        const leg = new THREE.Mesh(legGeo, steelMat);
+        leg.position.set(lx, 3.1, lz);
+        waterTower.add(leg);
+      }
+    }
+    const towerPlatform = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.2, 2.4), steelMat);
+    towerPlatform.position.y = 6.2;
+    waterTower.add(towerPlatform);
+
+    // Black cylindrical GeePee tank
+    const geepeeMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.4 });
+    const tank1 = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.85, 1.8, 16), geepeeMat);
+    tank1.position.set(0, 7.2, 0);
+    const whiteStripe = new THREE.Mesh(new THREE.CylinderGeometry(0.86, 0.86, 0.22, 16), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+    whiteStripe.position.set(0, 7.3, 0);
+    waterTower.add(tank1, whiteStripe);
+    house.add(waterTower);
+
+    // External Soundproof Diesel Generator House
+    const genShed = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.6, 2.0), new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.5 }));
+    genShed.position.set(cW * 0.5 - 2.0, 0.8, -cD * 0.5 + 2.0);
+    const genLouver = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.7, 0.1), new THREE.MeshBasicMaterial({ color: 0x111827 }));
+    genLouver.position.set(cW * 0.5 - 2.0, 0.9, -cD * 0.5 + 3.05);
+    house.add(genShed, genLouver);
+
+    // Rooftop DSTV Satellite Dish
+    const dishGroup = new THREE.Group();
+    dishGroup.position.set(width * 0.3, height + 0.6, depth * 0.4);
+    const dishMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.3, metalness: 0.6 });
+    const dishReflector = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.2, 0.2, 16), dishMat);
+    dishReflector.rotation.x = Math.PI / 3;
+    const dishPole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.2, 6), steelMat);
+    dishPole.position.y = 0.4;
+    dishGroup.add(dishPole, dishReflector);
+    house.add(dishGroup);
+
     return house;
   }
 
@@ -1051,6 +1206,7 @@ export class AbujaWorld3D {
 
         building.position.set(bx, 0.2, bz);
         building.rotation.y = -ang + Math.PI / 2;
+        this._addCollisionBox(pos.x + bx, pos.z + bz, bw + 6, bd + 6, `${id}_building_${i}`);
         building.traverse((child) => {
           if (child.isMesh) {
             child.userData = { districtId: id };
@@ -1458,6 +1614,100 @@ export class AbujaWorld3D {
       ibbGroup.add(fairway, sandBunker, flagPin);
       this.scene.add(ibbGroup);
     }
+
+    // 15. UNIVERSITY OF ABUJA & BAZE UNIVERSITY ACADEMIC CAMPUS
+    const bazeGroup = new THREE.Group();
+    bazeGroup.position.set(cbdPos.x - 70, 0, cbdPos.z - 85);
+    const facultyMat = new THREE.MeshStandardMaterial({ color: 0x1e3a8a, roughness: 0.5 });
+    const facultyBody = new THREE.Mesh(new THREE.BoxGeometry(32, 16, 20), facultyMat);
+    facultyBody.position.y = 8;
+    bazeGroup.add(facultyBody);
+
+    for (let cp = -3; cp <= 3; cp++) {
+      const col = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.5, 12, 10), whiteMarble);
+      col.position.set(cp * 4.0, 6, 10.5);
+      bazeGroup.add(col);
+    }
+    const pediment = new THREE.Mesh(new THREE.ConeGeometry(16, 4.5, 4), whiteMarble);
+    pediment.rotation.y = Math.PI / 4;
+    pediment.position.set(0, 18, 10.5);
+    bazeGroup.add(pediment);
+
+    const clockTower = new THREE.Mesh(new THREE.BoxGeometry(6, 16, 6), whiteMarble);
+    clockTower.position.set(0, 20, 0);
+    const clockFace = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.4, 0.2, 16), new THREE.MeshBasicMaterial({ color: 0xfacc15 }));
+    clockFace.rotation.x = Math.PI / 2;
+    clockFace.position.set(0, 22, 3.1);
+    bazeGroup.add(clockTower, clockFace);
+
+    const uniSignTex = this._makeCanvasTex(512, 128, (ctx, W, H) => {
+      ctx.fillStyle = '#1e3a8a';
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = '#facc15';
+      ctx.font = 'bold 34px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('🎓 UNIVERSITY OF ABUJA & BAZE', W / 2, 54);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '22px sans-serif';
+      ctx.fillText('FACULTY OF LAW, TECH & ADMINISTRATION', W / 2, 94);
+    });
+    const uniSign = new THREE.Mesh(new THREE.BoxGeometry(16, 3.0, 0.4), new THREE.MeshBasicMaterial({ map: uniSignTex }));
+    uniSign.position.set(0, 14.5, 11);
+    bazeGroup.add(uniSign);
+    this.scene.add(bazeGroup);
+    this._addCollisionBox(cbdPos.x - 70, cbdPos.z - 85, 34, 24, 'university_campus');
+
+    // 16. NIGERIAN GENERAL ELECTION CAMPAIGN BILLBOARDS
+    const billboardTex = this._makeCanvasTex(512, 256, (ctx, W, H) => {
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 0, W, H);
+      // APC banner left
+      ctx.fillStyle = '#15803d';
+      ctx.fillRect(0, 0, W / 3, H);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 26px sans-serif';
+      ctx.fillText('VOTE APC 🧹', 15, 75);
+      ctx.font = '15px sans-serif';
+      ctx.fillText('Renewed Hope', 15, 110);
+
+      // PDP banner middle
+      ctx.fillStyle = '#b91c1c';
+      ctx.fillRect(W / 3, 0, W / 3, H);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 26px sans-serif';
+      ctx.fillText('VOTE PDP ☂️', W / 3 + 15, 75);
+      ctx.font = '15px sans-serif';
+      ctx.fillText('Power to People', W / 3 + 15, 110);
+
+      // LP banner right
+      ctx.fillStyle = '#ea580c';
+      ctx.fillRect((2 * W) / 3, 0, W / 3, H);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 26px sans-serif';
+      ctx.fillText('VOTE LP 👨‍👩‍👧', (2 * W) / 3 + 15, 75);
+      ctx.font = '15px sans-serif';
+      ctx.fillText('Forward Ever!', (2 * W) / 3 + 15, 110);
+    });
+
+    const bbGroup = new THREE.Group();
+    bbGroup.position.set(cbdPos.x - 12, 0, cbdPos.z - 65);
+    const bbBoard = new THREE.Mesh(new THREE.BoxGeometry(20, 8, 0.5), new THREE.MeshBasicMaterial({ map: billboardTex }));
+    bbBoard.position.y = 10;
+    const bbPoleL = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.35, 11, 8), new THREE.MeshStandardMaterial({ color: 0x475569 }));
+    bbPoleL.position.set(-7, 5.5, 0);
+    const bbPoleR = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.35, 11, 8), new THREE.MeshStandardMaterial({ color: 0x475569 }));
+    bbPoleR.position.set(7, 5.5, 0);
+    bbGroup.add(bbBoard, bbPoleL, bbPoleR);
+    this.scene.add(bbGroup);
+    this._addCollisionBox(cbdPos.x - 12, cbdPos.z - 65, 20, 4, 'election_billboard');
+
+    // Register Major Landmark Obstacle Collision Boxes
+    this._addCollisionBox(cbdPos.x - 42, cbdPos.z - 28, 34, 34, 'national_mosque');
+    this._addCollisionBox(cbdPos.x, cbdPos.z + 26, 26, 20, 'cbn_hq');
+    for (let t = 0; t < 4; t++) {
+      this._addCollisionBox(cbdPos.x + 22 + t * 16, cbdPos.z - 22, 14, 14, 'nnpc_tower_' + t);
+    }
+    this._addCollisionBox(gateX, gateZ, 36, 12, 'city_gate');
   }
 
   _buildTrafficSwarm() {
@@ -2877,11 +3127,28 @@ export class AbujaWorld3D {
       this.playerHeading = targetHeading;
       this.playerSpeed = maxSpeed * inputMag;
 
-      this.playerPos.x += Math.sin(this.playerHeading) * this.playerSpeed * dt;
-      this.playerPos.z += Math.cos(this.playerHeading) * this.playerSpeed * dt;
+      const stepX = Math.sin(this.playerHeading) * this.playerSpeed * dt;
+      const stepZ = Math.cos(this.playerHeading) * this.playerSpeed * dt;
 
-      this.playerPos.x = Math.max(-680, Math.min(680, this.playerPos.x));
-      this.playerPos.z = Math.max(-680, Math.min(680, this.playerPos.z));
+      const nextPos = {
+        x: this.playerPos.x + stepX,
+        z: this.playerPos.z + stepZ
+      };
+
+      const pr = this.inVehicle ? 3.2 : 1.2;
+      const hitObstacle = this._resolveCollisions(nextPos, pr);
+
+      this.playerPos.x = Math.max(-680, Math.min(680, nextPos.x));
+      this.playerPos.z = Math.max(-680, Math.min(680, nextPos.z));
+
+      if (hitObstacle) {
+        if (this.inVehicle && this.playerSpeed > 14) {
+          this.playerSpeed = -this.playerSpeed * 0.28;
+          this._spawnCollisionSparks(this.playerPos.x, this.playerPos.z);
+        } else {
+          this.playerSpeed *= 0.45;
+        }
+      }
 
       this.playerGroup.position.copy(this.playerPos);
       this.playerGroup.rotation.y = this.playerHeading;

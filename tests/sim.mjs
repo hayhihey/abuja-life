@@ -7,6 +7,10 @@ import { callFavour, checkIn, favoursFor } from '../src/core/contacts.js';
 import { promotionReqs, promote } from '../src/core/careers.js';
 import { netWorth, abujaScore, rankOf } from '../src/core/state.js';
 import { evaluateAutonomousActions, runSmartObjectAction, buyCatalogItem, payEstateLevy } from '../src/core/sims.js';
+import { enrollInCourse, attendLecture } from '../src/core/education.js';
+import { calculateTaxAssessment, payTaxesAndIssueTCC } from '../src/core/tax.js';
+import { POLITICAL_PARTIES, ELECTIVE_OFFICES, RALLY_VENUES } from '../src/data/elections.js';
+import { MEGA_ESTATES } from '../src/data/mega_housing.js';
 
 console.log('--- ABUJA LIFE: HEADLESS ENGINE VALIDATION ---');
 
@@ -128,6 +132,28 @@ async function runTests() {
   const levyRes = payEstateLevy(g);
   assert(levyRes.ok, `Paid Estate Monthly Levy, access code: ${g.s.sims.estate.visitorAccessCode}`);
   assert(g.s.sims.estate.accessPermitted === true, `Estate gate security access active`);
+
+  // Test 16: Education & Higher Institutions
+  const enrollRes = enrollInCourse(g.s, 'uniabuja_pubadmin');
+  assert(enrollRes.success, `Enrolled in higher institution: ${enrollRes.course?.title}`);
+  const lectureRes = attendLecture(g.s);
+  assert(lectureRes.success, `Attended academic lecture: progress ${g.s.education.progressDays}`);
+
+  // Test 17: FIRS & FCT Taxation Engine
+  const taxAssessment = calculateTaxAssessment(g.s);
+  assert(taxAssessment && typeof taxAssessment.totalDue === 'number', `FIRS Tax Assessment calculated: ₦${taxAssessment.totalDue.toLocaleString()}`);
+  const taxPayRes = payTaxesAndIssueTCC(g.s);
+  assert(taxPayRes.success, `Paid FIRS Tax Assessment & issued Tax Clearance Certificate: ${taxPayRes.tccId}`);
+  assert(g.s.tax.tccValidUntilDay > 0, `Tax Clearance Certificate is valid until Day ${g.s.tax.tccValidUntilDay}`);
+
+  // Test 18: Elections & Political Parties
+  assert(POLITICAL_PARTIES.length >= 4, `Registered ${POLITICAL_PARTIES.length} Nigerian political parties (APC, PDP, LP, SDP)`);
+  assert(RALLY_VENUES.some(v => v.id === 'eagles_square'), `Eagles Square verified as campaign rally grounds`);
+
+  // Test 19: Mega Multiplayer Accommodation
+  assert(MEGA_ESTATES.length >= 4, `Initialized ${MEGA_ESTATES.length} mega-housing estates for massive multiplayer scale`);
+  const totalUnits = MEGA_ESTATES.reduce((acc, est) => acc + est.totalUnits, 0);
+  assert(totalUnits >= 2000, `Accommodation capacity verified: ${totalUnits} housing units across Abuja`);
 
   console.log(`\nResults: ${passed} passed, ${failed} failed.`);
   if (failed > 0) process.exit(1);

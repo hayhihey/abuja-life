@@ -2043,6 +2043,29 @@ html, body {
   padding: 3px 8px;
 }
 
+.top-nav-icon-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  padding: 3px 9px;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.16s ease;
+  flex-shrink: 0;
+  text-decoration: none;
+  font-family: inherit;
+}
+
+.top-nav-icon-pill:hover,
+.top-nav-icon-pill:active {
+  background: rgba(30, 41, 59, 0.95);
+  border-color: var(--naira-gold);
+  transform: translateY(-1px);
+}
+
 .nigeria-gta-fullscreen .radio-track {
   display: none;
 }
@@ -2572,9 +2595,13 @@ html, body {
   .nigeria-gta-fullscreen .gta-topbar-minimal {
     top: 6px;
     left: 6px;
-    max-width: calc(100vw - 175px);
-    padding: 3px 8px;
-    gap: 5px;
+    max-width: calc(100vw - 185px);
+    padding: 2px 6px;
+    gap: 4px;
+    height: 36px;
+    overflow-x: auto;
+    white-space: nowrap;
+    border-radius: 999px;
   }
 
   .nigeria-gta-fullscreen .gta-radio-pill,
@@ -2583,21 +2610,10 @@ html, body {
   }
 
   .nigeria-gta-fullscreen .stage-top-left-overlay {
-    top: 46px;
-    left: 6px;
+    display: none; /* Hide cluttered control pill row on mobile to keep 3D view clean */
   }
 
-  .world3d-control-pills {
-    flex-wrap: wrap;
-    gap: 4px;
-  }
-
-  .w3d-ctrl-btn {
-    padding: 4px 7px;
-    font-size: 10px;
-  }
-
-  /* Top-Right Classic GTA HUD sits flush right on mobile since Icon Dock moves to bottom */
+  /* Top-Right Classic GTA HUD sits flush right on mobile */
   .ngta-topright-hud {
     top: 6px;
     right: 8px;
@@ -2605,29 +2621,29 @@ html, body {
   }
 
   .ngta-fist-box {
-    width: 50px;
-    height: 50px;
+    width: 48px;
+    height: 48px;
     border-width: 2.5px;
     border-radius: 11px;
   }
 
   .ngta-fist-emoji {
-    font-size: 24px;
+    font-size: 22px;
   }
 
   .ngta-clock-digits,
   .ngta-cash-digits {
-    font-size: 18px;
+    font-size: 16px;
   }
 
   .ngta-bar-outer {
-    width: 92px;
-    height: 9px;
+    width: 86px;
+    height: 8px;
   }
 
-  /* Circular Live Street GPS Radar sits neatly on Top-Left below control pills on mobile */
+  /* Circular Live Street GPS Radar sits neatly on Top-Left with clean clearance */
   .nigeria-gta-fullscreen .gta-radar-dock {
-    top: 84px;
+    top: 48px;
     left: 8px;
     bottom: auto;
     align-items: flex-start;

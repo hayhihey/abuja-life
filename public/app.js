@@ -44,6 +44,12 @@ import {
   buyCatalogItem,
   payEstateLevy
 } from '/src/core/sims.js';
+import { AbujaAfrobeatsEngine } from '/music.js';
+import { ABUJA_INSTITUTIONS, COURSE_BY_ID } from '/src/data/education.js';
+import { enrollInCourse, attendLecture } from '/src/core/education.js';
+import { calculateTaxAssessment, payTaxesAndIssueTCC } from '/src/core/tax.js';
+import { POLITICAL_PARTIES, ELECTIVE_OFFICES, RALLY_VENUES } from '/src/data/elections.js';
+import { MEGA_ESTATES, HOUSING_UNIT_BY_ID } from '/src/data/mega_housing.js';
 
 const STORAGE_KEY = 'abuja_life_save_v3';
 const PLAYER_ID_KEY = 'abuja_life_player_id';
@@ -107,6 +113,7 @@ class AbujaClientApp {
     this.simSpeed = 1;
     this.whotState = null;
     this.ludoState = null;
+    this.afrobeats = new AbujaAfrobeatsEngine();
 
     this._initGame();
     this._ensureExtendedPlayerState();
@@ -4721,17 +4728,21 @@ class AbujaClientApp {
       }
       try {
         const name = document.getElementById('char-name-input')?.value?.trim() || 'Alhaji Musa';
-        const trackId = TRACKS[this.selectedStarterTrack] ? this.selectedStarterTrack : 'contractor';
-        const ageVal = Number(document.getElementById('char-age-input')?.value) || this.selectedAge || 26;
-        const propMode = document.getElementById('char-prev-prop-select')?.value || this.selectedPrevProp || 'default';
+        const trackId = document.getElementById('char-occupation-select')?.value || 'contractor';
+        const gender = document.getElementById('char-gender-select')?.value || 'male';
+        const lifeStage = document.getElementById('char-lifestage-select')?.value || 'adult';
+        const stObj = LIFE_STAGES[lifeStage] || LIFE_STAGES.adult;
+        const ageVal = stObj.defaultAge || 28;
+        const lifestyle = document.getElementById('char-lifestyle-select')?.value || 'alhaji';
+        const propMode = document.getElementById('char-prev-prop-select')?.value || 'default';
 
         this.game = Game.create({
           name,
           track: trackId,
-          gender: this.selectedGender || 'male',
+          gender,
           age: ageVal,
-          lifeStage: ageVal < 18 ? 'child' : ageVal <= 25 ? 'young_adult' : ageVal <= 44 ? 'adult' : 'elder',
-          lifestyle: this.selectedLifestyle || 'alhaji',
+          lifeStage,
+          lifestyle,
           prevProperty: propMode
         }, {
           decide: (decision) => this._promptDecisionModal(decision)
@@ -4755,9 +4766,9 @@ class AbujaClientApp {
           }
         }
 
-        const ls = NIGERIAN_LIFESTYLES[this.selectedLifestyle] || NIGERIAN_LIFESTYLES.alhaji;
+        const ls = NIGERIAN_LIFESTYLES[lifestyle] || NIGERIAN_LIFESTYLES.alhaji;
         this.game.log(
-          `Started Abuja Life as ${name} (${GENDERS[this.selectedGender]?.short || 'Citizen'}, ${ageVal} yrs) • Caliber: ${ls.name} (${ls.caliber})!`,
+          `Started Abuja Life as ${name} (${GENDERS[gender]?.short || 'Citizen'}, ${ageVal} yrs) • Caliber: ${ls.name} (${ls.caliber})!`,
           'good',
           '🇳🇬'
         );
@@ -4770,6 +4781,71 @@ class AbujaClientApp {
         console.error('Error completing character sign-up:', err);
         this._renderAll();
       }
+    });
+
+    // Top-Nav Icon Pills & Modals
+    document.getElementById('btn-top-edu')?.addEventListener('click', () => this._openEducationModal());
+    document.getElementById('btn-close-education')?.addEventListener('click', () => {
+      const m = document.getElementById('education-modal');
+      if (m) m.hidden = true;
+    });
+
+    document.getElementById('btn-top-tax')?.addEventListener('click', () => this._openTaxModal());
+    document.getElementById('btn-close-tax')?.addEventListener('click', () => {
+      const m = document.getElementById('tax-modal');
+      if (m) m.hidden = true;
+    });
+
+    document.getElementById('btn-top-election')?.addEventListener('click', () => this._openElectionModal());
+    document.getElementById('btn-close-election')?.addEventListener('click', () => {
+      const m = document.getElementById('election-modal');
+      if (m) m.hidden = true;
+    });
+
+    document.getElementById('btn-top-mega-housing')?.addEventListener('click', () => this._openMegaHousingModal());
+    document.getElementById('btn-close-mega-housing')?.addEventListener('click', () => {
+      const m = document.getElementById('mega-housing-modal');
+      if (m) m.hidden = true;
+    });
+
+    // Afrobeats Synthesizer Radio Controls
+    const updateAfrobeatsStatus = () => {
+      const playing = this.afrobeats.isPlaying;
+      const st = this.afrobeats.getCurrentStation();
+      const topLabel = document.getElementById('top-music-label');
+      if (topLabel) {
+        topLabel.textContent = playing ? `▶ ${st.name.split(' ')[0]}` : st.name.split(' ')[0];
+        topLabel.style.color = playing ? '#4ade80' : '#c7d2fe';
+      }
+      const topBtn = document.getElementById('btn-top-music');
+      if (topBtn) topBtn.classList.toggle('active', playing);
+
+      const elStatus = document.getElementById('election-music-status');
+      if (elStatus) {
+        elStatus.textContent = `${st.name} • ${st.trackTitle} (${playing ? '🔊 Playing' : '⏸ Paused'})`;
+      }
+      const togBtn = document.getElementById('btn-toggle-afrobeats');
+      if (togBtn) {
+        togBtn.textContent = playing ? '⏸ Pause Nigerian Beat' : '▶️ Play Nigerian Beat';
+        togBtn.style.background = playing ? '#dc2626' : '#10b981';
+      }
+    };
+
+    document.getElementById('btn-top-music')?.addEventListener('click', () => {
+      this.afrobeats.toggle();
+      updateAfrobeatsStatus();
+      this.showToast(this.afrobeats.isPlaying ? '🎶 Afrobeats Synth Radio Live!' : '⏸ Afrobeats Paused');
+    });
+
+    document.getElementById('btn-toggle-afrobeats')?.addEventListener('click', () => {
+      this.afrobeats.toggle();
+      updateAfrobeatsStatus();
+    });
+
+    document.getElementById('btn-switch-station')?.addEventListener('click', () => {
+      const st = this.afrobeats.cycleStation();
+      updateAfrobeatsStatus();
+      this.showToast(`📻 Tuned to ${st.name} (${st.bpm} BPM)`);
     });
   }
 
@@ -4875,150 +4951,100 @@ class AbujaClientApp {
 
   _openNewCharModal() {
     const modal = document.getElementById('new-char-modal');
-    const trackGrid = document.getElementById('starter-track-options');
-    const genderGrid = document.getElementById('char-gender-options');
-    const stageGrid = document.getElementById('char-lifestage-options');
-    const lifestyleGrid = document.getElementById('starter-lifestyle-options');
-    const propSelect = document.getElementById('char-prev-prop-select');
-    const ageInput = document.getElementById('char-age-input');
-    const ageDisplay = document.getElementById('char-age-display');
-    const stageDesc = document.getElementById('char-lifestage-desc');
-    const propDesc = document.getElementById('char-prev-prop-desc');
-    if (!modal || !trackGrid) return;
-
-    this.selectedGender = this.game.s.meta.gender || this.selectedGender || 'male';
-    this.selectedAge = this.game.s.meta.age || this.selectedAge || 26;
-    this.selectedLifeStage = this.game.s.meta.lifeStage || (this.selectedAge < 18 ? 'child' : 'adult');
-    this.selectedLifestyle = this.game.s.meta.lifestyle && NIGERIAN_LIFESTYLES[this.game.s.meta.lifestyle]
-      ? this.game.s.meta.lifestyle
-      : (this.selectedLifestyle || 'alhaji');
-    this.selectedStarterTrack = this.game.s.career.track || this.selectedStarterTrack || 'contractor';
+    if (!modal) return;
 
     const nameInp = document.getElementById('char-name-input');
-    if (nameInp) nameInp.value = this.game.s.meta.name || 'Alhaji Musa';
+    const occSel = document.getElementById('char-occupation-select');
+    const occPreview = document.getElementById('char-occupation-preview');
+    const genderSel = document.getElementById('char-gender-select');
+    const stageSel = document.getElementById('char-lifestage-select');
+    const stagePreview = document.getElementById('char-lifestage-preview');
+    const lifestyleSel = document.getElementById('char-lifestyle-select');
+    const lifestylePreview = document.getElementById('char-lifestyle-preview');
+    const propSel = document.getElementById('char-prev-prop-select');
 
-    // 1. Render Gender Selector
-    if (genderGrid) {
-      genderGrid.innerHTML = Object.values(GENDERS).map((g) => `
-        <div class="track-option-card ${g.id === this.selectedGender ? 'selected' : ''}" data-gender="${g.id}" style="padding:8px;">
-          <strong>${g.label}</strong>
-        </div>
-      `).join('');
-      genderGrid.querySelectorAll('.track-option-card').forEach((card) => {
-        card.addEventListener('click', () => {
-          this.selectedGender = card.dataset.gender;
-          genderGrid.querySelectorAll('.track-option-card').forEach((c) => c.classList.remove('selected'));
-          card.classList.add('selected');
-          // Suggest an authentic Nigerian name if still default
-          if (nameInp && ['Tunde', 'Citizen', 'Alhaji Musa', 'Baddie Zaynab'].includes(nameInp.value.trim())) {
-            nameInp.value = this.selectedGender === 'female' ? 'Baddie Zaynab' : 'Alhaji Musa';
-          }
-        });
-      });
+    if (nameInp) {
+      nameInp.value = this.game.s.meta.name || 'Alhaji Musa';
     }
 
-    // 2. Render Life Stage (Child/Teen vs Gen-Z vs Adult vs Elder) & Age Slider
-    const updateAgeUI = (ageNum) => {
-      this.selectedAge = ageNum;
-      if (ageInput) ageInput.value = ageNum;
-      let stKey = 'adult';
-      if (ageNum < 18) stKey = 'child';
-      else if (ageNum <= 25) stKey = 'young_adult';
-      else if (ageNum <= 44) stKey = 'adult';
-      else stKey = 'elder';
-      this.selectedLifeStage = stKey;
-      const stObj = LIFE_STAGES[stKey];
-      if (ageDisplay) {
-        ageDisplay.textContent = `${ageNum} Years Old (${ageNum < 18 ? '🧒🏾 Child / Teen' : ageNum <= 25 ? '🧑🏾‍🎓 Gen-Z Youth' : ageNum <= 44 ? '👔 Prime Adult' : '👑 Elder VIP'})`;
-      }
-      if (stageDesc && stObj) stageDesc.textContent = stObj.desc;
-      if (stageGrid) {
-        stageGrid.querySelectorAll('.track-option-card').forEach((c) => {
-          c.classList.toggle('selected', c.dataset.stage === stKey);
-        });
-      }
-    };
-
-    if (stageGrid) {
-      stageGrid.innerHTML = Object.values(LIFE_STAGES).map((st) => `
-        <div class="track-option-card ${st.id === this.selectedLifeStage ? 'selected' : ''}" data-stage="${st.id}" style="padding:7px;">
-          <strong style="font-size:11.5px;">${st.label}</strong>
-        </div>
+    // 1. Occupation Dropdown
+    if (occSel) {
+      occSel.innerHTML = Object.values(TRACKS).map((tr) => `
+        <option value="${tr.id}" ${tr.id === (this.game.s.career.track || 'contractor') ? 'selected' : ''}>
+          ${tr.icon} ${tr.name} — ${tr.tagline}
+        </option>
       `).join('');
-      stageGrid.querySelectorAll('.track-option-card').forEach((card) => {
-        card.addEventListener('click', () => {
-          const st = LIFE_STAGES[card.dataset.stage];
-          if (st) updateAgeUI(st.defaultAge);
-        });
-      });
-    }
-
-    if (ageInput) {
-      ageInput.oninput = (e) => updateAgeUI(Number(e.target.value));
-    }
-    updateAgeUI(this.selectedAge);
-
-    // 3. Render Nigerian Lifestyle Caliber Options (Alhaji, OS Baddie, Odogwu, Nepo Baby, Tech Bro, Corper, Sapa)
-    if (lifestyleGrid) {
-      lifestyleGrid.innerHTML = Object.values(NIGERIAN_LIFESTYLES).map((ls) => `
-        <div class="track-option-card ${ls.id === this.selectedLifestyle ? 'selected' : ''}" data-lifestyle="${ls.id}" style="padding:9px;">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <strong style="color:#fff; font-size:12px;">${ls.name}</strong>
-          </div>
-          <span style="font-size:10px; color:#facc15; font-weight:700;">${ls.caliber} • ${ls.worthLabel}</span>
-          <span style="font-size:10.5px; color:#38bdf8;">"${ls.slangTag}"</span>
-          <span style="font-size:10.5px; color:#cbd5e1; line-height:1.35;">${ls.desc}</span>
-          <span style="font-family:var(--font-mono); font-size:10px; color:#4ade80;">
-            Liquid: ${formatNairaFull(ls.cash + ls.bank)} • Steeze ${ls.steeze}% • Composure ${ls.composure}%
-          </span>
-        </div>
-      `).join('');
-
-      lifestyleGrid.querySelectorAll('.track-option-card').forEach((card) => {
-        card.addEventListener('click', () => {
-          this.selectedLifestyle = card.dataset.lifestyle;
-          lifestyleGrid.querySelectorAll('.track-option-card').forEach((c) => c.classList.remove('selected'));
-          card.classList.add('selected');
-          const lsObj = NIGERIAN_LIFESTYLES[this.selectedLifestyle];
-          if (lsObj && lsObj.recommendedTrack) {
-            this.selectedStarterTrack = lsObj.recommendedTrack;
-            trackGrid.querySelectorAll('.track-option-card').forEach((tc) => {
-              tc.classList.toggle('selected', tc.dataset.track === this.selectedStarterTrack);
-            });
-          }
-        });
-      });
-    }
-
-    // 4. Render Previous Properties & Garage Selector
-    if (propSelect) {
-      propSelect.innerHTML = Object.values(PREVIOUS_PROPERTY_OPTIONS).map((opt) => `
-        <option value="${opt.id}" ${opt.id === this.selectedPrevProp ? 'selected' : ''}>${opt.label}</option>
-      `).join('');
-      const updatePropDesc = () => {
-        const opt = PREVIOUS_PROPERTY_OPTIONS[propSelect.value] || PREVIOUS_PROPERTY_OPTIONS.default;
-        this.selectedPrevProp = opt.id;
-        if (propDesc) propDesc.textContent = opt.desc;
+      const updateOcc = () => {
+        const tr = TRACKS[occSel.value] || TRACKS.contractor;
+        if (occPreview) {
+          occPreview.innerHTML = `<strong>💼 Selected Track: ${tr.name}</strong> — ${tr.tagline}`;
+        }
       };
-      propSelect.onchange = updatePropDesc;
-      updatePropDesc();
+      occSel.onchange = updateOcc;
+      updateOcc();
     }
 
-    // 5. Render Career Tracks
-    trackGrid.innerHTML = Object.values(TRACKS).map((tr) => `
-      <div class="track-option-card ${tr.id === this.selectedStarterTrack ? 'selected' : ''}" data-track="${tr.id}" style="padding:8px;">
-        <strong style="font-size:11.5px;">${tr.icon} ${tr.name}</strong>
-        <span style="font-size:10.5px; color:#94a3b8;">${tr.tagline}</span>
-      </div>
-    `).join('');
+    // 2. Gender Dropdown
+    if (genderSel) {
+      genderSel.innerHTML = Object.values(GENDERS).map((g) => `
+        <option value="${g.id}" ${g.id === (this.game.s.meta.gender || 'male') ? 'selected' : ''}>
+          ${g.label}
+        </option>
+      `).join('');
+    }
 
-    trackGrid.querySelectorAll('.track-option-card').forEach((card) => {
-      card.addEventListener('click', () => {
-        this.selectedStarterTrack = card.dataset.track;
-        trackGrid.querySelectorAll('.track-option-card').forEach((c) => c.classList.remove('selected'));
-        card.classList.add('selected');
-      });
-    });
+    // 3. Life Stage Dropdown
+    if (stageSel) {
+      stageSel.innerHTML = Object.values(LIFE_STAGES).map((st) => `
+        <option value="${st.id}" ${st.id === (this.game.s.meta.lifeStage || 'adult') ? 'selected' : ''}>
+          ${st.label} (Default Age: ${st.defaultAge} yrs)
+        </option>
+      `).join('');
+      const updateStage = () => {
+        const st = LIFE_STAGES[stageSel.value] || LIFE_STAGES.adult;
+        if (stagePreview) {
+          stagePreview.innerHTML = `<strong>🎂 ${st.label}:</strong> ${st.desc}`;
+        }
+      };
+      stageSel.onchange = updateStage;
+      updateStage();
+    }
+
+    // 4. Nigerian Lifestyle Caliber Dropdown
+    if (lifestyleSel) {
+      lifestyleSel.innerHTML = Object.values(NIGERIAN_LIFESTYLES).map((ls) => `
+        <option value="${ls.id}" ${ls.id === (this.game.s.meta.lifestyle || 'alhaji') ? 'selected' : ''}>
+          ${ls.name} (${ls.caliber} • ${ls.worthLabel})
+        </option>
+      `).join('');
+      const updateLifestyle = () => {
+        const ls = NIGERIAN_LIFESTYLES[lifestyleSel.value] || NIGERIAN_LIFESTYLES.alhaji;
+        if (lifestylePreview) {
+          lifestylePreview.innerHTML = `
+            <strong>👑 ${ls.name} (${ls.caliber}):</strong> "${ls.slangTag}" — ${ls.desc}<br/>
+            <span style="font-family:var(--font-mono); color:#4ade80;">Starting Liquid: ${formatNairaFull(ls.cash + ls.bank)} • Steeze ${ls.steeze}% • Composure ${ls.composure}%</span>
+          `;
+        }
+        if (ls.recommendedTrack && occSel && TRACKS[ls.recommendedTrack]) {
+          occSel.value = ls.recommendedTrack;
+          if (occPreview) {
+            const tr = TRACKS[ls.recommendedTrack];
+            occPreview.innerHTML = `<strong>💼 Recommended Track: ${tr.name}</strong> — ${tr.tagline}`;
+          }
+        }
+      };
+      lifestyleSel.onchange = updateLifestyle;
+      updateLifestyle();
+    }
+
+    // 5. Previous Property Dropdown
+    if (propSel) {
+      propSel.innerHTML = Object.values(PREVIOUS_PROPERTY_OPTIONS).map((p) => `
+        <option value="${p.id}" ${p.id === 'default' ? 'selected' : ''}>
+          ${p.label} — ${p.desc}
+        </option>
+      `).join('');
+    }
 
     const cancelBtn = document.getElementById('btn-cancel-new-char');
     if (cancelBtn) {
@@ -5029,6 +5055,347 @@ class AbujaClientApp {
 
     modal.hidden = false;
     modal.style.display = 'flex';
+  }
+
+  _openEducationModal() {
+    const modal = document.getElementById('education-modal');
+    if (!modal) return;
+    modal.hidden = false;
+
+    const banner = document.getElementById('education-status-banner');
+    const edu = this.game.s.education || { enrolledCourseId: null, completedDegrees: [], currentGpa: 3.5, lecturesAttended: 0 };
+    const curCourse = edu.enrolledCourseId ? COURSE_BY_ID[edu.enrolledCourseId] : null;
+
+    if (banner) {
+      if (curCourse) {
+        const pct = Math.min(100, Math.round((edu.lecturesAttended / curCourse.lecturesNeeded) * 100));
+        banner.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <div>
+              <span style="font-size:11px; color:#60a5fa; font-weight:700;">ACTIVE DEGREE ENROLLMENT</span>
+              <h4 style="margin:2px 0 0 0; color:#fff; font-size:14px;">${curCourse.icon} ${curCourse.name} (${curCourse.institutionName})</h4>
+              <span style="font-size:12px; color:#94a3b8;">Lectures: ${edu.lecturesAttended} / ${curCourse.lecturesNeeded} (${pct}%) • Current GPA: ${edu.currentGpa.toFixed(2)}</span>
+            </div>
+            <button type="button" id="btn-attend-lecture-action" class="btn-primary" style="padding:8px 14px; font-weight:700;">
+              📖 Attend Lecture (+1 Progress)
+            </button>
+          </div>
+          <div style="width:100%; height:6px; background:#1e293b; border-radius:3px; margin-top:8px; overflow:hidden;">
+            <div style="width:${pct}%; height:100%; background:linear-gradient(90deg, #3b82f6, #60a5fa);"></div>
+          </div>
+        `;
+        document.getElementById('btn-attend-lecture-action')?.addEventListener('click', () => {
+          const res = attendLecture(this.game.s);
+          if (res.graduated) {
+            this.showToast(`🎉 CONGRATULATIONS! You graduated with ${res.degree} from ${curCourse.institutionName}! +15 Clout & Permanent Salary Boost!`);
+            this.game.log(`Graduated with ${res.degree} from ${curCourse.institutionName}!`, 'good', '🎓');
+            if (this.world3d) this.world3d.spawnNairaRain(30);
+          } else {
+            this.showToast(`📖 Lecture attended! Progress: ${res.progress} • ${res.notes || ''}`);
+          }
+          this._renderAll();
+          this._openEducationModal();
+        });
+      } else {
+        const completedStr = edu.completedDegrees.length > 0
+          ? edu.completedDegrees.map((d) => `<span class="meta-pill pos">🎓 ${d.degree || d.name || 'Alumnus'}</span>`).join(' ')
+          : '<span style="color:#94a3b8; font-size:12px;">No degree completed yet. Enroll in an institution below to begin your academic journey!</span>';
+        banner.innerHTML = `
+          <div style="font-size:11px; color:#94a3b8; font-weight:700;">ACADEMIC STANDING</div>
+          <div style="margin-top:4px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            ${completedStr}
+          </div>
+        `;
+      }
+    }
+
+    const listEl = document.getElementById('education-institutions-list');
+    if (listEl) {
+      listEl.innerHTML = ABUJA_INSTITUTIONS.map((inst) => `
+        <div style="background:#090d16; border:1px solid var(--border-subtle); border-radius:10px; padding:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px; margin-bottom:8px;">
+            <div>
+              <strong style="color:#fff; font-size:13.5px;">${inst.icon} ${inst.name} (${inst.acronym})</strong>
+              <div style="font-size:11px; color:#38bdf8;">📍 ${inst.district.toUpperCase()} • ${inst.type} • Founded ${inst.established}</div>
+            </div>
+            <span style="font-size:11px; color:#94a3b8; font-style:italic;">"${inst.motto}"</span>
+          </div>
+          <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap:8px;">
+            ${inst.courses.map((c) => {
+              const isEnrolled = edu.enrolledCourseId === c.id;
+              const isCompleted = edu.completedDegrees.some((d) => d.courseId === c.id || d.id === c.id);
+              return `
+                <div style="background:rgba(15,23,42,0.8); border:1px solid ${isEnrolled ? '#3b82f6' : 'rgba(255,255,255,0.08)'}; border-radius:8px; padding:8px 10px; display:flex; flex-direction:column; justify-content:space-between; gap:6px;">
+                  <div>
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                      <strong style="color:#fff; font-size:12px;">${c.icon} ${c.name}</strong>
+                      <span style="font-size:10.5px; color:#facc15; font-weight:700;">${formatNairaFull(c.tuitionFee)}</span>
+                    </div>
+                    <div style="font-size:11px; color:#cbd5e1; margin-top:2px;">${c.description}</div>
+                    <div style="font-size:10.5px; color:#4ade80; margin-top:4px;">
+                      Perk: +${Math.round((c.salaryMultiplier - 1) * 100)}% Salary • +${c.cloutAward} Clout
+                    </div>
+                  </div>
+                  <div>
+                    ${isCompleted ? '<button class="btn-xs" disabled style="width:100%; opacity:0.7;">✅ Degree Completed</button>' :
+                      isEnrolled ? '<button class="btn-xs btn-primary" style="width:100%;" disabled>🔵 Currently Enrolled</button>' :
+                      `<button type="button" class="btn-xs btn-enroll-course" data-id="${c.id}" style="width:100%; background:#2563eb; color:#fff; border:none; padding:5px 8px; border-radius:5px; font-weight:600;">🎓 Enroll (${formatNairaFull(c.tuitionFee)})</button>`
+                    }
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `).join('');
+
+      listEl.querySelectorAll('.btn-enroll-course').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const courseId = btn.dataset.id;
+          const course = COURSE_BY_ID[courseId];
+          if (!course) return;
+          if (!this.game.canAfford(course.tuitionFee)) {
+            this.showToast(`⚠️ Insufficient Naira! Tuition is ${formatNairaFull(course.tuitionFee)}.`);
+            return;
+          }
+          const res = enrollInCourse(this.game.s, courseId);
+          if (res.success) {
+            this.showToast(`🎓 Successfully enrolled in ${course.name} at ${course.institutionName}!`);
+            this.game.log(`Enrolled in ${course.name} at ${course.institutionName}!`, 'good', '🎓');
+            this._renderAll();
+            this._openEducationModal();
+          } else {
+            this.showToast(`⚠️ ${res.reason || 'Could not enroll'}`);
+          }
+        });
+      });
+    }
+  }
+
+  _openTaxModal() {
+    const modal = document.getElementById('tax-modal');
+    if (!modal) return;
+    modal.hidden = false;
+
+    const box = document.getElementById('tax-assessment-box');
+    const assessment = calculateTaxAssessment(this.game.s);
+    const taxState = this.game.s.tax || { tccValid: false, tccExpiryDay: 0, totalTaxPaid: 0 };
+    const curDay = this.game.s.clock?.day || 1;
+    const isTccActive = taxState.tccValid && curDay <= (taxState.tccExpiryDay || 0);
+
+    if (box) {
+      box.innerHTML = `
+        <div style="background:#090d16; border:1px solid var(--border-subtle); border-radius:10px; padding:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:8px; margin-bottom:10px;">
+            <div>
+              <strong style="color:#fff; font-size:14px;">FIRS Tax Clearance Certificate (TCC) Status</strong>
+              <div style="font-size:11.5px; color:#94a3b8;">FCT IRS Tax Identification Number: <strong>TIN-${this.game.s.meta.name.toUpperCase().replace(/[^A-Z]/g,'').slice(0,4) || 'ABJ'}-9021</strong></div>
+            </div>
+            <span class="card-badge" style="${isTccActive ? 'background:rgba(16,185,129,0.2); color:#4ade80;' : 'background:rgba(239,68,68,0.2); color:#f87171;'}">
+              ${isTccActive ? `✅ Valid TCC (Until Day ${taxState.tccExpiryDay})` : '⚠️ Tax Due / Expired TCC'}
+            </span>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <div style="display:flex; justify-content:space-between; font-size:12.5px;">
+              <span style="color:#cbd5e1;">💼 Gross Estimated Income / Net Worth:</span>
+              <strong style="color:#fff;">${formatNairaFull(assessment.grossBase)}</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:12.5px;">
+              <span style="color:#cbd5e1;">📊 FCT Progressive PAYE Income Tax:</span>
+              <span style="color:#f87171;">${formatNairaFull(assessment.payeTax)}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:12.5px;">
+              <span style="color:#cbd5e1;">🏡 FCT Luxury Property Levy (${assessment.propertyCount} properties):</span>
+              <span style="color:#f87171;">${formatNairaFull(assessment.propertyLevy)}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:12.5px;">
+              <span style="color:#cbd5e1;">🏎️ Luxury Automobile Fleet Levy:</span>
+              <span style="color:#f87171;">${formatNairaFull(assessment.vehicleLevy)}</span>
+            </div>
+            <div style="height:1px; background:rgba(255,255,255,0.1); margin:4px 0;"></div>
+            <div style="display:flex; justify-content:space-between; font-size:14px; font-weight:700;">
+              <span style="color:#facc15;">Total FIRS / FCT Assessment Due:</span>
+              <span style="color:#4ade80;">${formatNairaFull(assessment.totalTax)}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    const payBtn = document.getElementById('btn-pay-taxes-action');
+    if (payBtn) {
+      payBtn.textContent = `💳 Settle Tax Assessment (${formatNairaFull(assessment.totalTax)}) & Issue TCC`;
+      payBtn.onclick = () => {
+        if (!this.game.canAfford(assessment.totalTax)) {
+          this.showToast(`⚠️ Insufficient funds to clear tax! Need ${formatNairaFull(assessment.totalTax)}.`);
+          return;
+        }
+        const res = payTaxesAndIssueTCC(this.game.s);
+        if (res.success) {
+          this.showToast(`📜 FIRS Tax Cleared! Tax Clearance Certificate (TCC) issued valid until Day ${res.expiryDay}! (+5 Clout)`);
+          this.game.log(`Paid ${formatNairaFull(res.paid)} FIRS taxes. TCC valid until Day ${res.expiryDay}.`, 'good', '📜');
+          this._renderAll();
+          this._openTaxModal();
+        }
+      };
+    }
+  }
+
+  _openElectionModal() {
+    const modal = document.getElementById('election-modal');
+    if (!modal) return;
+    modal.hidden = false;
+
+    const elState = this.game.s.elections || { party: null, votesMobilized: 0, campaignBudget: 0 };
+    const partiesGrid = document.getElementById('election-parties-grid');
+    if (partiesGrid) {
+      partiesGrid.innerHTML = POLITICAL_PARTIES.map((p) => {
+        const isMember = elState.party === p.id;
+        return `
+          <div style="background:#090d16; border:1.5px solid ${isMember ? p.color : 'var(--border-subtle)'}; border-radius:10px; padding:12px; display:flex; flex-direction:column; justify-content:space-between; gap:8px;">
+            <div>
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span class="card-badge" style="background:${p.color}22; color:${p.color}; font-weight:800; font-size:12px;">${p.acronym}</span>
+                <span style="font-size:10.5px; color:#94a3b8;">${p.symbol} ${p.ideology}</span>
+              </div>
+              <h4 style="margin:6px 0 2px 0; color:#fff; font-size:13px;">${p.name}</h4>
+              <p style="font-size:11px; color:#38bdf8; margin:0 0 6px 0; font-style:italic;">"${p.slogan}"</p>
+              <p style="font-size:11px; color:#cbd5e1; margin:0; line-height:1.35;">${p.description}</p>
+            </div>
+            <div>
+              ${isMember ?
+                `<button class="btn-xs" style="width:100%; background:${p.color}; color:#fff; font-weight:700; border:none; padding:6px;" disabled>✅ Registered Party Member</button>` :
+                `<button type="button" class="btn-xs btn-join-party" data-id="${p.id}" style="width:100%; border:1px solid ${p.color}; color:${p.color}; padding:6px; font-weight:700;">Join ${p.acronym} Party</button>`
+              }
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      partiesGrid.querySelectorAll('.btn-join-party').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const pid = btn.dataset.id;
+          const party = POLITICAL_PARTIES.find((x) => x.id === pid);
+          if (!party) return;
+          if (!this.game.s.elections) this.game.s.elections = {};
+          this.game.s.elections.party = pid;
+          this.game.stat('clout', 4);
+          this.game.log(`Officially registered as a card-carrying member of ${party.name} (${party.acronym})!`, 'good', '🗳️');
+          this.showToast(`🗳️ Joined ${party.acronym}! Slogan: "${party.slogan}" (+4 Clout)`);
+          this._renderAll();
+          this._openElectionModal();
+        });
+      });
+    }
+
+    const ralliesList = document.getElementById('rally-venues-list');
+    if (ralliesList) {
+      ralliesList.innerHTML = RALLY_VENUES.map((v) => `
+        <div style="background:rgba(15,23,42,0.8); border:1px solid var(--border-subtle); border-radius:8px; padding:10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+          <div>
+            <strong style="color:#fff; font-size:12.5px;">${v.icon} ${v.name}</strong>
+            <div style="font-size:11px; color:#94a3b8;">📍 ${v.district.toUpperCase()} • Capacity: ${v.capacity.toLocaleString()} Citizens • ${v.perk}</div>
+          </div>
+          <button type="button" class="btn-xs btn-attend-rally" data-id="${v.id}" data-cost="${v.cost}" style="background:#ea580c; color:#fff; border:none; padding:6px 14px; font-weight:700; border-radius:6px;">
+            🎉 Attend Mega Rally (${formatNairaFull(v.cost)})
+          </button>
+        </div>
+      `).join('');
+
+      ralliesList.querySelectorAll('.btn-attend-rally').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const vid = btn.dataset.id;
+          const cost = Number(btn.dataset.cost) || 15000;
+          const v = RALLY_VENUES.find((x) => x.id === vid);
+          if (!v) return;
+          if (!this.game.canAfford(cost)) {
+            this.showToast(`⚠️ Need ${formatNairaFull(cost)} for campaign rally mobilization!`);
+            return;
+          }
+          this.game.pay(cost);
+          this.game.stat('clout', 8);
+          this.game.stat('sanity', 20);
+          if (!this.afrobeats.isPlaying) this.afrobeats.toggle();
+          if (this.world3d) this.world3d.spawnNairaRain(40);
+          this.game.log(`Rocked the campaign mega-rally at ${v.name}! Chanted party slogans with thousands of citizens.`, 'good', '🎉');
+          this.showToast(`🎉 Rallied at ${v.name}! Live Afrobeats booming! +8 Clout, +20 Sanity.`);
+          this._renderAll();
+        });
+      });
+    }
+  }
+
+  _openMegaHousingModal() {
+    const modal = document.getElementById('mega-housing-modal');
+    if (!modal) return;
+    modal.hidden = false;
+
+    const dir = document.getElementById('mega-estates-directory');
+    if (dir) {
+      dir.innerHTML = MEGA_ESTATES.map((est) => `
+        <div style="background:#090d16; border:1px solid var(--border-subtle); border-radius:10px; padding:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px; margin-bottom:8px;">
+            <div>
+              <strong style="color:#fff; font-size:13.5px;">${est.icon} ${est.name}</strong>
+              <div style="font-size:11px; color:#38bdf8;">📍 ${est.district.toUpperCase()} • ${est.totalUnits.toLocaleString()} High-Capacity Player Units • Security: ${est.security}</div>
+            </div>
+            <div style="font-size:11px; color:#4ade80; display:flex; gap:6px; flex-wrap:wrap;">
+              ${est.amenities.map((a) => `<span class="meta-pill">${a}</span>`).join('')}
+            </div>
+          </div>
+          <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap:8px;">
+            ${est.unitTypes.map((u) => `
+              <div style="background:rgba(15,23,42,0.8); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:8px 10px; display:flex; flex-direction:column; justify-content:space-between; gap:6px;">
+                <div>
+                  <strong style="color:#fff; font-size:12px;">${u.name}</strong>
+                  <div style="font-size:11px; color:#facc15;">Rent: ${formatNairaFull(u.rentPerMonth)}/mo • Buy: ${formatNairaFull(u.buyPrice)}</div>
+                  <div style="font-size:10.5px; color:#94a3b8; margin-top:2px;">Capacity: ${u.capacity} citizens • Comfort: +${u.comfortBonus}</div>
+                </div>
+                <div style="display:flex; gap:6px; margin-top:4px;">
+                  <button type="button" class="btn-xs btn-rent-mega" data-rent="${u.rentPerMonth}" data-name="${u.name} at ${est.name}" style="flex:1; background:#10b981; color:#fff; border:none; padding:4px;">Rent</button>
+                  <button type="button" class="btn-xs btn-buy-mega" data-price="${u.buyPrice}" data-name="${u.name} at ${est.name}" style="flex:1; background:#2563eb; color:#fff; border:none; padding:4px;">Buy</button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `).join('');
+
+      dir.querySelectorAll('.btn-rent-mega').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const rent = Number(btn.dataset.rent);
+          const name = btn.dataset.name;
+          if (!this.game.canAfford(rent)) {
+            this.showToast(`⚠️ Need ${formatNairaFull(rent)} first month rent!`);
+            return;
+          }
+          this.game.pay(rent);
+          this.game.stat('clout', 3);
+          this.game.stat('sanity', 15);
+          this.game.log(`Rented unit in ${name}! Estate security badge issued.`, 'good', '🏡');
+          this.showToast(`🏡 Rented ${name}! +3 Clout, +15 Sanity.`);
+          this._renderAll();
+        });
+      });
+
+      dir.querySelectorAll('.btn-buy-mega').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const price = Number(btn.dataset.price);
+          const name = btn.dataset.name;
+          if (!this.game.canAfford(price)) {
+            this.showToast(`⚠️ Need ${formatNairaFull(price)} to purchase this luxury apartment!`);
+            return;
+          }
+          this.game.pay(price);
+          this.game.stat('clout', 20);
+          this.game.stat('sanity', 40);
+          this.game.log(`Purchased C of O title deed for ${name}!`, 'good', '🏙️');
+          this.showToast(`🏙️ Congratulations! You now own ${name}! (+20 Clout)`);
+          this._renderAll();
+        });
+      });
+    }
   }
 
   showToast(message) {

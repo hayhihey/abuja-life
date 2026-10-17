@@ -153,6 +153,26 @@ export function newState({
     flags: { tipOff: false, vipTable: false, freeRide: false, layLow: false, protocolFavours: 0 },
     stats: { trips: 0, actions: 0, bribes: 0, shocksSurvived: 0, detentions: 0, burnouts: 0, peakNet: 0 },
     sims: initSimsState({ estateName: `${D.name} Residents Association` }),
+    education: {
+      enrolledCourseId: null,
+      progressDays: 0,
+      completedDegrees: [],
+    },
+    tax: {
+      firsTaxId: `FIRS-ABJ-${((seed % 9000) + 1000)}`,
+      tccValidUntilDay: 0,
+      totalTaxesPaid: 0,
+    },
+    elections: {
+      party: null,
+      campaignClout: 0,
+      office: null,
+      voterRegistered: true,
+      ralliesAttended: 0
+    },
+    chat: {
+      messages: []
+    },
     log: [],
     rngState: rng.s,
   };
