@@ -265,12 +265,49 @@ export class AbujaWorld3D {
     }
   }
 
+  _buildPalmTree(scale = 1) {
+    const tree = new THREE.Group();
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 0.9 });
+    const frondMat = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.65, side: THREE.DoubleSide });
+
+    // Segmented slightly curved tropical palm trunk
+    for (let s = 0; s < 5; s++) {
+      const seg = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.28 - s * 0.03, 0.32 - s * 0.03, 2.2, 8),
+        trunkMat
+      );
+      seg.position.set(s * 0.12, s * 2.0 + 1.1, 0);
+      seg.rotation.z = -s * 0.03;
+      seg.castShadow = true;
+      tree.add(seg);
+    }
+
+    // Crown of 7 arching green palm fronds
+    const crownY = 10.2;
+    const crownX = 0.48;
+    for (let f = 0; f < 7; f++) {
+      const ang = (f / 7) * Math.PI * 2;
+      const frondPivot = new THREE.Group();
+      frondPivot.position.set(crownX, crownY, 0);
+      frondPivot.rotation.y = ang;
+
+      const leaf = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.12, 4.2), frondMat);
+      leaf.position.set(0, -0.35, 2.0);
+      leaf.rotation.x = 0.38;
+      frondPivot.add(leaf);
+      tree.add(frondPivot);
+    }
+
+    tree.scale.setScalar(scale);
+    return tree;
+  }
+
   _buildRoadNetwork() {
     this.roadSegments = [];
     const roadMat = new THREE.MeshStandardMaterial({
-      color: 0x475569,
-      roughness: 0.85,
-      metalness: 0.05
+      color: 0x262930,
+      roughness: 0.78,
+      metalness: 0.08
     });
     const shoulderSandMat = new THREE.MeshStandardMaterial({
       color: 0xd6bfa3,
@@ -283,8 +320,11 @@ export class AbujaWorld3D {
       roughness: 0.4
     });
     const stripeMat = new THREE.MeshBasicMaterial({ color: 0xf8fafc });
+    const skidMat = new THREE.MeshBasicMaterial({ color: 0x111827, transparent: true, opacity: 0.45 });
+    const guardrailMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.35, metalness: 0.75 });
     const kerbBlackMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.7 });
     const kerbWhiteMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.7 });
+    const kerbRedMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.65 });
 
     for (const edge of EDGES) {
       const dA = DISTRICT_BY_ID[edge.a];
@@ -302,11 +342,12 @@ export class AbujaWorld3D {
       const angle = Math.atan2(diff.x, diff.z);
 
       const isRail = edge.type === 'rail';
-      const width = isRail ? 6 : edge.type === 'expressway' ? 15 : 10;
+      const isExp = edge.type === 'expressway';
+      const width = isRail ? 6 : isExp ? 16 : 11;
 
-      // Sandy earth road shoulder (like Nigeria GTA streets)
+      // Sandy earth road shoulder
       if (!isRail) {
-        const shoulderGeo = new THREE.BoxGeometry(width + 5.5, 0.22, len);
+        const shoulderGeo = new THREE.BoxGeometry(width + 6.0, 0.22, len);
         const shoulder = new THREE.Mesh(shoulderGeo, shoulderSandMat);
         shoulder.position.set(mid.x, 0.14, mid.z);
         shoulder.rotation.y = angle;
@@ -314,7 +355,7 @@ export class AbujaWorld3D {
         this.scene.add(shoulder);
       }
 
-      const geo = new THREE.BoxGeometry(width, isRail ? 0.9 : 0.42, len);
+      const geo = new THREE.BoxGeometry(width, isRail ? 0.9 : 0.44, len);
       const mesh = new THREE.Mesh(geo, isRail ? railMat : roadMat);
       mesh.position.copy(mid);
       mesh.rotation.y = angle;
@@ -322,21 +363,52 @@ export class AbujaWorld3D {
       this.scene.add(mesh);
 
       if (!isRail) {
-        const stripeGeo = new THREE.PlaneGeometry(0.45, len * 0.94);
+        // Center lane divider + side edge white lines + subtle tire skid tracks (like Image 1)
+        const stripeGeo = new THREE.PlaneGeometry(0.42, len * 0.94);
         stripeGeo.rotateX(-Math.PI / 2);
         const stripe = new THREE.Mesh(stripeGeo, stripeMat);
         stripe.position.set(mid.x, 0.62, mid.z);
         stripe.rotation.y = angle;
         this.scene.add(stripe);
 
-        // Iconic alternating black-and-white painted Nigerian street kerbs
+        for (const laneSide of [-1, 1]) {
+          const skidGeo = new THREE.PlaneGeometry(0.9, len * 0.88);
+          skidGeo.rotateX(-Math.PI / 2);
+          const skid = new THREE.Mesh(skidGeo, skidMat);
+          const sOff = laneSide * (width * 0.24);
+          skid.position.set(
+            mid.x + Math.cos(angle) * sOff,
+            0.61,
+            mid.z - Math.sin(angle) * sOff
+          );
+          skid.rotation.y = angle;
+          this.scene.add(skid);
+        }
+
+        // Steel W-beam highway guardrails on expressways
+        if (isExp) {
+          const railBeamGeo = new THREE.BoxGeometry(0.35, 0.55, len * 0.92);
+          for (const side of [-1, 1]) {
+            const gOff = side * (width * 0.5 + 1.25);
+            const gBeam = new THREE.Mesh(railBeamGeo, guardrailMat);
+            gBeam.position.set(
+              mid.x + Math.cos(angle) * gOff,
+              1.1,
+              mid.z - Math.sin(angle) * gOff
+            );
+            gBeam.rotation.y = angle;
+            this.scene.add(gBeam);
+          }
+        }
+
+        // Iconic alternating painted Nigerian street kerbs + roadside palm trees
         const kerbCount = Math.min(36, Math.floor(len / 8));
         const kerbSegLen = len / Math.max(1, kerbCount);
-        const kerbGeo = new THREE.BoxGeometry(0.65, 0.62, kerbSegLen * 0.92);
+        const kerbGeo = new THREE.BoxGeometry(0.68, 0.62, kerbSegLen * 0.92);
         for (let k = 0; k < kerbCount; k++) {
           const frac = (k + 0.5) / kerbCount - 0.5;
           const alongZ = frac * len;
-          const kMat = k % 2 === 0 ? kerbBlackMat : kerbWhiteMat;
+          const kMat = k % 2 === 0 ? (isExp ? kerbRedMat : kerbBlackMat) : kerbWhiteMat;
           for (const side of [-1, 1]) {
             const kerb = new THREE.Mesh(kerbGeo, kMat);
             const offsetSide = side * (width * 0.5 + 0.35);
@@ -347,6 +419,19 @@ export class AbujaWorld3D {
             );
             kerb.rotation.y = angle;
             this.scene.add(kerb);
+          }
+
+          // Line avenues with tropical palm trees every ~40 units
+          if (k % 5 === 0) {
+            const palm = this._buildPalmTree(0.9 + (k % 3) * 0.15);
+            const pSide = (k % 2 === 0 ? 1 : -1) * (width * 0.5 + 3.2);
+            palm.position.set(
+              mid.x + Math.sin(angle) * alongZ + Math.cos(angle) * pSide,
+              0.15,
+              mid.z + Math.cos(angle) * alongZ - Math.sin(angle) * pSide
+            );
+            palm.rotation.y = k * 1.1;
+            this.scene.add(palm);
           }
         }
       }
@@ -1029,13 +1114,19 @@ export class AbujaWorld3D {
     if (!this.roadSegments.length) return;
 
     const vehiclePalettes = [
-      { color: 0xfacc15, w: 2.8, h: 1.8, l: 5.2, speed: 0.22, type: 'taxi' },
-      { color: 0x10b981, w: 2.8, h: 1.8, l: 5.2, speed: 0.25, type: 'taxi' },
-      { color: 0x0f172a, w: 3.4, h: 2.5, l: 6.4, speed: 0.34, type: 'vip_suv' },
-      { color: 0xf8fafc, w: 3.2, h: 2.3, l: 6.0, speed: 0.29, type: 'suv' },
-      { color: 0xeab308, w: 2.2, h: 2.0, l: 3.4, speed: 0.16, type: 'keke' },
-      { color: 0x059669, w: 4.2, h: 3.6, l: 18.0, speed: 0.42, type: 'train' }
+      { color: 0xf8fafc, cabin: 0x0f172a, trim: 0xef4444, w: 3.1, h: 1.55, l: 6.2, speed: 0.34, type: 'sports_coupe' },
+      { color: 0xfacc15, cabin: 0x1e293b, trim: 0x111827, w: 2.8, h: 1.75, l: 5.4, speed: 0.24, type: 'taxi' },
+      { color: 0x10b981, cabin: 0x0f172a, trim: 0xf8fafc, w: 2.8, h: 1.75, l: 5.4, speed: 0.26, type: 'taxi' },
+      { color: 0x0f172a, cabin: 0x020617, trim: 0x38bdf8, w: 3.4, h: 2.35, l: 6.5, speed: 0.35, type: 'vip_suv' },
+      { color: 0xeab308, cabin: 0x1c1917, trim: 0x111827, w: 2.1, h: 1.95, l: 3.4, speed: 0.17, type: 'keke' },
+      { color: 0x059669, cabin: 0x064e3b, trim: 0xfacc15, w: 4.2, h: 3.6, l: 18.0, speed: 0.42, type: 'train' }
     ];
+
+    const wheelGeo = new THREE.CylinderGeometry(0.55, 0.55, 0.42, 12);
+    wheelGeo.rotateZ(Math.PI / 2);
+    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.75 });
+    const headMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+    const tailMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
 
     for (let i = 0; i < 46; i++) {
       const seg = this.roadSegments[i % this.roadSegments.length];
@@ -1044,33 +1135,64 @@ export class AbujaWorld3D {
         : vehiclePalettes[i % (vehiclePalettes.length - 1)];
 
       const carGroup = new THREE.Group();
+      const bodyMat = new THREE.MeshStandardMaterial({
+        color: spec.color,
+        roughness: 0.22,
+        metalness: 0.72
+      });
+      const cabinMat = new THREE.MeshStandardMaterial({
+        color: spec.cabin,
+        roughness: 0.15,
+        metalness: 0.9
+      });
+
       const body = new THREE.Mesh(
-        new THREE.BoxGeometry(spec.w, spec.h, spec.l),
-        new THREE.MeshStandardMaterial({
-          color: spec.color,
-          roughness: 0.35,
-          metalness: 0.65
-        })
+        new THREE.BoxGeometry(spec.w, spec.h * 0.58, spec.l),
+        bodyMat
       );
-      body.position.y = spec.h * 0.5 + 0.6;
+      body.position.y = spec.h * 0.32 + 0.52;
       carGroup.add(body);
 
-      const headMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
-      const tailMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
-      const hl = new THREE.Mesh(new THREE.BoxGeometry(spec.w * 0.8, 0.4, 0.3), headMat);
-      hl.position.set(0, spec.h * 0.5 + 0.5, spec.l * 0.51);
+      const cabin = new THREE.Mesh(
+        new THREE.BoxGeometry(spec.w * 0.84, spec.h * 0.46, spec.l * 0.54),
+        cabinMat
+      );
+      cabin.position.set(0, spec.h * 0.78 + 0.45, -spec.l * 0.04);
+      carGroup.add(cabin);
+
+      if (!seg.isRail) {
+        const wOffX = spec.w * 0.5;
+        const wOffZ = spec.l * 0.32;
+        for (const [wx, wz] of [[-wOffX, wOffZ], [wOffX, wOffZ], [-wOffX, -wOffZ], [wOffX, -wOffZ]]) {
+          const wMesh = new THREE.Mesh(wheelGeo, wheelMat);
+          wMesh.position.set(wx, 0.55, wz);
+          carGroup.add(wMesh);
+        }
+      }
+
+      if (spec.type === 'sports_coupe') {
+        const wing = new THREE.Mesh(
+          new THREE.BoxGeometry(spec.w * 0.96, 0.14, 0.55),
+          new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3 })
+        );
+        wing.position.set(0, spec.h * 0.75 + 0.55, -spec.l * 0.45);
+        carGroup.add(wing);
+      }
+
+      const hl = new THREE.Mesh(new THREE.BoxGeometry(spec.w * 0.82, 0.32, 0.25), headMat);
+      hl.position.set(0, spec.h * 0.38 + 0.5, spec.l * 0.51);
       carGroup.add(hl);
 
-      const tl = new THREE.Mesh(new THREE.BoxGeometry(spec.w * 0.8, 0.4, 0.3), tailMat);
-      tl.position.set(0, spec.h * 0.5 + 0.5, -spec.l * 0.51);
+      const tl = new THREE.Mesh(new THREE.BoxGeometry(spec.w * 0.85, 0.32, 0.25), tailMat);
+      tl.position.set(0, spec.h * 0.38 + 0.5, -spec.l * 0.51);
       carGroup.add(tl);
 
       if (spec.type === 'vip_suv') {
         const strobe = new THREE.Mesh(
-          new THREE.BoxGeometry(1.8, 0.35, 0.6),
+          new THREE.BoxGeometry(1.8, 0.32, 0.55),
           new THREE.MeshBasicMaterial({ color: 0x3b82f6 })
         );
-        strobe.position.set(0, spec.h + 0.8, 0);
+        strobe.position.set(0, spec.h + 0.65, 0);
         carGroup.add(strobe);
       }
 
@@ -1095,93 +1217,336 @@ export class AbujaWorld3D {
   } = {}) {
     const root = new THREE.Group();
 
-    const skinMat = new THREE.MeshStandardMaterial({ color: skinColor, roughness: 0.65 });
-    const hairMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.85 });
-    const jacketMat = new THREE.MeshStandardMaterial({ color: jacketColor, roughness: 0.48 });
-    const shirtMat = new THREE.MeshStandardMaterial({ color: shirtColor, roughness: 0.55 });
-    const pantsMat = new THREE.MeshStandardMaterial({ color: pantsColor, roughness: 0.7 });
-    const shoeMat = new THREE.MeshStandardMaterial({ color: shoeColor, roughness: 0.4 });
-    const soleMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 });
+    const skinMat = new THREE.MeshStandardMaterial({ color: skinColor, roughness: 0.52, metalness: 0.06 });
+    const hairMat = new THREE.MeshStandardMaterial({ color: 0x090d16, roughness: 0.85 });
+    const jacketMat = new THREE.MeshStandardMaterial({ color: jacketColor, roughness: 0.42, metalness: 0.08 });
+    const shirtMat = new THREE.MeshStandardMaterial({ color: shirtColor, roughness: 0.5 });
+    const pantsMat = new THREE.MeshStandardMaterial({ color: pantsColor, roughness: 0.62 });
+    const shoeMat = new THREE.MeshStandardMaterial({ color: shoeColor, roughness: 0.35, metalness: 0.12 });
+    const soleMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.45 });
+    const eyeWhiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const pupilMat = new THREE.MeshBasicMaterial({ color: 0x090d16 });
+    const lipMat = new THREE.MeshStandardMaterial({ color: 0x4a2518, roughness: 0.55 });
+    const goldMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, metalness: 0.88, roughness: 0.18 });
+    const beltMat = new THREE.MeshStandardMaterial({ color: 0x090d16, roughness: 0.35, metalness: 0.3 });
 
-    // Torso / Pastel Pink Jacket (matching Nigeria GTA screenshots)
-    const torso = new THREE.Mesh(new THREE.BoxGeometry(1.45, 1.85, 0.78), jacketMat);
-    torso.position.y = 2.65;
-    torso.castShadow = true;
+    // --- 1. ATHLETIC ANATOMICAL TORSO (Tapered V-Shape Chest + Open Jacket + Fitted Inner Tee) ---
+    const torso = new THREE.Group();
+    torso.position.y = 2.68;
+
+    // Sculpted upper chest & lats (smooth rounded cylinder tapered from shoulders to waist)
+    const chestCore = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.68, 0.54, 1.78, 18),
+      jacketMat
+    );
+    chestCore.scale.set(1.08, 1.0, 0.64);
+    chestCore.castShadow = true;
+    torso.add(chestCore);
+
+    // Inner fitted crew-neck shirt visible on front (+Z is forward)
+    const frontTee = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.64, 0.51, 1.74, 16, 1, false, -0.55, 1.1),
+      shirtMat
+    );
+    frontTee.scale.set(1.09, 1.0, 0.68);
+    torso.add(frontTee);
+
+    // Left & Right tailored jacket lapels framing the shirt
+    for (const side of [-1, 1]) {
+      const lapel = new THREE.Mesh(
+        new THREE.BoxGeometry(0.16, 1.68, 0.12),
+        jacketMat
+      );
+      lapel.position.set(side * 0.28, 0.02, 0.41);
+      lapel.rotation.z = side * -0.04;
+      torso.add(lapel);
+
+      // Rounded deltoid shoulder caps for smooth human silhouette
+      const deltoid = new THREE.Mesh(
+        new THREE.SphereGeometry(0.31, 14, 12),
+        jacketMat
+      );
+      deltoid.position.set(side * 0.78, 0.72, 0);
+      deltoid.scale.set(1.05, 0.92, 0.88);
+      torso.add(deltoid);
+    }
+
+    // Stylish jacket collar & gold Cuban chain around neck
+    const collar = new THREE.Mesh(
+      new THREE.TorusGeometry(0.32, 0.075, 10, 20, Math.PI * 1.35),
+      jacketMat
+    );
+    collar.rotation.x = Math.PI / 2;
+    collar.rotation.z = Math.PI * 0.82;
+    collar.position.set(0, 0.88, -0.02);
+    torso.add(collar);
+
+    const goldChain = new THREE.Mesh(
+      new THREE.TorusGeometry(0.28, 0.026, 8, 18),
+      goldMat
+    );
+    goldChain.rotation.x = Math.PI / 2 + 0.22;
+    goldChain.position.set(0, 0.82, 0.08);
+    torso.add(goldChain);
+
     root.add(torso);
 
-    // Inner White Shirt strip on front (+Z is forward)
-    const innerTee = new THREE.Mesh(new THREE.BoxGeometry(0.55, 1.78, 0.82), shirtMat);
-    innerTee.position.set(0, 2.65, 0.02);
-    root.add(innerTee);
-
-    // Hip / Belt waist block
-    const pelvis = new THREE.Mesh(new THREE.BoxGeometry(1.38, 0.42, 0.74), pantsMat);
-    pelvis.position.y = 1.62;
+    // --- 2. SCULPTED PELVIS, HIPS & DESIGNER BELT ---
+    const pelvis = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.56, 0.54, 0.44, 16),
+      pantsMat
+    );
+    pelvis.scale.set(1.05, 1.0, 0.66);
+    pelvis.position.y = 1.66;
     root.add(pelvis);
 
-    // Neck & Head with neat Nigerian low-cut fade
-    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.26, 0.35, 10), skinMat);
-    neck.position.y = 3.72;
+    const belt = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.575, 0.575, 0.12, 16),
+      beltMat
+    );
+    belt.scale.set(1.06, 1.0, 0.67);
+    belt.position.y = 1.82;
+    root.add(belt);
+
+    const buckle = new THREE.Mesh(
+      new THREE.BoxGeometry(0.22, 0.14, 0.08),
+      goldMat
+    );
+    buckle.position.set(0, 1.82, 0.39);
+    root.add(buckle);
+
+    // --- 3. REALISTIC HUMAN HEAD, FACIAL FEATURES & NIGERIAN TAPER FADE HAIRCUT ---
+    const neck = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.21, 0.25, 0.38, 14),
+      skinMat
+    );
+    neck.position.y = 3.74;
     root.add(neck);
 
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.82, 0.76), skinMat);
-    head.position.y = 4.22;
-    head.castShadow = true;
-    root.add(head);
+    const headGroup = new THREE.Group();
+    headGroup.position.y = 4.24;
 
-    const hair = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.32, 0.8), hairMat);
-    hair.position.y = 4.54;
-    root.add(hair);
+    // Smooth anatomical cranium
+    const cranium = new THREE.Mesh(
+      new THREE.SphereGeometry(0.42, 22, 20),
+      skinMat
+    );
+    cranium.scale.set(0.92, 1.08, 0.98);
+    cranium.castShadow = true;
+    headGroup.add(cranium);
 
-    // Articulated Left & Right Arms (pivoted at shoulder y = 3.45)
-    const leftArmPivot = new THREE.Group();
-    leftArmPivot.position.set(-0.92, 3.45, 0);
-    const leftSleeve = new THREE.Mesh(new THREE.BoxGeometry(0.42, 1.35, 0.42), jacketMat);
-    leftSleeve.position.y = -0.58;
-    leftSleeve.castShadow = true;
-    const leftHand = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.38, 0.36), skinMat);
-    leftHand.position.y = -1.35;
-    leftArmPivot.add(leftSleeve, leftHand);
-    root.add(leftArmPivot);
+    // Sculpted jawline & chin
+    const jaw = new THREE.Mesh(
+      new THREE.SphereGeometry(0.33, 16, 14),
+      skinMat
+    );
+    jaw.scale.set(0.88, 0.75, 0.92);
+    jaw.position.set(0, -0.16, 0.06);
+    headGroup.add(jaw);
 
-    const rightArmPivot = new THREE.Group();
-    rightArmPivot.position.set(0.92, 3.45, 0);
-    const rightSleeve = new THREE.Mesh(new THREE.BoxGeometry(0.42, 1.35, 0.42), jacketMat);
-    rightSleeve.position.y = -0.58;
-    rightSleeve.castShadow = true;
-    const rightHand = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.38, 0.36), skinMat);
-    rightHand.position.y = -1.35;
-    rightArmPivot.add(rightSleeve, rightHand);
-    root.add(rightArmPivot);
+    // Crisp Nigerian Taper Fade / Afro Sponge Twist Top + Hairline
+    const hairTop = new THREE.Mesh(
+      new THREE.SphereGeometry(0.435, 20, 16, 0, Math.PI * 2, 0, Math.PI * 0.56),
+      hairMat
+    );
+    hairTop.scale.set(0.94, 1.06, 1.0);
+    hairTop.position.y = 0.04;
+    headGroup.add(hairTop);
 
-    // Articulated Left & Right Legs in Black Jeans & Yellow Sneakers (pivoted at hip y = 1.55)
-    const leftLegPivot = new THREE.Group();
-    leftLegPivot.position.set(-0.38, 1.55, 0);
-    const leftTrouser = new THREE.Mesh(new THREE.BoxGeometry(0.52, 1.35, 0.52), pantsMat);
-    leftTrouser.position.y = -0.68;
-    leftTrouser.castShadow = true;
-    const leftShoe = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.32, 0.78), shoeMat);
-    leftShoe.position.set(0, -1.38, 0.12);
-    const leftSole = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.1, 0.82), soleMat);
-    leftSole.position.set(0, -1.5, 0.12);
-    leftLegPivot.add(leftTrouser, leftShoe, leftSole);
-    root.add(leftLegPivot);
+    const hairCrown = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.35, 0.38, 0.18, 16),
+      hairMat
+    );
+    hairCrown.scale.set(0.92, 1.0, 0.96);
+    hairCrown.position.y = 0.38;
+    headGroup.add(hairCrown);
 
-    const rightLegPivot = new THREE.Group();
-    rightLegPivot.position.set(0.38, 1.55, 0);
-    const rightTrouser = new THREE.Mesh(new THREE.BoxGeometry(0.52, 1.35, 0.52), pantsMat);
-    rightTrouser.position.y = -0.68;
-    rightTrouser.castShadow = true;
-    const rightShoe = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.32, 0.78), shoeMat);
-    rightShoe.position.set(0, -1.38, 0.12);
-    const rightSole = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.1, 0.82), soleMat);
-    rightSole.position.set(0, -1.5, 0.12);
-    rightLegPivot.add(rightTrouser, rightShoe, rightSole);
-    root.add(rightLegPivot);
+    // Realistic Eyes (Sclera + Dark Iris/Pupil) + Eyebrows
+    for (const side of [-1, 1]) {
+      const eyeWhite = new THREE.Mesh(
+        new THREE.SphereGeometry(0.062, 10, 10),
+        eyeWhiteMat
+      );
+      eyeWhite.scale.set(1.15, 0.82, 0.65);
+      eyeWhite.position.set(side * 0.145, 0.04, 0.375);
+      headGroup.add(eyeWhite);
+
+      const pupil = new THREE.Mesh(
+        new THREE.SphereGeometry(0.036, 8, 8),
+        pupilMat
+      );
+      pupil.position.set(side * 0.145, 0.04, 0.408);
+      headGroup.add(pupil);
+
+      const brow = new THREE.Mesh(
+        new THREE.BoxGeometry(0.13, 0.028, 0.04),
+        hairMat
+      );
+      brow.position.set(side * 0.145, 0.125, 0.385);
+      brow.rotation.z = side * -0.06;
+      headGroup.add(brow);
+
+      // Sculpted Human Ears
+      const ear = new THREE.Mesh(
+        new THREE.SphereGeometry(0.085, 10, 10),
+        skinMat
+      );
+      ear.scale.set(0.45, 1.15, 0.72);
+      ear.position.set(side * 0.385, 0.0, -0.02);
+      headGroup.add(ear);
+    }
+
+    // Nose bridge & tip
+    const nose = new THREE.Mesh(
+      new THREE.ConeGeometry(0.068, 0.18, 10),
+      skinMat
+    );
+    nose.position.set(0, -0.03, 0.42);
+    nose.rotation.x = Math.PI * 0.38;
+    headGroup.add(nose);
+
+    // Natural Lips & Clean Goatee/Mustache line
+    const lips = new THREE.Mesh(
+      new THREE.SphereGeometry(0.075, 10, 8),
+      lipMat
+    );
+    lips.scale.set(1.45, 0.52, 0.65);
+    lips.position.set(0, -0.17, 0.385);
+    headGroup.add(lips);
+
+    const chinBeard = new THREE.Mesh(
+      new THREE.SphereGeometry(0.18, 12, 10),
+      hairMat
+    );
+    chinBeard.scale.set(0.95, 0.45, 0.85);
+    chinBeard.position.set(0, -0.29, 0.25);
+    headGroup.add(chinBeard);
+
+    root.add(headGroup);
+
+    // --- 4. ARTICULATED HUMAN ARMS (Rounded Upper Arm, Elbow, Forearm & Sculpted Hand) ---
+    const buildArm = (side) => {
+      const armPivot = new THREE.Group();
+      armPivot.position.set(side * 0.86, 3.42, 0);
+
+      // Upper arm jacket sleeve
+      const upperArm = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.21, 0.18, 0.74, 14),
+        jacketMat
+      );
+      upperArm.position.y = -0.34;
+      upperArm.castShadow = true;
+      armPivot.add(upperArm);
+
+      // Elbow joint sphere
+      const elbow = new THREE.Mesh(
+        new THREE.SphereGeometry(0.175, 12, 10),
+        jacketMat
+      );
+      elbow.position.y = -0.72;
+      armPivot.add(elbow);
+
+      // Lower sleeve / forearm with slight natural forward bend
+      const forearm = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.17, 0.145, 0.62, 14),
+        jacketMat
+      );
+      forearm.position.set(0, -1.02, 0.04);
+      forearm.rotation.x = 0.08;
+      forearm.castShadow = true;
+      armPivot.add(forearm);
+
+      // Wristwatch on left wrist
+      if (side === -1) {
+        const watch = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.155, 0.155, 0.08, 12),
+          goldMat
+        );
+        watch.position.set(0, -1.26, 0.06);
+        armPivot.add(watch);
+      }
+
+      // Sculpted human hand (palm + thumb)
+      const palm = new THREE.Mesh(
+        new THREE.SphereGeometry(0.155, 12, 10),
+        skinMat
+      );
+      palm.scale.set(0.82, 1.18, 0.95);
+      palm.position.set(0, -1.42, 0.07);
+      armPivot.add(palm);
+
+      return armPivot;
+    };
+
+    const leftArmPivot = buildArm(-1);
+    const rightArmPivot = buildArm(1);
+    root.add(leftArmPivot, rightArmPivot);
+
+    // --- 5. ARTICULATED HUMAN LEGS (Thigh, Knee, Tapered Calf & Detailed Designer Sneakers) ---
+    const buildLeg = (side) => {
+      const legPivot = new THREE.Group();
+      legPivot.position.set(side * 0.34, 1.56, 0);
+
+      // Sculpted thigh
+      const thigh = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.26, 0.21, 0.74, 14),
+        pantsMat
+      );
+      thigh.position.y = -0.35;
+      thigh.castShadow = true;
+      legPivot.add(thigh);
+
+      // Rounded knee joint
+      const knee = new THREE.Mesh(
+        new THREE.SphereGeometry(0.205, 12, 10),
+        pantsMat
+      );
+      knee.position.y = -0.72;
+      legPivot.add(knee);
+
+      // Tapered calf / ankle jeans
+      const calf = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.20, 0.16, 0.68, 14),
+        pantsMat
+      );
+      calf.position.y = -1.06;
+      calf.castShadow = true;
+      legPivot.add(calf);
+
+      // Contoured sneaker upper + rounded toe box + white midsole + tongue
+      const shoeUpper = new THREE.Mesh(
+        new THREE.BoxGeometry(0.38, 0.24, 0.62),
+        shoeMat
+      );
+      shoeUpper.position.set(0, -1.40, 0.08);
+      legPivot.add(shoeUpper);
+
+      const toeCap = new THREE.Mesh(
+        new THREE.SphereGeometry(0.19, 12, 10),
+        shoeMat
+      );
+      toeCap.scale.set(1.0, 0.62, 1.15);
+      toeCap.position.set(0, -1.42, 0.36);
+      legPivot.add(toeCap);
+
+      const midsole = new THREE.Mesh(
+        new THREE.BoxGeometry(0.42, 0.10, 0.82),
+        soleMat
+      );
+      midsole.position.set(0, -1.51, 0.14);
+      legPivot.add(midsole);
+
+      return legPivot;
+    };
+
+    const leftLegPivot = buildLeg(-1);
+    const rightLegPivot = buildLeg(1);
+    root.add(leftLegPivot, rightLegPivot);
 
     return {
       root,
       torso,
+      headGroup,
       leftArmPivot,
       rightArmPivot,
       leftLegPivot,
@@ -1191,7 +1556,7 @@ export class AbujaWorld3D {
 
   _buildStreetPedestrians() {
     const npcOutfits = [
-      { jacketColor: 0x16a34a, shirtColor: 0xffffff, pantsColor: 0x1e293b, shoeColor: 0xffffff }, // Green/white jersey (like Image 4)
+      { jacketColor: 0x16a34a, shirtColor: 0xffffff, pantsColor: 0x1e293b, shoeColor: 0xffffff },
       { jacketColor: 0xeab308, shirtColor: 0x111827, pantsColor: 0x0f172a, shoeColor: 0xfacc15 },
       { jacketColor: 0x2563eb, shirtColor: 0xf8fafc, pantsColor: 0x1e293b, shoeColor: 0xe2e8f0 },
       { jacketColor: 0xdc2626, shirtColor: 0xfef08a, pantsColor: 0x111827, shoeColor: 0xffffff }
@@ -1200,7 +1565,6 @@ export class AbujaWorld3D {
     for (let dIdx = 0; dIdx < DISTRICTS.length; dIdx++) {
       const d = DISTRICTS[dIdx];
       const basePos = map2DTo3D(d.x, d.y);
-      // Spawn 2 street pedestrians per district compound walkway
       for (let n = 0; n < 2; n++) {
         const outfit = npcOutfits[(dIdx + n) % npcOutfits.length];
         const rig = this._buildHumanoidRig(outfit);
@@ -1223,12 +1587,246 @@ export class AbujaWorld3D {
     }
   }
 
+  _buildWidebodySportsCar() {
+    const car = new THREE.Group();
+
+    // Primary paint materials (stored on userData so setPlayerVehicleAppearance can recolor dynamically)
+    const paintMat = new THREE.MeshStandardMaterial({
+      color: 0xf8fafc, // Pearl White Widebody default matching reference screenshot
+      roughness: 0.16,
+      metalness: 0.65
+    });
+    const glassMat = new THREE.MeshStandardMaterial({
+      color: 0x090d16,
+      roughness: 0.08,
+      metalness: 0.95
+    });
+    const carbonMat = new THREE.MeshStandardMaterial({
+      color: 0x111827,
+      roughness: 0.32,
+      metalness: 0.55
+    });
+    const rimMat = new THREE.MeshStandardMaterial({
+      color: 0xcbd5e1,
+      roughness: 0.22,
+      metalness: 0.88
+    });
+    const tireMat = new THREE.MeshStandardMaterial({
+      color: 0x0f172a,
+      roughness: 0.82
+    });
+    const redStripeMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+    const cyanStripeMat = new THREE.MeshBasicMaterial({ color: 0x06b6d4 });
+    const tailGlowMat = new THREE.MeshBasicMaterial({ color: 0xdc2626 });
+    const amberGlowMat = new THREE.MeshBasicMaterial({ color: 0xf97316 });
+    const headLightMat = new THREE.MeshBasicMaterial({ color: 0xe0f2fe });
+
+    // Soft dark ground contact shadow underneath the car
+    const shadowPlane = new THREE.Mesh(
+      new THREE.PlaneGeometry(5.6, 10.2),
+      new THREE.MeshBasicMaterial({ color: 0x020617, transparent: true, opacity: 0.52 })
+    );
+    shadowPlane.rotation.x = -Math.PI / 2;
+    shadowPlane.position.y = 0.26;
+    car.add(shadowPlane);
+
+    // 1. Sculpted Lower Widebody Chassis
+    const mainChassis = new THREE.Mesh(
+      new THREE.BoxGeometry(4.4, 1.32, 9.2),
+      paintMat
+    );
+    mainChassis.position.set(0, 1.38, 0);
+    mainChassis.castShadow = true;
+    car.add(mainChassis);
+
+    // Flared Widebody Wheel Arches / Side Fenders (Front & Rear)
+    for (const side of [-1, 1]) {
+      const fenderFlare = new THREE.Mesh(
+        new THREE.BoxGeometry(0.36, 1.12, 8.6),
+        paintMat
+      );
+      fenderFlare.position.set(side * 2.28, 1.24, 0);
+      fenderFlare.castShadow = true;
+      car.add(fenderFlare);
+
+      // Carbon fiber side skirt lip
+      const sideSkirt = new THREE.Mesh(
+        new THREE.BoxGeometry(0.42, 0.22, 6.2),
+        carbonMat
+      );
+      sideSkirt.position.set(side * 2.32, 0.72, 0);
+      car.add(sideSkirt);
+    }
+
+    // 2. Aerodynamic Fastback Cabin & Tinted Windows
+    const cabinCore = new THREE.Mesh(
+      new THREE.BoxGeometry(3.65, 1.28, 4.9),
+      glassMat
+    );
+    cabinCore.position.set(0, 2.52, -0.35);
+    car.add(cabinCore);
+
+    const roofPanel = new THREE.Mesh(
+      new THREE.BoxGeometry(3.45, 0.14, 3.6),
+      paintMat
+    );
+    roofPanel.position.set(0, 3.18, -0.35);
+    car.add(roofPanel);
+
+    // Shark-fin roof antenna (like reference screenshot)
+    const sharkFin = new THREE.Mesh(
+      new THREE.ConeGeometry(0.14, 0.45, 4),
+      carbonMat
+    );
+    sharkFin.position.set(0, 3.38, -1.65);
+    sharkFin.rotation.x = -0.25;
+    car.add(sharkFin);
+
+    // Side wing mirrors
+    for (const side of [-1, 1]) {
+      const mirror = new THREE.Mesh(
+        new THREE.BoxGeometry(0.45, 0.22, 0.28),
+        paintMat
+      );
+      mirror.position.set(side * 2.15, 2.25, 1.35);
+      car.add(mirror);
+    }
+
+    // 3. Carbon GT Rear Wing Spoiler on Dual Struts (exact match to screenshot)
+    const wingBlade = new THREE.Mesh(
+      new THREE.BoxGeometry(4.45, 0.14, 0.72),
+      carbonMat
+    );
+    wingBlade.position.set(0, 2.72, -4.18);
+    wingBlade.rotation.x = 0.08;
+    car.add(wingBlade);
+
+    for (const side of [-1, 1]) {
+      const wingEndplate = new THREE.Mesh(
+        new THREE.BoxGeometry(0.10, 0.42, 0.82),
+        carbonMat
+      );
+      wingEndplate.position.set(side * 2.22, 2.72, -4.18);
+      car.add(wingEndplate);
+
+      const wingStrut = new THREE.Mesh(
+        new THREE.BoxGeometry(0.12, 0.68, 0.38),
+        carbonMat
+      );
+      wingStrut.position.set(side * 1.15, 2.34, -4.05);
+      car.add(wingStrut);
+    }
+
+    // 4. Aggressive Rear Fascia: Wrap-Around LED Taillights + Red & Cyan M-Stripe Bumper + Diffuser + Quad Exhausts
+    for (const side of [-1, 1]) {
+      const outerTail = new THREE.Mesh(
+        new THREE.BoxGeometry(1.38, 0.36, 0.18),
+        tailGlowMat
+      );
+      outerTail.position.set(side * 1.42, 1.72, -4.62);
+      car.add(outerTail);
+
+      const innerTail = new THREE.Mesh(
+        new THREE.BoxGeometry(0.85, 0.18, 0.20),
+        amberGlowMat
+      );
+      innerTail.position.set(side * 1.35, 1.70, -4.64);
+      car.add(innerTail);
+    }
+
+    // Rear License Plate ("ABJ-01VB")
+    const plate = new THREE.Mesh(
+      new THREE.BoxGeometry(1.15, 0.36, 0.12),
+      new THREE.MeshBasicMaterial({ color: 0xf8fafc })
+    );
+    plate.position.set(0, 1.56, -4.63);
+    car.add(plate);
+
+    // Signature Red + Cyan Horizontal Rear Bumper Trim Stripes (from user screenshot)
+    const rearRedStripe = new THREE.Mesh(
+      new THREE.BoxGeometry(4.35, 0.12, 0.16),
+      redStripeMat
+    );
+    rearRedStripe.position.set(0, 1.16, -4.63);
+    car.add(rearRedStripe);
+
+    const rearCyanStripe = new THREE.Mesh(
+      new THREE.BoxGeometry(3.85, 0.10, 0.16),
+      cyanStripeMat
+    );
+    rearCyanStripe.position.set(0, 1.02, -4.63);
+    car.add(rearCyanStripe);
+
+    // Carbon Rear Diffuser & Quad Exhaust Tips
+    const rearDiffuser = new THREE.Mesh(
+      new THREE.BoxGeometry(4.2, 0.38, 0.35),
+      carbonMat
+    );
+    rearDiffuser.position.set(0, 0.76, -4.52);
+    car.add(rearDiffuser);
+
+    const exhaustGeo = new THREE.CylinderGeometry(0.14, 0.14, 0.45, 12);
+    exhaustGeo.rotateX(Math.PI / 2);
+    for (const ex of [-1.45, -1.12, 1.12, 1.45]) {
+      const pipe = new THREE.Mesh(exhaustGeo, rimMat);
+      pipe.position.set(ex, 0.72, -4.68);
+      car.add(pipe);
+    }
+
+    // 5. Front Kidney Grille & Angel-Eye LED Headlights (+Z is forward)
+    const frontGrille = new THREE.Mesh(
+      new THREE.BoxGeometry(2.1, 0.68, 0.22),
+      carbonMat
+    );
+    frontGrille.position.set(0, 1.28, 4.62);
+    car.add(frontGrille);
+
+    for (const side of [-1, 1]) {
+      const headLamp = new THREE.Mesh(
+        new THREE.BoxGeometry(1.05, 0.34, 0.22),
+        headLightMat
+      );
+      headLamp.position.set(side * 1.55, 1.52, 4.62);
+      car.add(headLamp);
+    }
+
+    // 6. 4 Deep-Dish Alloy Wheels with Tires & Red Brembo Brake Calipers
+    const tireGeo = new THREE.CylinderGeometry(0.78, 0.78, 0.58, 20);
+    tireGeo.rotateZ(Math.PI / 2);
+    const alloyGeo = new THREE.CylinderGeometry(0.54, 0.54, 0.62, 14);
+    alloyGeo.rotateZ(Math.PI / 2);
+
+    const wheelCoords = [
+      [-2.22, 0.78, 2.85],
+      [2.22, 0.78, 2.85],
+      [-2.22, 0.78, -2.85],
+      [2.22, 0.78, -2.85]
+    ];
+    for (const [wx, wy, wz] of wheelCoords) {
+      const tire = new THREE.Mesh(tireGeo, tireMat);
+      tire.position.set(wx, wy, wz);
+      car.add(tire);
+
+      const alloy = new THREE.Mesh(alloyGeo, rimMat);
+      alloy.position.set(wx, wy, wz);
+      car.add(alloy);
+    }
+
+    car.userData = {
+      paintMat,
+      glassMat,
+      trimMat: rearRedStripe.material
+    };
+
+    return car;
+  }
+
   _buildLocalPlayerRig() {
     this.playerGroup = new THREE.Group();
     this.playerGroup.position.copy(this.playerPos);
     this.playerGroup.rotation.y = this.playerHeading;
 
-    // Subtle ground shadow ring under player
+    // Subtle ground indicator ring under player
     const ringGeo = new THREE.RingGeometry(1.1, 1.45, 24);
     ringGeo.rotateX(-Math.PI / 2);
     this.playerRing = new THREE.Mesh(
@@ -1238,34 +1836,12 @@ export class AbujaWorld3D {
     this.playerRing.position.y = 0.24;
     this.playerGroup.add(this.playerRing);
 
-    // Player SUV Vehicle Mesh (visible when inVehicle === true)
-    this.playerVehicleMesh = new THREE.Group();
-    const chassis = new THREE.Mesh(
-      new THREE.BoxGeometry(4.4, 2.2, 8.6),
-      new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.2, metalness: 0.85 })
-    );
-    chassis.position.y = 1.8;
-    chassis.castShadow = true;
-    this.playerVehicleMesh.add(chassis);
-
-    const cabin = new THREE.Mesh(
-      new THREE.BoxGeometry(3.8, 1.7, 5.0),
-      new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.15, metalness: 0.9 })
-    );
-    cabin.position.set(0, 3.4, -0.4);
-    this.playerVehicleMesh.add(cabin);
-
-    const grille = new THREE.Mesh(
-      new THREE.BoxGeometry(3.6, 1.0, 0.3),
-      new THREE.MeshStandardMaterial({ color: 0xfacc15, emissive: 0xca8a04, emissiveIntensity: 0.5 })
-    );
-    grille.position.set(0, 1.8, 4.35);
-    this.playerVehicleMesh.add(grille);
-
+    // Player Widebody Sports Car (visible when inVehicle === true, matching user screenshot)
+    this.playerVehicleMesh = this._buildWidebodySportsCar();
     this.playerVehicleMesh.visible = this.inVehicle;
     this.playerGroup.add(this.playerVehicleMesh);
 
-    // Articulated 3rd-Person Nigeria GTA Character (Pastel Pink Jacket, Black Jeans, Yellow Sneakers)
+    // Articulated Realistic 3rd-Person Nigeria GTA Human Character
     this.playerHuman = this._buildHumanoidRig({
       jacketColor: 0xf472b6,
       shirtColor: 0xf8fafc,
@@ -1405,16 +1981,16 @@ export class AbujaWorld3D {
     this.playerVehicleMesh.visible = this.inVehicle;
     this.playerPedMesh.visible = !this.inVehicle;
     if (this.cameraMode === 'chase') {
-      this.cameraDistance = this.inVehicle ? 34 : 15.5;
-      this.cameraPitch = this.inVehicle ? 0.32 : 0.22;
+      this.cameraDistance = this.inVehicle ? 26 : 15.5;
+      this.cameraPitch = this.inVehicle ? 0.24 : 0.20;
     }
     return this.inVehicle;
   }
 
   cycleCameraMode() {
     this.cameraMode = this.cameraMode === 'chase' ? 'helicopter' : 'chase';
-    this.cameraDistance = this.cameraMode === 'helicopter' ? 195 : (this.inVehicle ? 34 : 15.5);
-    this.cameraPitch = this.cameraMode === 'helicopter' ? 0.78 : (this.inVehicle ? 0.32 : 0.22);
+    this.cameraDistance = this.cameraMode === 'helicopter' ? 195 : (this.inVehicle ? 26 : 15.5);
+    this.cameraPitch = this.cameraMode === 'helicopter' ? 0.78 : (this.inVehicle ? 0.24 : 0.20);
     return this.cameraMode;
   }
 
@@ -1721,16 +2297,27 @@ export class AbujaWorld3D {
   }
 
   _updatePlayerDriving(dt) {
+    // Camera-relative vectors:
+    // Camera sits at playerPos + (sin(yaw), cos(yaw)) * dist looking at playerPos.
+    // Therefore Screen-Forward = (-sin(yaw), -cos(yaw)) and Screen-Right = (+cos(yaw), -sin(yaw)).
     const forwardInput = (this.keys.w ? 1 : 0) - (this.keys.s ? 1 : 0) - this.touchVector.y;
-    const turnInput = (this.keys.a ? 1 : 0) - (this.keys.d ? 1 : 0) - this.touchVector.x;
+    const rightInput = (this.keys.d ? 1 : 0) - (this.keys.a ? 1 : 0) + this.touchVector.x;
 
-    const maxSpeed = this.inVehicle ? (this.keys.shift ? 125 : 82) : (this.keys.shift ? 36 : 22);
+    const maxSpeed = this.inVehicle ? (this.keys.shift ? 132 : 86) : (this.keys.shift ? 38 : 24);
+    const inputMag = Math.min(1, Math.hypot(forwardInput, rightInput));
 
-    if (Math.abs(forwardInput) > 0.05 || Math.abs(turnInput) > 0.05) {
-      const inputAngle = Math.atan2(-turnInput, forwardInput);
-      const targetHeading = this.cameraYaw + inputAngle + Math.PI;
+    if (inputMag > 0.04) {
+      const fwdX = -Math.sin(this.cameraYaw);
+      const fwdZ = -Math.cos(this.cameraYaw);
+      const rightX = Math.cos(this.cameraYaw);
+      const rightZ = -Math.sin(this.cameraYaw);
+
+      const moveX = fwdX * forwardInput + rightX * rightInput;
+      const moveZ = fwdZ * forwardInput + rightZ * rightInput;
+
+      const targetHeading = Math.atan2(moveX, moveZ);
       this.playerHeading = targetHeading;
-      this.playerSpeed = maxSpeed * Math.min(1, Math.hypot(forwardInput, turnInput));
+      this.playerSpeed = maxSpeed * inputMag;
 
       this.playerPos.x += Math.sin(this.playerHeading) * this.playerSpeed * dt;
       this.playerPos.z += Math.cos(this.playerHeading) * this.playerSpeed * dt;
@@ -1740,6 +2327,11 @@ export class AbujaWorld3D {
 
       this.playerGroup.position.copy(this.playerPos);
       this.playerGroup.rotation.y = this.playerHeading;
+
+      // Gently steer chase camera behind vehicle/character when turning left/right while moving forward
+      if (this.inVehicle && Math.abs(forwardInput) > 0.1) {
+        this.cameraYaw -= rightInput * dt * 0.95;
+      }
 
       this.walkCycle += dt * (this.keys.shift ? 15 : 10);
       this._checkDistrictProximity();
@@ -1770,8 +2362,8 @@ export class AbujaWorld3D {
 
     const horizDist = Math.cos(this.cameraPitch) * this.cameraDistance;
     const vertDist = Math.sin(this.cameraPitch) * this.cameraDistance;
-    const minCamHeight = this.inVehicle ? 7.5 : 3.6;
-    const lookTargetY = this.inVehicle ? 4.2 : 3.5;
+    const minCamHeight = this.inVehicle ? 6.2 : 3.6;
+    const lookTargetY = this.inVehicle ? 3.2 : 3.5;
 
     const desiredCam = new THREE.Vector3(
       this.playerPos.x + Math.sin(this.cameraYaw) * horizDist,
@@ -1812,17 +2404,17 @@ export class AbujaWorld3D {
   setPlayerVehicleAppearance(carId = 'corolla') {
     if (!this.playerVehicleMesh) return;
     const palette = {
-      along: { body: 0x475569, cabin: 0x334155, trim: 0x94a3b8 },
-      corolla: { body: 0x1e3a8a, cabin: 0x1e293b, trim: 0x38bdf8 },
-      rx350: { body: 0x7c2d12, cabin: 0x1c1917, trim: 0xfacc15 },
-      prado: { body: 0x090d16, cabin: 0x020617, trim: 0x10b981 },
+      along: { body: 0xe2e8f0, cabin: 0x1e293b, trim: 0xef4444 },
+      corolla: { body: 0xf8fafc, cabin: 0x090d16, trim: 0xef4444 },
+      rx350: { body: 0xf1f5f9, cabin: 0x090d16, trim: 0xfacc15 },
+      prado: { body: 0x0f172a, cabin: 0x020617, trim: 0x10b981 },
       g63: { body: 0x111827, cabin: 0x000000, trim: 0xf59e0b }
     };
     const cfg = palette[carId] || palette.corolla;
-    const children = this.playerVehicleMesh.children;
-    if (children[0]?.material) children[0].material.color.setHex(cfg.body);
-    if (children[1]?.material) children[1].material.color.setHex(cfg.cabin);
-    if (children[2]?.material) children[2].material.color.setHex(cfg.trim);
+    const ud = this.playerVehicleMesh.userData;
+    if (ud?.paintMat) ud.paintMat.color.setHex(cfg.body);
+    if (ud?.glassMat) ud.glassMat.color.setHex(cfg.cabin);
+    if (ud?.trimMat) ud.trimMat.color.setHex(cfg.trim);
   }
 
   syncPlayerHouses(plots = []) {

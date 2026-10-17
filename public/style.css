@@ -2393,33 +2393,388 @@ html, body {
   font-size: 10px;
 }
 
+/* 360° Touch Analog Joystick + D-Pad Ring */
 .nigeria-gta-fullscreen .gta-drive-pad {
-  right: 72px;
+  position: fixed;
+  right: 74px;
   bottom: 14px;
-  z-index: 28;
+  z-index: 29;
+  padding: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(15, 23, 42, 0.85) 0%, rgba(6, 10, 18, 0.94) 100%);
+  border: 2px solid rgba(148, 163, 184, 0.42);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.72), inset 0 0 14px rgba(56, 189, 248, 0.14);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
+.nigeria-gta-fullscreen .dpad-btn {
+  width: 40px;
+  height: 36px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 900;
+  background: rgba(30, 41, 59, 0.92);
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  color: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+  transition: transform 0.08s ease, background 0.12s ease, border-color 0.12s ease;
+}
+
+.nigeria-gta-fullscreen .dpad-btn:active,
+.nigeria-gta-fullscreen .dpad-btn.active {
+  background: #facc15;
+  color: #090d16;
+  border-color: #fef08a;
+  transform: scale(0.92);
+}
+
+.gta-analog-ring {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(30, 41, 59, 0.95) 0%, rgba(9, 13, 22, 0.98) 100%);
+  border: 2px dashed rgba(56, 189, 248, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: grab;
+  touch-action: none;
+}
+
+.gta-analog-ring:active {
+  cursor: grabbing;
+  border-color: #facc15;
+}
+
+.gta-analog-knob {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #38bdf8 0%, #2563eb 100%);
+  border: 2px solid #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  pointer-events: none;
+  transition: transform 0.04s linear;
+}
+
+/* Ergonomic 1-Tap Street & Sports Car Action Cluster */
+.gta-mobile-action-cluster {
+  position: fixed;
+  right: 234px;
+  bottom: 18px;
+  z-index: 29;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.gmac-btn {
+  min-width: 68px;
+  height: 56px;
+  border-radius: 14px;
+  background: rgba(12, 18, 30, 0.90);
+  backdrop-filter: blur(8px);
+  border: 2px solid rgba(255, 255, 255, 0.28);
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 4px 8px;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.68);
+  touch-action: manipulation;
+  transition: transform 0.1s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.gmac-btn:hover {
+  transform: translateY(-2px);
+}
+
+.gmac-btn:active,
+.gmac-btn.active {
+  transform: scale(0.93);
+}
+
+.gmac-btn.gmac-drive {
+  border-color: #38bdf8;
+  background: linear-gradient(145deg, rgba(14, 116, 144, 0.88), rgba(15, 23, 42, 0.95));
+}
+
+.gmac-btn.gmac-drive.active {
+  border-color: #4ade80;
+  background: linear-gradient(145deg, rgba(5, 150, 105, 0.92), rgba(6, 78, 59, 0.96));
+}
+
+.gmac-btn.gmac-punch {
+  border-color: #f87171;
+  background: linear-gradient(145deg, rgba(185, 28, 28, 0.85), rgba(15, 23, 42, 0.95));
+}
+
+.gmac-btn.gmac-sprint {
+  border-color: #facc15;
+  background: linear-gradient(145deg, rgba(180, 83, 9, 0.85), rgba(15, 23, 42, 0.95));
+}
+
+.gmac-btn.gmac-sprint.active {
+  background: #eab308;
+  color: #090d16;
+}
+
+.gmac-btn.gmac-spray {
+  border-color: #34d399;
+  background: linear-gradient(145deg, rgba(4, 120, 87, 0.85), rgba(15, 23, 42, 0.95));
+}
+
+.gmac-ico {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.gmac-lbl {
+  font-family: var(--font-display);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+}
+
+/* Mobile Tap-Outside Drawer Backdrop */
+.mobile-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.48);
+  backdrop-filter: blur(2px);
+  z-index: 38;
+}
+
+.mobile-drawer-backdrop[hidden] {
+  display: none !important;
+}
+
+/* ==========================================================================
+   MOBILE-FIRST ERGONOMIC GTA LAYOUT (PHONES & TABLETS <= 768px)
+   ========================================================================== */
 @media (max-width: 768px) {
   .nigeria-gta-fullscreen .gta-topbar-minimal {
-    max-width: calc(100vw - 180px);
-    padding: 3px 7px;
+    top: 6px;
+    left: 6px;
+    max-width: calc(100vw - 175px);
+    padding: 3px 8px;
+    gap: 5px;
   }
+
+  .nigeria-gta-fullscreen .gta-radio-pill,
   .nigeria-gta-fullscreen .gta-center-hud {
     display: none;
   }
-  .gta-radar-frame.circular-ngta-radar {
-    width: 136px;
-    height: 136px;
-    border-width: 5px;
+
+  .nigeria-gta-fullscreen .stage-top-left-overlay {
+    top: 46px;
+    left: 6px;
   }
+
+  .world3d-control-pills {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .w3d-ctrl-btn {
+    padding: 4px 7px;
+    font-size: 10px;
+  }
+
+  /* Top-Right Classic GTA HUD sits flush right on mobile since Icon Dock moves to bottom */
+  .ngta-topright-hud {
+    top: 6px;
+    right: 8px;
+    gap: 6px;
+  }
+
   .ngta-fist-box {
-    width: 54px;
-    height: 54px;
+    width: 50px;
+    height: 50px;
+    border-width: 2.5px;
+    border-radius: 11px;
   }
+
+  .ngta-fist-emoji {
+    font-size: 24px;
+  }
+
   .ngta-clock-digits,
   .ngta-cash-digits {
-    font-size: 20px;
+    font-size: 18px;
+  }
+
+  .ngta-bar-outer {
+    width: 92px;
+    height: 9px;
+  }
+
+  /* Circular Live Street GPS Radar sits neatly on Top-Left below control pills on mobile */
+  .nigeria-gta-fullscreen .gta-radar-dock {
+    top: 84px;
+    left: 8px;
+    bottom: auto;
+    align-items: flex-start;
+  }
+
+  .gta-radar-frame.circular-ngta-radar {
+    width: 110px;
+    height: 110px;
+    border-width: 4px;
+  }
+
+  .circular-ngta-radar .radar-north-badge {
+    width: 20px;
+    height: 20px;
+    font-size: 10px;
+    top: 4px;
+    right: 10px;
+  }
+
+  .circular-ngta-radar .radar-gps-label {
+    font-size: 7.5px;
+    padding: 1px 6px;
+    bottom: 5px;
+  }
+
+  .nigeria-gta-fullscreen .gta-radar-stats-legend {
+    font-size: 9px;
+    padding: 2px 7px;
+    gap: 5px;
+  }
+
+  /* Left Thumb: 360° Touch Virtual Analog Joystick + D-Pad on Bottom-Left */
+  .nigeria-gta-fullscreen .gta-drive-pad {
+    left: 10px;
+    right: auto;
+    bottom: 70px;
+    padding: 6px;
+  }
+
+  .nigeria-gta-fullscreen .dpad-btn {
+    width: 38px;
+    height: 34px;
+    font-size: 13px;
+  }
+
+  .gta-analog-ring {
+    width: 52px;
+    height: 52px;
+  }
+
+  /* Right Thumb: Big 1-Tap Street & Car Action Buttons on Bottom-Right */
+  .gta-mobile-action-cluster {
+    right: 10px;
+    bottom: 70px;
+    gap: 7px;
+  }
+
+  .gmac-btn {
+    min-width: 64px;
+    height: 52px;
+    border-radius: 13px;
+  }
+
+  /* Bottom Edge: Horizontal Swipeable App Bar for All Game Menus */
+  .gta-floating-icon-dock {
+    top: auto;
+    bottom: 6px;
+    left: 6px;
+    right: 6px;
+    height: 56px;
+    flex-direction: row;
+    align-items: center;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 4px 6px;
+    gap: 6px;
+    border-radius: 16px;
+    background: rgba(9, 13, 22, 0.92);
+    border: 1.5px solid rgba(250, 204, 21, 0.45);
+  }
+
+  .gta-dock-icon {
+    min-width: 54px;
+    height: 46px;
+    flex-shrink: 0;
+    border-radius: 12px;
+  }
+
+  .gta-dock-icon .gdi-ico {
+    font-size: 18px;
+  }
+
+  .gta-dock-icon .gdi-lbl {
+    font-size: 8px;
+  }
+
+  /* Smooth Mobile Bottom-Sheet Command Deck Drawer */
+  .nigeria-gta-fullscreen .command-deck-panel {
+    top: auto;
+    left: 6px;
+    right: 6px;
+    bottom: 66px;
+    width: auto;
+    height: min(74vh, 560px);
+    border-radius: 18px;
+    z-index: 42;
+  }
+
+  .nigeria-gta-fullscreen .command-deck-panel.is-drawer-closed {
+    transform: translateY(120%);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* Make inner forms, grids, and buttons effortless to tap on mobile */
+  .form-row-2col,
+  .starter-track-grid,
+  .vault-notes-showcase,
+  .dh-tasks-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .deck-tabs {
+    padding: 6px 8px;
+    gap: 6px;
+  }
+
+  .tab-btn {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  .action-card {
+    padding: 12px;
+  }
+
+  .btn-execute,
+  .btn-primary {
+    min-height: 42px;
+    font-size: 13px;
+  }
+
+  .modal-card {
+    padding: 14px;
+    max-height: 92vh;
   }
 }
+
 
 

@@ -3938,17 +3938,34 @@ class AbujaClientApp {
       this._renderAll();
     });
 
-    document.getElementById('btn-toggle-drive')?.addEventListener('click', (e) => {
+    const syncDriveButtons = (inCar) => {
+      const topBtn = document.getElementById('btn-toggle-drive');
+      if (topBtn) {
+        topBtn.textContent = inCar ? '🏎️ Sports Car (F)' : '🚶🏾 Walk Mode (F)';
+        topBtn.classList.toggle('active', inCar);
+      }
+      const mobBtn = document.getElementById('btn-mobile-drive');
+      const mobIco = document.getElementById('gmac-drive-ico');
+      const mobLbl = document.getElementById('gmac-drive-lbl');
+      if (mobBtn) mobBtn.classList.toggle('active', inCar);
+      if (mobIco) mobIco.textContent = inCar ? '🚶🏾' : '🏎️';
+      if (mobLbl) mobLbl.textContent = inCar ? 'EXIT CAR' : 'ENTER CAR';
+    };
+
+    const handleToggleDrive = () => {
       if (!this.world3d) return;
       const inCar = this.world3d.toggleVehicleMode();
-      e.currentTarget.textContent = inCar ? '🚙 SUV Mode (F)' : '🚶 On Foot (F)';
-      e.currentTarget.classList.toggle('active', inCar);
-    });
+      syncDriveButtons(inCar);
+      this.showToast(inCar ? '🏎️ Entered Widebody Sports Coupe! Use Joystick or WASD to drive.' : '🚶🏾 Stepped out onto the street walkway.');
+    };
+
+    document.getElementById('btn-toggle-drive')?.addEventListener('click', handleToggleDrive);
+    document.getElementById('btn-mobile-drive')?.addEventListener('click', handleToggleDrive);
 
     document.getElementById('btn-toggle-cam')?.addEventListener('click', (e) => {
       if (!this.world3d) return;
       const mode = this.world3d.cycleCameraMode();
-      e.currentTarget.textContent = mode === 'helicopter' ? '🚁 Chopper Cam (V)' : '🎥 Chase Cam (V)';
+      e.currentTarget.textContent = mode === 'helicopter' ? '🚁 Chopper Cam (V)' : '🎥 3rd-Person (V)';
     });
 
     document.getElementById('btn-toggle-2dmap')?.addEventListener('click', (e) => {
@@ -3961,13 +3978,13 @@ class AbujaClientApp {
     document.getElementById('btn-toggle-lowpower')?.addEventListener('click', (e) => {
       if (!this.world3d) return;
       const isLow = this.world3d.toggleLowPowerMode();
-      e.currentTarget.textContent = isLow ? '❄️ Cool Mode: ON' : '❄️ Cool Mode';
+      e.currentTarget.textContent = isLow ? '❄️ON' : '❄️';
       e.currentTarget.classList.toggle('active', isLow);
-      this.showToast(isLow ? '❄️ Cool Mode enabled (30 FPS & 1x DPI battery saver)' : '⚡ Full 60 FPS 3D rendering restored');
+      this.showToast(isLow ? '❄️ Cool Mode enabled (Battery Saver)' : '⚡ Full 60 FPS 3D rendering restored');
     });
 
-    // Spray ₦5,000 Naira in 3D!
-    document.getElementById('btn-spray-naira')?.addEventListener('click', () => {
+    // Spray ₦5,000 Naira in 3D! (Shared by Top-Left Pill & Mobile Action Cluster)
+    const triggerSprayNaira = () => {
       const sprayAmt = 5000;
       if (!this.game.canAfford(sprayAmt)) {
         this.showToast('⚠️ Need at least ₦5,000 to spray Naira!');
@@ -3992,23 +4009,107 @@ class AbujaClientApp {
 
       this._renderHUD();
       this._saveGame();
+    };
+
+    document.getElementById('btn-spray-naira')?.addEventListener('click', triggerSprayNaira);
+    document.getElementById('btn-mobile-spray')?.addEventListener('click', triggerSprayNaira);
+
+    // Mobile 1-Tap Street Punch & Turbo Sprint Buttons
+    document.getElementById('btn-mobile-punch')?.addEventListener('click', () => {
+      if (this.world3d) {
+        this.world3d.triggerStreetPunch();
+        syncDriveButtons(this.world3d.inVehicle);
+      }
     });
 
-    // On-screen WASD Driving Pad
+    const sprintBtn = document.getElementById('btn-mobile-sprint');
+    if (sprintBtn) {
+      let sprintLocked = false;
+      sprintBtn.addEventListener('click', () => {
+        sprintLocked = !sprintLocked;
+        if (this.world3d) this.world3d.keys.shift = sprintLocked;
+        sprintBtn.classList.toggle('active', sprintLocked);
+      });
+    }
+
+    // On-screen WASD Directional Buttons (Right = 'd', Left = 'a')
     document.querySelectorAll('#gta-drive-pad .dpad-btn').forEach((btn) => {
       const dir = btn.dataset.dir;
       const start = (e) => {
         e.preventDefault();
+        btn.classList.add('active');
         if (this.world3d) this.world3d.keys[dir] = true;
       };
       const end = (e) => {
         e.preventDefault();
+        btn.classList.remove('active');
         if (this.world3d) this.world3d.keys[dir] = false;
       };
       btn.addEventListener('pointerdown', start);
       btn.addEventListener('pointerup', end);
       btn.addEventListener('pointerleave', end);
+      btn.addEventListener('pointercancel', end);
     });
+
+    // Smooth 360° Touch Virtual Analog Joystick (#gta-analog-ring)
+    const analogRing = document.getElementById('gta-analog-ring');
+    const analogKnob = document.getElementById('gta-analog-knob');
+    if (analogRing && analogKnob) {
+      let joyActive = false;
+      let joyPointerId = null;
+      const maxRadius = 22;
+
+      const updateJoystick = (clientX, clientY) => {
+        const rect = analogRing.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const dx = clientX - cx;
+        const dy = clientY - cy;
+        const dist = Math.hypot(dx, dy);
+        const clamped = Math.min(maxRadius, dist);
+        const angle = Math.atan2(dy, dx);
+        const kx = Math.cos(angle) * clamped;
+        const ky = Math.sin(angle) * clamped;
+
+        analogKnob.style.transform = `translate(${kx.toFixed(1)}px, ${ky.toFixed(1)}px)`;
+
+        if (this.world3d) {
+          // kx > 0 = dragging right -> touchVector.x > 0 (moves Screen Right)
+          // ky < 0 = dragging up    -> touchVector.y < 0 (moves Screen Forward)
+          this.world3d.touchVector.x = kx / maxRadius;
+          this.world3d.touchVector.y = ky / maxRadius;
+        }
+      };
+
+      const resetJoystick = () => {
+        joyActive = false;
+        joyPointerId = null;
+        analogKnob.style.transform = 'translate(0px, 0px)';
+        if (this.world3d) {
+          this.world3d.touchVector.x = 0;
+          this.world3d.touchVector.y = 0;
+        }
+      };
+
+      analogRing.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        joyActive = true;
+        joyPointerId = e.pointerId;
+        analogRing.setPointerCapture?.(e.pointerId);
+        updateJoystick(e.clientX, e.clientY);
+      });
+
+      analogRing.addEventListener('pointermove', (e) => {
+        if (!joyActive || (joyPointerId !== null && e.pointerId !== joyPointerId)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        updateJoystick(e.clientX, e.clientY);
+      });
+
+      analogRing.addEventListener('pointerup', resetJoystick);
+      analogRing.addEventListener('pointercancel', resetJoystick);
+    }
 
     // Open / Close CBN Naira Vault Modal
     document.getElementById('btn-open-vault')?.addEventListener('click', () => this.openNairaVaultModal());
@@ -4242,6 +4343,10 @@ class AbujaClientApp {
       this.closeDeckDrawer();
     });
 
+    document.getElementById('mobile-drawer-backdrop')?.addEventListener('click', () => {
+      this.closeDeckDrawer();
+    });
+
     // Classic Top-Right Nigeria GTA Fist Icon (Street Punch / Knockdown)
     document.getElementById('btn-gta-fist')?.addEventListener('click', () => {
       if (this.world3d) {
@@ -4334,8 +4439,8 @@ class AbujaClientApp {
       if (this.world3d) {
         this.world3d.flyToDistrict(this.game.s.loc.district);
         this.world3d.syncPlayerHouses(Object.values(this.game.s.social.plots || {}));
-        if (this.game.s.social.car && typeof this.world3d.setVehicleSkin === 'function') {
-          this.world3d.setVehicleSkin(this.game.s.social.car);
+        if (this.game.s.social.car && typeof this.world3d.setPlayerVehicleAppearance === 'function') {
+          this.world3d.setPlayerVehicleAppearance(this.game.s.social.car);
         }
         this.world3d.spawnNairaRain(35);
       }
@@ -4383,12 +4488,16 @@ class AbujaClientApp {
   openDeckTab(tabId) {
     const deck = document.getElementById('command-deck-panel');
     if (deck) deck.classList.remove('is-drawer-closed');
+    const backdrop = document.getElementById('mobile-drawer-backdrop');
+    if (backdrop) backdrop.hidden = window.innerWidth > 768;
     this.switchTab(tabId);
   }
 
   closeDeckDrawer() {
     const deck = document.getElementById('command-deck-panel');
     if (deck) deck.classList.add('is-drawer-closed');
+    const backdrop = document.getElementById('mobile-drawer-backdrop');
+    if (backdrop) backdrop.hidden = true;
     document.querySelectorAll('.gta-dock-icon[data-dock-tab]').forEach((b) => {
       b.classList.remove('active');
     });
@@ -4398,6 +4507,8 @@ class AbujaClientApp {
     this.activeTab = tabId;
     const deck = document.getElementById('command-deck-panel');
     if (deck) deck.classList.remove('is-drawer-closed');
+    const backdrop = document.getElementById('mobile-drawer-backdrop');
+    if (backdrop) backdrop.hidden = window.innerWidth > 768;
 
     document.querySelectorAll('.deck-tabs .tab-btn').forEach((b) => {
       b.classList.toggle('active', b.dataset.tab === tabId);

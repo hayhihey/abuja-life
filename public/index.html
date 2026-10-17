@@ -279,19 +279,46 @@
           </div>
         </div>
 
-        <!-- Bottom-Right On-Screen Walking / Driving Pad -->
-        <div class="gta-drive-pad" id="gta-drive-pad">
-          <button class="dpad-btn up" data-dir="w" title="Move Forward (W)">▲</button>
+        <!-- Bottom-Left / Right 360° Touch Virtual Analog Joystick + D-Pad -->
+        <div class="gta-drive-pad" id="gta-drive-pad" aria-label="360 Touch Joystick and Steering Pad">
+          <button type="button" class="dpad-btn up" data-dir="w" title="Move Forward (W)">▲</button>
           <div class="dpad-mid-row">
-            <button class="dpad-btn left" data-dir="a" title="Turn Left (A)">◀</button>
-            <span class="dpad-center">WASD</span>
-            <button class="dpad-btn right" data-dir="d" title="Turn Right (D)">▶</button>
+            <button type="button" class="dpad-btn left" data-dir="a" title="Move Left (A)">◀</button>
+            <div class="gta-analog-ring" id="gta-analog-ring" title="Drag thumbstick 360° to walk or steer">
+              <div class="gta-analog-knob" id="gta-analog-knob">
+                <span>🕹️</span>
+              </div>
+            </div>
+            <button type="button" class="dpad-btn right" data-dir="d" title="Move Right (D)">▶</button>
           </div>
-          <button class="dpad-btn down" data-dir="s" title="Move Back (S)">▼</button>
+          <button type="button" class="dpad-btn down" data-dir="s" title="Move Back (S)">▼</button>
+        </div>
+
+        <!-- Ergonomic 1-Tap Street & Sports Car Action Cluster (Thumb-Friendly for Mobile & Desktop) -->
+        <div class="gta-mobile-action-cluster" id="gta-mobile-action-cluster" aria-label="Quick Street Actions">
+          <button type="button" class="gmac-btn gmac-drive" id="btn-mobile-drive" title="Enter / Exit Widebody Sports Car (Shortcut: F)">
+            <span class="gmac-ico" id="gmac-drive-ico">🏎️</span>
+            <span class="gmac-lbl" id="gmac-drive-lbl">ENTER CAR</span>
+          </button>
+          <button type="button" class="gmac-btn gmac-punch" id="btn-mobile-punch" title="Throw Street Punch / Knockdown (Shortcut: Space)">
+            <span class="gmac-ico">👊🏾</span>
+            <span class="gmac-lbl">PUNCH</span>
+          </button>
+          <button type="button" class="gmac-btn gmac-sprint" id="btn-mobile-sprint" title="Hold or Tap for Turbo Boost / Sprint (Shortcut: Shift)">
+            <span class="gmac-ico">⚡</span>
+            <span class="gmac-lbl">BOOST</span>
+          </button>
+          <button type="button" class="gmac-btn gmac-spray" id="btn-mobile-spray" title="Spray ₦5,000 Cash in 3D (+Clout)">
+            <span class="gmac-ico">💸</span>
+            <span class="gmac-lbl">SPRAY ₦</span>
+          </button>
         </div>
       </section>
 
-      <!-- RIGHT: FLOATING COLLAPSIBLE COMMAND DECK DRAWER (Opens via Icon Dock) -->
+      <!-- Mobile Tap-Outside Backdrop to Dismiss Drawer Effortlessly -->
+      <div class="mobile-drawer-backdrop" id="mobile-drawer-backdrop" hidden></div>
+
+      <!-- RIGHT / BOTTOM-SHEET: FLOATING COLLAPSIBLE COMMAND DECK DRAWER (Opens via Icon Dock) -->
       <section class="command-deck-panel is-drawer-closed" id="command-deck-panel">
 
         <!-- Drawer Close Header + Visual Naira Cash Strip -->
