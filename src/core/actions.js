@@ -746,6 +746,98 @@ export const ACTIONS = [
       }
     },
   },
+  {
+    id: 'baba_alaye_tuale', group: 'Network',
+    name: (g) => (g.s.meta?.lifestyle === 'baba_alaye' || g.s.meta?.lifestyle === 'agbero_chairman'
+      ? '🗣️ Command Area Boys & Collect "Owo Ile" Homage'
+      : '🗣️ Hail "Tuale Baba Alaye!" & Settle Area Boys (₦5k)'),
+    icon: '🗣️',
+    desc: () => '"Tuale Baba Alaye! Nothing Spoil!" Either collect street homage as Area Father or bless the boys for street immunity & protection.',
+    where: (g) => atKind(g, 'agbero_park', 'transport', 'market', 'nightlife'),
+    cost: (g) => (g.s.meta?.lifestyle === 'baba_alaye' || g.s.meta?.lifestyle === 'agbero_chairman'
+      ? { min: 45, energy: 6 }
+      : { min: 25, ngn: 5000 }),
+    async run(g) {
+      const isAreaBoss = g.s.meta?.lifestyle === 'baba_alaye' || g.s.meta?.lifestyle === 'agbero_chairman';
+      if (isAreaBoss) {
+        const homage = nice(g.rng.int(24000, 56000), 1000);
+        g.earn(homage, { cash: true });
+        g.stat('clout', 1.8);
+        g.log(`"Tuale Baba Alaye!" Visiting film crews, convoy drivers, and shop owners paid ${ngn(homage)} "Owo Ile" homage into your hand!`, 'good', '🗣️');
+      } else {
+        g.stat('clout', 2.2);
+        g.stat('sanity', 10);
+        g.s.heat = clamp(g.s.heat - 8);
+        if (g.s.social) g.s.social.steeze = clamp((g.s.social.steeze || 75) + 5, 0, 100);
+        g.log('"Tuale Baba Alaye! Nothing Spoil!" The area boys hailed your name and cleared the road for your whip (-8 Heat, +2.2 Clout)!', 'good', '🗣️');
+      }
+    },
+  },
+  {
+    id: 'agbero_owoda_tickets', group: 'Work',
+    name: '🚐 Agbero Park Union Ticket Collection ("Owo Da?!")',
+    icon: '🚐',
+    desc: () => '"Wuse! Berger! Nyanya! Oshodi! Enter with your change o!" Collect daily loading tickets from commercial drivers.',
+    where: (g) => atKind(g, 'agbero_park', 'transport'),
+    cost: () => ({ min: 90, energy: 14 }),
+    async run(g) {
+      const isUnionBoss = g.s.meta?.lifestyle === 'agbero_chairman' || g.s.meta?.lifestyle === 'baba_alaye';
+      const mult = isUnionBoss ? 1.85 : 1.0;
+      const take = nice(g.rng.int(22000, 48000) * mult, 500);
+      g.earn(take, { cash: true });
+      if (g.s.social) g.s.social.composure = clamp((g.s.social.composure || 75) + 4, 0, 100);
+      g.log(`"Owo Da?! Smart yourself!" Collected ${ngn(take)} in union loading tickets at the motor park.`, 'good', '🚐');
+      if (g.rng.chance(0.35)) gainContact(g, 'dispatcher', 1, 'At the loading bay, you link up with');
+    },
+  },
+  {
+    id: 'aso_drive_parley', group: 'Network',
+    name: '👑 Aso Drive / Banana Island Billionaire Parley (₦50k)',
+    icon: '👑',
+    desc: () => 'High-level midnight parley behind the armored gates of Aso Drive (Asokoro) or Banana Island (Ikoyi).',
+    where: (g) => atKind(g, 'asodrive'),
+    cost: () => ({ min: 120, energy: 10, ngn: 50000 }),
+    async run(g) {
+      g.stat('clout', 5.5);
+      g.stat('sanity', 12);
+      if (g.s.social) {
+        g.s.social.steeze = clamp((g.s.social.steeze || 80) + 8, 0, 100);
+        g.s.social.composure = clamp((g.s.social.composure || 80) + 8, 0, 100);
+      }
+      g.log('Private parley on Aso Drive / Banana Island! Convoys parked outside while billion-Naira allocations are discussed.', 'good', '👑');
+      gainContact(g, randomContactType(g.rng, { civil_servant: 4, contractor: 4 }), 3, 'Over vintage cognac on Aso Drive, you exchange private numbers with');
+    },
+  },
+  {
+    id: 'jabi_lake_jetski', group: 'Place',
+    name: '🛥️ Jabi Lake Jet-Ski & Sunset Yacht Cruise (₦25k)',
+    icon: '🛥️',
+    desc: () => 'Ride high-speed jet-skis across Jabi Lake Waterfront and chill on the Boat Club deck.',
+    where: (g) => atKind(g, 'jabi_lake_club', 'recreation'),
+    cost: () => ({ min: 110, energy: 8, ngn: 25000 }),
+    async run(g) {
+      g.stat('sanity', 26);
+      g.stat('clout', 2.8);
+      if (g.s.social) g.s.social.steeze = clamp((g.s.social.steeze || 80) + 6, 0, 100);
+      g.log(' Golden hour jet-skiing across Jabi Lake! Sunset content & Boat Club networking (+26 Sanity, +2.8 Clout).', 'good', '🛥️');
+      if (g.rng.chance(0.45)) gainContact(g, randomContactType(g.rng, { tech_founder: 3, promoter: 2, contractor: 2 }), 2, 'On the Jabi Boat Club pontoon, you meet');
+    },
+  },
+  {
+    id: 'eko_atlantic_deal', group: 'Work',
+    name: '🌊 Eko Atlantic & Lekki-Ikoyi Bridge Venture Deal (₦35k)',
+    icon: '🌉',
+    desc: () => 'Pitch an Abuja–Lagos corridor deal overlooking Eko Atlantic City and the Lekki-Ikoyi Link Bridge.',
+    where: (g) => atKind(g, 'eko_atlantic', 'lagos_landmark'),
+    cost: () => ({ min: 140, energy: 14, ngn: 35000 }),
+    async run(g) {
+      const payout = nice(g.rng.int(65000, 135000), 1000);
+      g.earn(payout, { bank: true });
+      g.stat('clout', 3.2);
+      g.log(`"Eko for Show!" Closed a major Lagos–Abuja venture deal in Victoria Island: +${ngn(payout)} wired!`, 'good', '🌊');
+      if (g.rng.chance(0.5)) gainContact(g, randomContactType(g.rng, { tech_founder: 3, contractor: 3, promoter: 2 }), 2, 'At a Victoria Island rooftop, you connect with');
+    },
+  },
 ];
 
 export const ACTIONS_BY_ID = Object.fromEntries(ACTIONS.map((a) => [a.id, a]));

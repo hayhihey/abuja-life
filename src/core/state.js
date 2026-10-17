@@ -160,7 +160,7 @@ export function newState({
 // ---------------------------------------------------------------- selectors
 export const fundsOf = (s) => s.cash + s.bank;
 
-const PLOT_VALUATION = { kubwa: 1500000, lugbe: 2200000, jabi: 5500000, wuse2: 8500000, maitama: 16000000 };
+const PLOT_VALUATION = { kubwa: 1500000, lugbe: 2200000, dawaki: 3000000, jabi: 5500000, wuse2: 8500000, guzape: 11000000, maitama: 16000000, asokoro: 21000000, lagos_island: 24000000 };
 const CAR_VALUATION = { along: 0, corolla: 1200000, rx350: 4800000, prado: 9500000, g63: 15000000 };
 
 export function netWorth(s) {

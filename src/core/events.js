@@ -158,6 +158,49 @@ export const EVENTS = [
     },
   },
   {
+    id: 'baba_alaye_hail', triggers: ['arrive'],
+    p(g, { district }) {
+      return ['utako', 'nyanya', 'wuse2', 'lagos_mainland', 'lagos_island', 'garki'].includes(district.id) ? 0.14 : 0;
+    },
+    async run(g, { district }) {
+      const s = g.s;
+      const isAreaBoss = s.meta?.lifestyle === 'baba_alaye' || s.meta?.lifestyle === 'agbero_chairman';
+      const dashAmt = 3000;
+      const id = await g.ask({
+        title: '🗣️ "Tuale Baba Alaye! Find Something For Boys!"',
+        icon: '🗣️',
+        body: `As you pull up in ${district.name}, Baba Alaye and two Agbero union boys drum on your bonnet with big grins: "Tuale Chairman! Nothing spoil! Your boys dey ground—drop small Owo Ile make we guard your whip!"`,
+        options: [
+          { id: 'bless', label: `"Nothing Spoil!" — Dash them ${ngn(dashAmt)}`, sub: '+2 Clout, +6 Sanity, -5 Heat (Street protection)', disabled: !g.canAfford(dashAmt), reason: 'Need ₦3,000' },
+          { id: 'code', label: isAreaBoss ? '🗣️ Flash Area Father Union Sign (Collect Homage Instead!)' : '🗣️ Hail back in street lingo ("No Gree For Anybody!")', sub: isAreaBoss ? 'Earn ₦10,000 union tribute!' : 'Uses Composure & Clout' },
+          { id: 'ignore', label: 'Wind up tinted glass and drive past', sub: 'Small sanity hit' },
+        ],
+      });
+      if (id === 'bless') {
+        g.pay(dashAmt);
+        g.stat('clout', 2);
+        g.stat('sanity', 6);
+        s.heat = clamp(s.heat - 5);
+        g.log(`"Tuale Baba Alaye! Odogwu Paranran!" The boys salute and clear traffic for you in ${district.name}.`, 'good', '🗣️');
+      } else if (id === 'code') {
+        if (isAreaBoss) {
+          g.earn(10000, { cash: true });
+          g.stat('clout', 1.5);
+          g.log('"Area Father himself!" The park boys immediately remit ₦10,000 loading tribute into your hand!', 'good', '🚐');
+        } else if (g.rng.chance(0.55 + s.clout / 120)) {
+          g.stat('clout', 1);
+          g.log('You hail Baba Alaye by his street nickname! He laughs and waves you through for free.', 'good', '🤝');
+        } else {
+          g.stat('sanity', -4);
+          g.log('Agbero boys hiss: "All this English no dey buy Gala o!"', 'warn', '🚐');
+        }
+      } else {
+        g.stat('sanity', -3);
+        g.log('You wind up your glass and ignore the Agbero callers.', 'info', '🚙');
+      }
+    },
+  },
+  {
     id: 'stop_and_search', triggers: ['arrive'],
     p(g) { return g.s.heat >= 60 ? (g.s.heat - 55) / 100 * 0.4 : 0; },
     async run(g) {

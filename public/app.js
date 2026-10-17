@@ -1012,9 +1012,11 @@ class AbujaClientApp {
       { id: 'lugbe', name: 'Lugbe Airport Corridor (500sqm)', zone: 2, price: 120000, desc: 'High-density residential commuter belt. Fast rental yield.' },
       { id: 'kubwa', name: 'Kubwa Train Link District (600sqm)', zone: 2, price: 160000, desc: 'Starter homes and steady young-family tenant market.' },
       { id: 'dawaki', name: 'Dawaki Hillside Heights (650sqm)', zone: 2, price: 220000, desc: 'Scenic rocky quarry views and breezy residential plots.' },
-      { id: 'jabi', name: 'Jabi Lakeview Commercial (800sqm)', zone: 1, price: 480000, desc: 'Prime Zone 1 waterfront corridor for tech founders and shortlets.' },
+      { id: 'jabi', name: 'Jabi Lakeview Commercial (800sqm)', zone: 1, price: 480000, desc: 'Prime Zone 1 waterfront corridor for tech founders, yacht club access, and shortlets.' },
       { id: 'guzape', name: 'Guzape Diplomatic Ridge (900sqm)', zone: 1, price: 850000, desc: 'Elite cliffside topography overlooking Asokoro. High political status.' },
-      { id: 'maitama', name: 'Maitama Prime Residential Estate (1,200sqm)', zone: 1, price: 1500000, desc: 'Supreme FCT prestige. Diplomats, ministers, 24/7 power, apex status.' }
+      { id: 'maitama', name: 'Maitama Prime Residential Estate (1,200sqm)', zone: 1, price: 1500000, desc: 'Supreme FCT prestige. Diplomats, ministers, 24/7 power, apex status.' },
+      { id: 'asokoro', name: 'Aso Drive Billionaire Boulevard (1,500sqm)', zone: 1, price: 1950000, desc: 'Presidential Villa corridor in Asokoro. Fortified compounds, governors, and zero NEPA blackouts.' },
+      { id: 'lagos_island', name: 'Banana Island & Lekki Waterfront (1,400sqm)', zone: 1, price: 2200000, desc: 'Eko Atlantic & Ikoyi Link Bridge luxury waterfront. Highest shortlet & annual rent yields in Nigeria.' }
     ];
 
     const STAGE_NAMES = [
@@ -1034,7 +1036,9 @@ class AbujaClientApp {
       dawaki: 450000,
       jabi: 950000,
       guzape: 1500000,
-      maitama: 2800000
+      maitama: 2800000,
+      asokoro: 3600000,
+      lagos_island: 4200000
     };
 
     container.innerHTML = ABUJA_PLOTS.map((plotDef) => {
@@ -1074,9 +1078,13 @@ class AbujaClientApp {
       const SHORTLET_RATES = {
         kubwa: 65000,
         lugbe: 80000,
+        dawaki: 110000,
         jabi: 165000,
+        guzape: 260000,
         wuse2: 240000,
-        maitama: 380000
+        maitama: 380000,
+        asokoro: 460000,
+        lagos_island: 520000
       };
       const daysSinceShortlet = this.game.day - (owned.lastShortletDay || 0);
       const canHostShortlet = isMansion && daysSinceShortlet >= 3;

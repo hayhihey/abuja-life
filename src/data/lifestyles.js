@@ -155,6 +155,67 @@ export const NIGERIAN_LIFESTYLES = {
     },
     desc: 'Earning foreign exchange from Jabi cafes & co-working hubs. Starts with ₦1.45M, a reliable Toyota Corolla "Muscle", 10kVA Solar, and a Lugbe plot at German Floor stage.'
   },
+  baba_alaye: {
+    id: 'baba_alaye',
+    name: '🗣️ Baba Alaye / Area Father ("Tuale! Nothing Spoil")',
+    slangTag: 'Tuale Baba! • Find Something For Boys • Street King',
+    caliber: '🦁 Tier B+ • Street Gatekeeper & Area Father',
+    worthLabel: '₦3,800,000+ Street Treasury',
+    cash: 650000,
+    bank: 950000,
+    clout: 28,
+    steeze: 85,
+    composure: 96,
+    district: 'utako',
+    recommendedTrack: 'trader',
+    defaultCar: 'corolla',
+    defaultSolar: false,
+    defaultPlots: {
+      kubwa: { district: 'kubwa', stage: 3, name: 'Kubwa Extension Plot', cofo: true }
+    },
+    desc: '"Tuale Baba Alaye! Nothing Spoil!" You command the street boys across Berger Junction, Utako, and Oshodi. Big men, convoy drivers, and content creators settle you with "Owo Ile" (ground wetting) before operating!'
+  },
+  agbero_chairman: {
+    id: 'agbero_chairman',
+    name: '🚐 Agbero / Park Union Chairman ("Owo Da?!")',
+    slangTag: 'Owo Da! • Enter With Your Change • NURTW Park Boss',
+    caliber: '🔥 Tier B • Transport Union Enforcer',
+    worthLabel: '₦2,600,000+ Park Remittance',
+    cash: 550000,
+    bank: 650000,
+    clout: 24,
+    steeze: 78,
+    composure: 94,
+    district: 'nyanya',
+    recommendedTrack: 'trader',
+    defaultCar: 'corolla',
+    defaultSolar: false,
+    defaultPlots: {
+      lugbe: { district: 'lugbe', stage: 2, name: 'Lugbe Airport Road Estate', cofo: false }
+    },
+    desc: '"Wuse! Area 1! Oshodi! Owo Da?!" You run the motor park loading tickets from Nyanya and Utako down to Lagos Oshodi. Every Danfo, Keke, and Along taxi pays union levy into your hand daily.'
+  },
+  eko_island_bigboy: {
+    id: 'eko_island_bigboy',
+    name: '🌊 Eko Island & Aso Drive Mogul ("Lekki to Asokoro")',
+    slangTag: 'Eko For Show • Banana Island • Aso Drive Jet Life',
+    caliber: '💎 Tier S • Lagos-Abuja Jet Billionaire',
+    worthLabel: '₦34,000,000+ Net Worth',
+    cash: 1800000,
+    bank: 6200000,
+    clout: 50,
+    steeze: 99,
+    composure: 97,
+    district: 'lagos_island',
+    recommendedTrack: 'contractor',
+    defaultCar: 'g63',
+    defaultSolar: true,
+    defaultPlots: {
+      maitama: { district: 'maitama', stage: 5, name: 'Maitama Minister’s Hill', cofo: true },
+      lagos_island: { district: 'lagos_island', stage: 5, name: 'Banana Island / Lekki Waterfront Villa', cofo: true }
+    },
+    desc: 'Breakfast in Banana Island Ikoyi, private jet lunch on Aso Drive Asokoro, dinner at Jabi Boat Club. Starts with completed mansions in both Lagos Island and Maitama plus a Brabus G63.'
+  },
   corper_allawee: {
     id: 'corper_allawee',
     name: '🪖 NYSC Corper ("Allawee" Hustler)',
@@ -184,12 +245,12 @@ export const NIGERIAN_LIFESTYLES = {
     clout: 4,
     steeze: 62,
     composure: 70,
-    district: 'mararaba',
+    district: 'nyanya',
     recommendedTrack: 'trader',
     defaultCar: 'along',
     defaultSolar: false,
     defaultPlots: {},
-    desc: '"Sapa nice one, Everywhere Go First Blurr, but No Gree For Anybody!" Start from the Mararaba expressway trenches with ₦45k and build an Abuja empire from scratch.'
+    desc: '"Sapa nice one, Everywhere Go First Blurr, but No Gree For Anybody!" Start from the Nyanya/Mararaba expressway trenches with ₦45k and build an Abuja-Lagos empire from scratch.'
   }
 };
 
@@ -216,21 +277,25 @@ export const PREVIOUS_PROPERTY_OPTIONS = {
   },
   maitama_empire: {
     id: 'maitama_empire',
-    label: '🏰 Maitama Mansion + Wuse 2 Duplex + G-Wagon & Prado Convoy',
-    desc: 'Old-money FCT portfolio: Completed Maitama Mansion, Completed Wuse 2 Duplex, 10kVA Solar, Prado VXR & AMG G-Wagon.'
+    label: '🏰 Maitama + Banana Island Lagos Mansions + G63 & Prado Convoy',
+    desc: 'Old-money Abuja & Lagos portfolio: Completed Maitama Mansion, Wuse 2 Duplex, 10kVA Solar, Prado VXR & AMG G63.'
   }
 };
 
 export const NIGERIAN_SLANG_DICTIONARY = [
-  { term: 'Steeze', meaning: 'Effortless style + ease; aura and drip when walking into Transcorp or Wuse 2.' },
+  { term: 'Tuale Baba Alaye!', meaning: 'Street salute to the Area Father ("Nothing Spoil! Find something for boys").' },
+  { term: 'Agbero / Owo Da!', meaning: 'Motor park union enforcer demanding bus loading tickets ("Enter with your change o!").' },
+  { term: 'Steeze', meaning: 'Effortless style + ease; aura and drip when walking into Transcorp, Lekki, or Wuse 2.' },
   { term: 'Composure', meaning: 'Maintaining maximum calm and dignity even when VIO stops you or AEDC takes light.' },
   { term: 'Send Your Aza', meaning: 'Drop your bank account number for an instant Naira credit alert.' },
   { term: 'Alhaji / Alhajia', meaning: 'Big-money patron, oil & gas VIP, or generous baller sponsoring the soft life.' },
-  { term: 'OS / Soft Life Baddie', meaning: 'High-maintenance luxury queen living in Wuse 2/Jabi shortlets with zero stress.' },
+  { term: 'OS / Soft Life Baddie', meaning: 'High-maintenance luxury queen living in Wuse 2/Jabi/Lekki shortlets with zero stress.' },
   { term: 'Dorime', meaning: 'Club siren & sparkler parade when expensive bottles (Azul / Ace of Spades) are ordered.' },
   { term: 'Oblee', meaning: 'High-voltage partying, Detty December vibes, and maximum enjoyment.' },
+  { term: 'Eko For Show', meaning: 'Lagos Island (Victoria Island, Lekki, Banana Island) flashy billionaire lifestyle.' },
+  { term: 'Aso Drive Protocol', meaning: 'Abuja’s most powerful billionaire street beside Aso Rock Presidential Villa.' },
   { term: 'Billing / Urgent 2k', meaning: 'Sending financial requests ("bills") to a partner, Alhaji, or contact.' },
-  { term: 'No Gree For Anybody', meaning: 'Refusing to be intimidated or cheated in Abuja traffic, business, or politics.' },
+  { term: 'No Gree For Anybody', meaning: 'Refusing to be intimidated or cheated in Abuja or Lagos traffic, business, or politics.' },
   { term: 'Clock It', meaning: 'Spotting the undeniable truth or flexing a verified achievement.' },
   { term: 'Ganusi', meaning: 'Hovering at an ICC Owambe or VIP table for free small-chops and jollof.' },
   { term: 'Sapa / Shege', meaning: 'Severe broke-ness after paying 2-year Abuja upfront rent.' }

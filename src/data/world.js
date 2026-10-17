@@ -34,10 +34,11 @@ export const DISTRICTS = [
     ],
   },
   {
-    id: 'asokoro', name: 'Asokoro', short: 'Asokoro', zone: 1, x: 64, y: 58,
+    id: 'asokoro', name: 'Asokoro & Aso Drive', short: 'Asokoro', zone: 1, x: 64, y: 58,
     rent: 9_500_000, living: 12000, power: 0.95, isp: 0.92, footfall: 0.8, prestige: 5, housing: true,
-    blurb: 'Quiet, tight security, big names. The road to the Villa runs through here, so convoys do too.',
+    blurb: 'Aso Drive billionaire mansions, intelligence headquarters, and the road to the Presidential Villa.',
     landmarks: [
+      { id: 'aso_drive', name: 'Aso Drive Billionaire & Villa Boulevard', kind: 'asodrive', icon: '👑', gate: { clout: 20, label: 'Aso Drive Security Post' } },
       { id: 'protocol_lodge', name: 'Protocol Lodge', kind: 'protocol', icon: '🎫' },
       { id: 'villa_gate', name: 'Aso Rock Villa Gate', kind: 'govt', icon: '🚧', gate: { clout: 40, label: 'Presidential Guard checkpoint' } },
     ],
@@ -64,11 +65,12 @@ export const DISTRICTS = [
     ],
   },
   {
-    id: 'jabi', name: 'Jabi', short: 'Jabi', zone: 1, x: 28, y: 36,
+    id: 'jabi', name: 'Jabi Lake & Waterfront', short: 'Jabi', zone: 1, x: 28, y: 36,
     rent: 4_500_000, living: 8500, power: 0.85, isp: 0.9, footfall: 1.1, prestige: 3, housing: true,
-    blurb: 'Jabi Lake, Mall, Baze University, tech hub and NCDC. Joggers at dawn, founders at noon, traffic at six.',
+    blurb: 'Jabi Lake Waterfront, Boat Club jet-skis, Jabi Lake Mall, Baze University, tech hub and NCDC.',
     landmarks: [
-      { id: 'jabi_lake', name: 'Jabi Lake Park & Boat Club', kind: 'recreation', icon: '🛶' },
+      { id: 'jabi_lake', name: 'Jabi Lake Park & Waterfront Promenade', kind: 'recreation', icon: '🛶' },
+      { id: 'jabi_boat_club', name: 'Jabi Boat Club (Jet-Ski & Yacht Cruise)', kind: 'jabi_lake_club', icon: '🛥️' },
       { id: 'jabi_hub', name: 'Jabi Tech Hub (co-working)', kind: 'cowork', icon: '💻' },
       { id: 'jabi_mall', name: 'Jabi Lake Mall Cafe', kind: 'cafe', icon: '☕' },
       { id: 'baze_uni', name: 'Baze University Campus', kind: 'university', icon: '🎓' },
@@ -76,11 +78,12 @@ export const DISTRICTS = [
     ],
   },
   {
-    id: 'utako', name: 'Utako', short: 'Utako', zone: 1, x: 36, y: 50,
+    id: 'utako', name: 'Utako & Berger Junction', short: 'Utako', zone: 1, x: 36, y: 50,
     rent: 3_500_000, living: 7000, power: 0.82, isp: 0.88, footfall: 1.25, prestige: 2, housing: true,
-    blurb: 'Long-distance buses, mama-put rows and a busy innovation hub. Everybody is either arriving or leaving.',
+    blurb: 'Interstate luxury buses, Berger Junction Agbero & Baba Alaye union callers, mama-put rows and innovation hubs.',
     landmarks: [
       { id: 'utako_park', name: 'Utako Motor Park', kind: 'transport', icon: '🚌' },
+      { id: 'agbero_junction', name: 'Berger Junction Baba Alaye & Agbero Union Stand', kind: 'agbero_park', icon: '🗣️' },
       { id: 'utako_hub', name: 'Utako Innovation Hub', kind: 'cowork', icon: '💡' },
     ],
   },
@@ -97,11 +100,11 @@ export const DISTRICTS = [
     ],
   },
   {
-    id: 'lugbe', name: 'Lugbe', short: 'Lugbe', zone: 2, x: 62, y: 90,
+    id: 'lugbe', name: 'Lugbe & Airport Road', short: 'Lugbe', zone: 2, x: 62, y: 90,
     rent: 1_200_000, living: 3800, power: 0.62, isp: 0.7, footfall: 1.0, prestige: 1, housing: true,
-    blurb: 'Airport Road hold-up capital, Abuja City Gate & Magicland Amusement Park. Dense estates and FRSC at every bend.',
+    blurb: 'Airport Road hold-up capital, Abuja City Gate, Nnamdi Azikiwe Intl Airport (Lagos Flights) & Magicland.',
     landmarks: [
-      { id: 'airport_junction', name: 'Airport Road / City Gate Junction', kind: 'transport', icon: '✈️' },
+      { id: 'airport_junction', name: 'Airport Road / Nnamdi Azikiwe Terminal', kind: 'transport', icon: '✈️' },
       { id: 'magicland_park', name: 'Magicland Amusement Park (Wonderland)', kind: 'amusement', icon: '🎡' },
       { id: 'lugbe_market', name: 'Lugbe Market', kind: 'market', icon: '🛒' },
     ],
@@ -139,10 +142,33 @@ export const DISTRICTS = [
   {
     id: 'nyanya', name: 'Nyanya / Mararaba', short: 'Nyanya', zone: 2, x: 90, y: 66,
     rent: 420_000, living: 2400, power: 0.45, isp: 0.55, footfall: 1.2, prestige: 0, housing: true,
-    blurb: 'The choke-point. Markets that never close, rents that are actually survivable, and the Nyanya marathon every morning.',
+    blurb: 'The choke-point. Agbero callers shouting "Area 1! Berger!", markets that never close, and the Nyanya marathon.',
     landmarks: [
-      { id: 'nyanya_park', name: 'Nyanya Motor Park', kind: 'transport', icon: '🚐' },
+      { id: 'nyanya_park', name: 'Nyanya Motor Park (Agbero & Baba Alaye Stand)', kind: 'agbero_park', icon: '🚐' },
       { id: 'mararaba_market', name: 'Mararaba Market', kind: 'market', icon: '🛒', wholesale: true },
+    ],
+  },
+  // --- PROMINENT LAGOS STATE (EKO) SECTORS CONNECTED BY FLIGHT / INTERSTATE CORRIDOR ---
+  {
+    id: 'lagos_island', name: 'Lagos Island (Lekki, VI & Ikoyi)', short: 'Lekki / VI', zone: 1, x: 14, y: 84,
+    rent: 15_000_000, living: 16000, power: 0.88, isp: 0.96, footfall: 1.45, prestige: 5, housing: true,
+    blurb: 'Eko for Show! Lekki-Ikoyi Link Bridge, Banana Island billionaires, Eko Atlantic towers, and Victoria Island Dorime clubs.',
+    landmarks: [
+      { id: 'lekki_ikoyi_bridge', name: 'Lekki-Ikoyi Cable Link Bridge', kind: 'lagos_landmark', icon: '🌉' },
+      { id: 'eko_atlantic', name: 'Eko Atlantic City & Victoria Island HQ', kind: 'eko_atlantic', icon: '🏙️' },
+      { id: 'banana_island_gate', name: 'Banana Island Billionaire Gate (Ikoyi)', kind: 'asodrive', icon: '🏝️', gate: { clout: 30, label: 'Banana Island Private Security' } },
+      { id: 'quilox_vi', name: 'Victoria Island VIP Nightlife Strip', kind: 'nightlife', icon: '🍾' },
+    ],
+  },
+  {
+    id: 'lagos_mainland', name: 'Lagos Mainland (Ikeja, Oshodi & Surulere)', short: 'Ikeja / Oshodi', zone: 2, x: 32, y: 88,
+    rent: 2_800_000, living: 6500, power: 0.72, isp: 0.85, footfall: 1.55, prestige: 2, housing: true,
+    blurb: 'No Gree For Anybody! Oshodi yellow Danfo parks, Baba Alaye & Agbero union headquarters, Computer Village Ikeja & Third Mainland Bridge.',
+    landmarks: [
+      { id: 'oshodi_agbero_park', name: 'Oshodi Transport Interchange (Agbero & Baba Alaye HQ)', kind: 'agbero_park', icon: '🗣️' },
+      { id: 'computer_village', name: 'Ikeja Computer Village (Tech & Phone Hustle)', kind: 'banex', icon: '💻' },
+      { id: 'afrika_shrine', name: 'New Afrika Shrine (Ikeja Afrobeats Lounge)', kind: 'nightlife', icon: '🎷' },
+      { id: 'third_mainland', name: 'Third Mainland Lagoon Bridge', kind: 'lagos_landmark', icon: '🌊' },
     ],
   },
 ];
@@ -162,12 +188,12 @@ export const EDGES = [
   { id: 'cbd-wuse2', a: 'cbd', b: 'wuse2', name: 'Shehu Shagari Way', type: 'inner', minutes: 10, peak: 1.5, tags: ['checkpoint', 'convoy'] },
   { id: 'cbd-garki', a: 'cbd', b: 'garki', name: 'Ahmadu Bello Way', type: 'inner', minutes: 12, peak: 1.4, tags: [] },
   { id: 'cbd-maitama', a: 'cbd', b: 'maitama', name: 'Ministers Hill Link', type: 'inner', minutes: 14, peak: 1.3, tags: ['convoy'] },
-  { id: 'cbd-asokoro', a: 'cbd', b: 'asokoro', name: 'Asokoro Link', type: 'inner', minutes: 12, peak: 1.3, tags: ['convoy', 'checkpoint'] },
+  { id: 'cbd-asokoro', a: 'cbd', b: 'asokoro', name: 'Aso Drive / Three Arms Link', type: 'inner', minutes: 12, peak: 1.3, tags: ['convoy', 'checkpoint'] },
   { id: 'wuse2-maitama', a: 'wuse2', b: 'maitama', name: 'Aguiyi Ironsi Street', type: 'inner', minutes: 9, peak: 1.4, tags: ['convoy'] },
   { id: 'wuse2-jabi', a: 'wuse2', b: 'jabi', name: 'Jabi\u2013Wuse Expressway', type: 'expressway', minutes: 15, peak: 1.7, tags: ['gridlock'] },
   { id: 'jabi-utako', a: 'jabi', b: 'utako', name: 'Jabi Lake Underpass', type: 'inner', minutes: 8, peak: 1.6, tags: ['flood', 'gridlock'] },
   { id: 'utako-wuse2', a: 'utako', b: 'wuse2', name: 'Utako\u2013Wuse Link', type: 'inner', minutes: 12, peak: 1.4, tags: [] },
-  { id: 'maitama-asokoro', a: 'maitama', b: 'asokoro', name: 'Diplomatic Drive', type: 'expressway', minutes: 14, peak: 1.2, tags: ['convoy', 'checkpoint'] },
+  { id: 'maitama-asokoro', a: 'maitama', b: 'asokoro', name: 'Aso Drive Boulevard', type: 'expressway', minutes: 14, peak: 1.2, tags: ['convoy', 'checkpoint'] },
   { id: 'asokoro-guzape', a: 'asokoro', b: 'guzape', name: 'Guzape Hills Road', type: 'inner', minutes: 12, peak: 1.2, tags: [] },
   { id: 'garki-asokoro', a: 'garki', b: 'asokoro', name: 'Garki\u2013Asokoro Road', type: 'inner', minutes: 10, peak: 1.3, tags: [] },
   { id: 'garki-wuse2', a: 'garki', b: 'wuse2', name: 'Moshood Abiola Way', type: 'inner', minutes: 13, peak: 1.5, tags: ['checkpoint'] },
@@ -186,6 +212,12 @@ export const EDGES = [
   { id: 'kubwa-mpape', a: 'kubwa', b: 'mpape', name: 'Mpape\u2013Kubwa Road', type: 'inner', minutes: 30, peak: 1.2, tags: ['flood'] },
   { id: 'mpape-maitama', a: 'mpape', b: 'maitama', name: 'Katampe Link', type: 'inner', minutes: 22, peak: 1.4, tags: [] },
   { id: 'mpape-wuse2', a: 'mpape', b: 'wuse2', name: 'Mpape\u2013Wuse Bypass', type: 'expressway', minutes: 26, peak: 1.5, tags: ['checkpoint'] },
+
+  // --- Abuja <-> Lagos Jet & Highway Corridors + Third Mainland Bridge
+  { id: 'lugbe-lagos-island', a: 'lugbe', b: 'lagos_island', name: 'Abuja\u2013Lagos Jet Flight (ABV \u2192 Victoria Island)', type: 'rail', minutes: 55, peak: 1.1, tags: [] },
+  { id: 'lugbe-lagos-mainland', a: 'lugbe', b: 'lagos_mainland', name: 'Abuja\u2013Ikeja Express Corridor', type: 'expressway', minutes: 65, peak: 1.4, tags: ['checkpoint'] },
+  { id: 'utako-lagos-mainland', a: 'utako', b: 'lagos_mainland', name: 'Utako\u2013Oshodi Luxury Night Bus Route', type: 'expressway', minutes: 70, peak: 1.5, tags: ['gridlock'] },
+  { id: 'lagos-mainland-island', a: 'lagos_mainland', b: 'lagos_island', name: 'Third Mainland Bridge (Lagos Lagoon)', type: 'expressway', minutes: 18, peak: 1.8, tags: ['gridlock', 'checkpoint'] },
 ];
 
 export const EDGE_BY_ID = Object.fromEntries(EDGES.map((e) => [e.id, e]));

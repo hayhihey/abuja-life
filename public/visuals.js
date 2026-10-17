@@ -326,6 +326,24 @@ export function renderDistrictIllustrationSVG(districtId) {
       sunColor: '#fde047',
       accent: '#34d399',
       silhouette: 'hill_villas'
+    },
+    lagos_island: {
+      title: 'LAGOS ISLAND • LEKKI & VI',
+      subtitle: 'LEKKI-IKOYI BRIDGE • EKO ATLANTIC • BANANA ISLAND',
+      skyTop: '#0c4a6e',
+      skyBot: '#ec4899',
+      sunColor: '#fde047',
+      accent: '#38bdf8',
+      silhouette: 'jabi_lake'
+    },
+    lagos_mainland: {
+      title: 'LAGOS MAINLAND • OSHODI & IKEJA',
+      subtitle: 'YELLOW DANFO PARKS • BABA ALAYE • COMPUTER VILLAGE',
+      skyTop: '#451a03',
+      skyBot: '#eab308',
+      sunColor: '#f97316',
+      accent: '#facc15',
+      silhouette: 'expressway_jam'
     }
   };
 

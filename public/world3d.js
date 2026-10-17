@@ -690,6 +690,81 @@ export class AbujaWorld3D {
     milSpire.position.y = 57.5;
     milParkGroup.add(milSpire);
     this.scene.add(milParkGroup);
+
+    // 10. ASO DRIVE PRESIDENTIAL BOULEVARD & GOLDEN VILLA ARCH (Asokoro / Maitama)
+    const asoDriveGroup = new THREE.Group();
+    asoDriveGroup.position.set(asokoroPos.x - 18, 0, asokoroPos.z - 22);
+    const asoPillarL = new THREE.Mesh(new THREE.BoxGeometry(3.2, 22, 3.2), whiteMarble);
+    asoPillarL.position.set(-12, 11, 0);
+    const asoPillarR = new THREE.Mesh(new THREE.BoxGeometry(3.2, 22, 3.2), whiteMarble);
+    asoPillarR.position.set(12, 11, 0);
+    const asoCrown = new THREE.Mesh(new THREE.BoxGeometry(30, 3.6, 4.2), goldMat);
+    asoCrown.position.set(0, 23, 0);
+    asoDriveGroup.add(asoPillarL, asoPillarR, asoCrown);
+    this.scene.add(asoDriveGroup);
+
+    // 11. JABI LAKE BOAT CLUB PIER & LUXURY YACHT (Jabi Waterfront)
+    const jabiD = DISTRICT_BY_ID.jabi;
+    if (jabiD) {
+      const jabiPos = map2DTo3D(jabiD.x, jabiD.y);
+      const boatClubGroup = new THREE.Group();
+      boatClubGroup.position.set(jabiPos.x - 36, 0, jabiPos.z + 18);
+
+      const pier = new THREE.Mesh(
+        new THREE.BoxGeometry(26, 1.2, 5),
+        new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.8 })
+      );
+      pier.position.set(0, 1.4, 0);
+      boatClubGroup.add(pier);
+
+      // Luxury White Yacht on Jabi Lake
+      const yachtHull = new THREE.Mesh(new THREE.BoxGeometry(14, 2.6, 4.6), whiteMarble);
+      yachtHull.position.set(14, 1.8, 4);
+      const yachtCabin = new THREE.Mesh(new THREE.BoxGeometry(7, 2.4, 3.6), goldMat);
+      yachtCabin.position.set(13, 3.8, 4);
+      boatClubGroup.add(yachtHull, yachtCabin);
+      this.scene.add(boatClubGroup);
+    }
+
+    // 12. LAGOS ISLAND: LEKKI-IKOYI CABLE LINK BRIDGE, LAGOON & EKO ATLANTIC TOWERS
+    const lagosIslD = DISTRICT_BY_ID.lagos_island;
+    const lagosMainD = DISTRICT_BY_ID.lagos_mainland;
+    if (lagosIslD && lagosMainD) {
+      const islPos = map2DTo3D(lagosIslD.x, lagosIslD.y);
+      const mainPos = map2DTo3D(lagosMainD.x, lagosMainD.y);
+
+      // Lagos Lagoon Water Expanse
+      const lagoonMesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(85, 85, 0.8, 32),
+        new THREE.MeshStandardMaterial({
+          color: 0x0284c7,
+          emissive: 0x0369a1,
+          emissiveIntensity: 0.35,
+          roughness: 0.15,
+          metalness: 0.85
+        })
+      );
+      lagoonMesh.position.set((islPos.x + mainPos.x) * 0.5, 0.3, (islPos.z + mainPos.z) * 0.5 + 15);
+      this.scene.add(lagoonMesh);
+
+      // Iconic Lekki-Ikoyi Cable-Stayed Bridge Pylon & Glowing Cables
+      const bridgeGroup = new THREE.Group();
+      bridgeGroup.position.set((islPos.x + mainPos.x) * 0.5, 0, (islPos.z + mainPos.z) * 0.5);
+
+      const pylon = new THREE.Mesh(new THREE.ConeGeometry(4.2, 68, 4), whiteMarble);
+      pylon.position.set(0, 34, 0);
+      bridgeGroup.add(pylon);
+
+      const cableMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+      for (let c = -3; c <= 3; c++) {
+        if (c === 0) continue;
+        const cable = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 48, 6), cableMat);
+        cable.position.set(c * 6, 24, 0);
+        cable.rotation.z = c > 0 ? 0.42 : -0.42;
+        bridgeGroup.add(cable);
+      }
+      this.scene.add(bridgeGroup);
+    }
   }
 
   _buildTrafficSwarm() {
