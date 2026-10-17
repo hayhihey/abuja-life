@@ -3,10 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>ABUJA LIFE: GRAND THEFT PROTOCOL — 3D FCT Life, Court, Games &amp; Naira Engine</title>
+  <title>ABUJA LIFE: NIGERIA GTA — 3D Street &amp; Real Nigeria GPS Edition</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,500;0,600;0,700;1,700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+  <!-- Leaflet Real Nigeria Street GPS Map CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <link rel="stylesheet" href="/style.css" />
   <script type="importmap">
     {
@@ -17,7 +20,7 @@
   </script>
 </head>
 <body>
-  <div id="app" class="gta-shell">
+  <div id="app" class="gta-shell nigeria-gta-fullscreen">
 
     <!-- Network "Go-Slow" Auto-Recovery Pill (Inspired by lagoslife.app resilience) -->
     <div id="net-status-pill" class="net-status-pill" hidden>
@@ -26,14 +29,14 @@
     </div>
 
     <!-- ================================================================== -->
-    <!-- TOP GTA HUD BAR: LOGO + RADIO + CLOCK + WANTED STARS + NAIRA STACK -->
+    <!-- COMPACT TOP ICON STRIP (Hidden/Minimal so 3D Nigeria GTA is 100%)  -->
     <!-- ================================================================== -->
-    <header class="gta-topbar">
+    <header class="gta-topbar gta-topbar-minimal">
       <div class="brand-cluster">
-        <div class="gta-badge-logo">
-          <span class="badge-top">FCT</span>
+        <div class="gta-badge-logo" id="btn-toggle-district-card" style="cursor:pointer;" title="Click to toggle District Postcard">
+          <span class="badge-top">🇳🇬 GTA</span>
           <span class="badge-main">ABUJA</span>
-          <span class="badge-sub">GRAND PROTOCOL</span>
+          <span class="badge-sub">STREET GPS</span>
         </div>
         <div class="player-id-card" id="btn-hud-profile" style="cursor:pointer;" title="Click to customize Gender, Age, Lifestyle Caliber & Properties">
           <div id="hud-avatar-slot" class="hud-avatar-slot"></div>
@@ -52,7 +55,7 @@
         </div>
       </div>
 
-      <!-- FCT FM Radio & Clock Center Strip -->
+      <!-- Compact Radio & Speed Icon Pills -->
       <div class="gta-center-hud">
         <div class="gta-radio-pill" id="btn-cycle-radio" title="Click to switch Abuja FM Station">
           <span class="radio-icon">📻</span>
@@ -63,7 +66,7 @@
         </div>
 
         <div class="clock-controls-cluster">
-          <div class="clock-readout">
+          <div class="clock-readout" hidden>
             <span id="hud-clock" class="clock-time">Day 1 • Mon • 08:00</span>
             <span id="hud-weather" class="clock-weather">☀️ Clear FCT Sky</span>
           </div>
@@ -77,45 +80,22 @@
         </div>
       </div>
 
-      <!-- GTA Top-Right: 5-Star Wanted Heat + Realistic Physical Naira Wallet -->
-      <div class="gta-right-hud">
-        <div class="wanted-stars-box" id="hud-wanted-box" title="VIO / FRSC / Task Force Heat Level">
-          <span class="wanted-label">HEAT</span>
-          <div class="wanted-stars" id="hud-wanted-stars">
-            <span class="star">★</span>
-            <span class="star">★</span>
-            <span class="star">★</span>
-            <span class="star">★</span>
-            <span class="star">★</span>
-          </div>
-          <span class="wanted-pct" id="hud-heat-val">0%</span>
-        </div>
-
-        <!-- Realistic Physical Naira Banknote Wallet Card (Click to open CBN Vault) -->
-        <div class="naira-hud-wallet" id="btn-open-vault" title="Click to inspect your physical CBN Naira banknotes &amp; wire cash">
+      <!-- Hidden Legacy Top-Right Holders (Kept for DOM compatibility) -->
+      <div class="gta-right-hud" hidden>
+        <div class="naira-hud-wallet" id="btn-open-vault">
           <div class="naira-mini-note-preview" id="hud-naira-note-art"></div>
-          <div class="naira-wallet-numbers">
-            <div class="naira-wallet-top">
-              <span class="cbn-tag">CBN NAIRA VAULT</span>
-              <span class="naira-bundle-pill" id="hud-naira-bundles">Cash + Bank</span>
-            </div>
-            <div class="naira-amount-row">
-              <span id="hud-funds-val" class="gta-cash-readout">₦510,000</span>
-              <span id="hud-funds-delta" class="cash-delta-popup"></span>
-            </div>
-          </div>
+          <span id="hud-naira-bundles">Cash + Bank</span>
         </div>
-
-        <button id="btn-new-char" class="gta-icon-btn" title="Character Select / Reset">👤</button>
+        <button id="btn-new-char" class="gta-icon-btn">👤</button>
       </div>
     </header>
 
     <!-- ================================================================== -->
-    <!-- MAIN WORKSPACE: 3D THREE.JS CITY STAGE (LEFT) + COMMAND DECK (RIGHT) -->
+    <!-- MAIN WORKSPACE: 100% FULL-SCREEN 3D NIGERIA GTA + FLOATING ICONS   -->
     <!-- ================================================================== -->
     <main class="gta-main-stage">
 
-      <!-- LEFT: INTERACTIVE 3D ABUJA WORLD & GTA RADAR HUD -->
+      <!-- FULL-SCREEN INTERACTIVE 3D NIGERIA GTA WORLD -->
       <section class="world-stage-panel">
         <!-- Three.js 3D Viewport -->
         <div id="world3d-viewport" class="world3d-viewport"></div>
@@ -135,84 +115,186 @@
           </svg>
         </div>
 
-        <!-- Top-Left GTA District Postcard Artwork & Controls -->
+        <!-- ============================================================== -->
+        <!-- CLASSIC NIGERIA GTA TOP-RIGHT HUD (Fist Box + Clock + ₦ + Bars)-->
+        <!-- ============================================================== -->
+        <div class="ngta-topright-hud" id="ngta-topright-hud">
+          <!-- GTA Fist / Street Action Icon Box -->
+          <button type="button" id="btn-gta-fist" class="ngta-fist-box" title="Street Punch / Knockdown Rival (Shortcut: Space or E)">
+            <span class="ngta-fist-emoji">👊🏾</span>
+            <span class="ngta-fist-sub">PUNCH</span>
+          </button>
+
+          <div class="ngta-stats-col">
+            <!-- Bold White-on-Black GTA Digital Clock -->
+            <div class="ngta-clock-row">
+              <span id="gta-classic-clock" class="ngta-clock-digits">08:00</span>
+            </div>
+
+            <!-- Red Health / Energy Bar -->
+            <div class="ngta-bar-outer health" title="Energy / Stamina">
+              <div class="ngta-bar-fill health" id="hud-energy-bar" style="width:90%"></div>
+            </div>
+
+            <!-- White Composure / Steeze Armor Bar -->
+            <div class="ngta-bar-outer armor" title="Sanity / Composure &amp; Steeze">
+              <div class="ngta-bar-fill armor" id="hud-sanity-bar" style="width:70%"></div>
+            </div>
+
+            <!-- Bold Green GTA Naira Readout (Click to open CBN Vault) -->
+            <div class="ngta-cash-row" id="btn-classic-cash-vault" title="Click to open CBN Physical Naira Vault &amp; Wire">
+              <span id="hud-funds-val" class="ngta-cash-digits">₦510,000</span>
+              <span id="hud-funds-delta" class="cash-delta-popup"></span>
+            </div>
+
+            <!-- 5-Star Wanted Heat Row -->
+            <div class="ngta-wanted-row" id="hud-wanted-box" title="VIO / FRSC / EFCC Heat Level">
+              <div class="wanted-stars" id="hud-wanted-stars">
+                <span class="star">★</span>
+                <span class="star">★</span>
+                <span class="star">★</span>
+                <span class="star">★</span>
+                <span class="star">★</span>
+              </div>
+              <span class="wanted-pct" id="hud-heat-val" hidden>0%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- "MAKE ALL THE OTHERS LIKE ICON" — FLOATING GTA ICON DOCK       -->
+        <!-- ============================================================== -->
+        <nav class="gta-floating-icon-dock" id="gta-floating-icon-dock" aria-label="Game Menus Icon Dock">
+          <button type="button" class="gta-dock-icon" data-dock-tab="actions" title="⚡ Street Hustle &amp; District Moves">
+            <span class="gdi-ico">⚡</span>
+            <span class="gdi-lbl">Hustle</span>
+          </button>
+          <button type="button" class="gta-dock-icon" data-dock-tab="commute" title="🛣️ Commute &amp; Expressways">
+            <span class="gdi-ico">🛣️</span>
+            <span class="gdi-lbl">Commute</span>
+          </button>
+          <button type="button" class="gta-dock-icon" data-dock-tab="shop" title="🛍️ MarketWishes.com Mall &amp; 36-State Tourist Centers">
+            <span class="gdi-ico">🛍️</span>
+            <span class="gdi-lbl">Shop/Tour</span>
+          </button>
+          <button type="button" class="gta-dock-icon" data-dock-tab="career" title="💼 Career &amp; BPP Contracts">
+            <span class="gdi-ico">💼</span>
+            <span class="gdi-lbl">Career</span>
+          </button>
+          <button type="button" class="gta-dock-icon" data-dock-tab="housing" title="🏗️ Build 3D House &amp; AGIS Land">
+            <span class="gdi-ico">🏗️</span>
+            <span class="gdi-lbl">House</span>
+          </button>
+          <button type="button" class="gta-dock-icon" data-dock-tab="network" title="📋 Paid Tasks &amp; Links">
+            <span class="gdi-ico">📋</span>
+            <span class="gdi-lbl">Tasks</span>
+          </button>
+          <button type="button" class="gta-dock-icon" data-dock-tab="games" title="🎲 Nigerian Lifestyle, Garage, Whot &amp; Ludo">
+            <span class="gdi-ico">🎲</span>
+            <span class="gdi-lbl">Lifestyle</span>
+          </button>
+          <button type="button" class="gta-dock-icon" data-dock-tab="court" title="⚖️ FCT High Court &amp; Polls">
+            <span class="gdi-ico">⚖️</span>
+            <span class="gdi-lbl">Court</span>
+          </button>
+          <button type="button" class="gta-dock-icon" data-dock-tab="multiplayer" title="💬 Live Multiplayer Chat">
+            <span class="gdi-ico">💬</span>
+            <span class="gdi-lbl">Chat</span>
+            <span id="dock-chat-badge" class="gdi-badge" hidden>0</span>
+          </button>
+          <button type="button" class="gta-dock-icon" data-dock-tab="feed" title="📻 FCT Street Log">
+            <span class="gdi-ico">📻</span>
+            <span class="gdi-lbl">Log</span>
+          </button>
+          <button type="button" class="gta-dock-icon" id="btn-dock-gps" title="🗺️ Full Nigeria Street GPS Map (Abuja &amp; Lagos)">
+            <span class="gdi-ico">🗺️</span>
+            <span class="gdi-lbl">GPS Map</span>
+          </button>
+          <button type="button" class="gta-dock-icon" id="btn-dock-vault" title="🏦 CBN Physical Naira Vault &amp; Wire">
+            <span class="gdi-ico">🏦</span>
+            <span class="gdi-lbl">₦ Vault</span>
+          </button>
+          <button type="button" class="gta-dock-icon" id="btn-dock-profile" title="👤 Citizen Sign-Up &amp; Lifestyle Caliber">
+            <span class="gdi-ico">👤</span>
+            <span class="gdi-lbl">Profile</span>
+          </button>
+        </nav>
+
+        <!-- Top-Left Compact Camera/Action Icon Pills + Collapsible District Postcard -->
         <div class="stage-top-left-overlay">
-          <div class="district-postcard-card">
+          <div class="world3d-control-pills">
+            <button id="btn-toggle-drive" class="w3d-ctrl-btn" title="Toggle Walking vs SUV Driving (Shortcut: F)">
+              🚶🏾 Walk Mode (F)
+            </button>
+            <button id="btn-toggle-cam" class="w3d-ctrl-btn" title="Switch 3rd-Person vs Helicopter Camera (Shortcut: V)">
+              🎥 3rd-Person (V)
+            </button>
+            <button id="btn-spray-naira" class="w3d-ctrl-btn" style="border-color:#facc15; color:#fde047;" title="Spray Naira notes in 3D (+Clout)">
+              💸 Spray ₦5k
+            </button>
+            <button id="btn-toggle-2dmap" class="w3d-ctrl-btn" title="Toggle 2D Blueprint Grid">
+              📐 2D
+            </button>
+            <button id="btn-toggle-lowpower" class="w3d-ctrl-btn" title="Cool Phone / Low-Power Mode">
+              ❄️
+            </button>
+          </div>
+
+          <div class="district-postcard-card" id="district-postcard-card" hidden>
             <div id="district-art-banner" class="district-art-banner"></div>
             <div class="district-postcard-body">
               <div class="dp-header">
                 <div>
                   <span id="banner-sector-tag" class="sector-pill zone-2">Zone 2</span>
-                  <h2 id="banner-district-name">Kubwa</h2>
+                  <h2 id="banner-district-name">Central Area</h2>
                 </div>
-                <button id="btn-spray-naira" class="btn-spray-naira" title="Spray Naira notes in 3D (+Clout)">
-                  💸 Spray ₦5k
-                </button>
               </div>
               <p id="banner-district-vibe" class="dp-vibe">Civil servants' starter homes, a train link into town and a restless young crowd.</p>
               <div id="banner-landmarks" class="dp-landmarks"></div>
             </div>
           </div>
-
-          <!-- 3D Camera, Driving & Low-Power Cool Phone Controls -->
-          <div class="world3d-control-pills">
-            <button id="btn-toggle-drive" class="w3d-ctrl-btn active" title="Toggle SUV vs Walking (Shortcut: F)">
-              🚙 SUV Mode (F)
-            </button>
-            <button id="btn-toggle-cam" class="w3d-ctrl-btn" title="Switch Chase vs Helicopter Camera (Shortcut: V)">
-              🎥 Chase Cam (V)
-            </button>
-            <button id="btn-toggle-2dmap" class="w3d-ctrl-btn" title="Toggle 2D Satellite Blueprint Map">
-              🗺️ 2D Grid
-            </button>
-            <button id="btn-toggle-lowpower" class="w3d-ctrl-btn" title="Cool Phone / Low-Power Mode (Reduces GPU heat)">
-              ❄️ Cool Mode
-            </button>
-          </div>
         </div>
 
-        <!-- Bottom-Left GTA V Radar Minimap + 3-Segment Health/Energy/Protocol Bars -->
+        <!-- ============================================================== -->
+        <!-- BOTTOM-LEFT CIRCULAR NIGERIA GPS STREET RADAR (LEAFLET + GTA)  -->
+        <!-- ============================================================== -->
         <div class="gta-radar-dock">
-          <div class="gta-radar-frame">
-            <canvas id="gta-radar-canvas" width="210" height="145"></canvas>
-            <div class="radar-north-badge">N</div>
-            <div class="radar-gps-label" id="radar-gps-label">GPS • KUBWA</div>
+          <div class="gta-radar-frame circular-ngta-radar" id="btn-expand-gps-radar" title="Click N badge or double-click radar to open Full Nigeria Street GPS Map">
+            <!-- Real Nigeria OpenStreetMap GPS Street Layer -->
+            <div id="gta-leaflet-radar" class="gta-leaflet-radar"></div>
+            <!-- Transparent Tactical Player/Blip Overlay Canvas -->
+            <canvas id="gta-radar-canvas" width="184" height="184"></canvas>
+            <div class="radar-north-badge" id="btn-radar-north" title="Open Full Nigeria Street GPS Map">N</div>
+            <div class="radar-gps-label" id="radar-gps-label">GPS • SHEHU SHAGARI WAY</div>
           </div>
-          <div class="gta-radar-bars">
-            <div class="radar-bar-slot" title="Sanity / Composure">
-              <div class="radar-bar-fill sanity" id="hud-sanity-bar" style="width:70%"></div>
-            </div>
-            <div class="radar-bar-slot" title="Energy / Stamina">
-              <div class="radar-bar-fill energy" id="hud-energy-bar" style="width:90%"></div>
-            </div>
-            <div class="radar-bar-slot" title="Protocol / Clout">
-              <div class="radar-bar-fill clout" id="hud-clout-bar" style="width:12%"></div>
-            </div>
+          <!-- Hidden Legacy Bars/Vals for JS Compatibility -->
+          <div class="gta-radar-bars" hidden>
+            <div class="radar-bar-slot"><div class="radar-bar-fill clout" id="hud-clout-bar" style="width:12%"></div></div>
           </div>
           <div class="gta-radar-stats-legend">
-            <span>🧠 Sanity <strong id="hud-sanity-val">70</strong></span>
-            <span>⚡ Energy <strong id="hud-energy-val">90</strong></span>
-            <span>🏛️ Clout <strong id="hud-clout-val">12</strong></span>
-            <span>🤝 Links <strong id="hud-network-val">3</strong></span>
+            <span>🧠 <strong id="hud-sanity-val">70</strong></span>
+            <span>⚡ <strong id="hud-energy-val">90</strong></span>
+            <span>🏛️ <strong id="hud-clout-val">12</strong></span>
+            <span>🤝 <strong id="hud-network-val">3</strong></span>
           </div>
         </div>
 
-        <!-- Bottom-Right On-Screen Driving Pad -->
+        <!-- Bottom-Right On-Screen Walking / Driving Pad -->
         <div class="gta-drive-pad" id="gta-drive-pad">
-          <button class="dpad-btn up" data-dir="w" title="Drive Forward (W)">▲</button>
+          <button class="dpad-btn up" data-dir="w" title="Move Forward (W)">▲</button>
           <div class="dpad-mid-row">
-            <button class="dpad-btn left" data-dir="a" title="Steer Left (A)">◀</button>
+            <button class="dpad-btn left" data-dir="a" title="Turn Left (A)">◀</button>
             <span class="dpad-center">WASD</span>
-            <button class="dpad-btn right" data-dir="d" title="Steer Right (D)">▶</button>
+            <button class="dpad-btn right" data-dir="d" title="Turn Right (D)">▶</button>
           </div>
-          <button class="dpad-btn down" data-dir="s" title="Reverse / Brake (S)">▼</button>
+          <button class="dpad-btn down" data-dir="s" title="Move Back (S)">▼</button>
         </div>
       </section>
 
-      <!-- RIGHT: COMMAND DECK & REAL-TIME MULTIPLAYER HUB -->
-      <section class="command-deck-panel">
+      <!-- RIGHT: FLOATING COLLAPSIBLE COMMAND DECK DRAWER (Opens via Icon Dock) -->
+      <section class="command-deck-panel is-drawer-closed" id="command-deck-panel">
 
-        <!-- Visual Naira Cash Drawer Strip at Top of Command Deck -->
+        <!-- Drawer Close Header + Visual Naira Cash Strip -->
         <div class="naira-visual-strip">
           <div class="nvs-left">
             <span class="nvs-title">PHYSICAL NAIRA STACK (SIMULATION CURRENCY)</span>
@@ -221,6 +303,9 @@
           <div class="nvs-notes-fan" id="nvs-notes-fan"></div>
           <button class="nvs-wire-btn" id="btn-quick-wire" title="Send Naira to another player">
             💸 Wire ₦
+          </button>
+          <button type="button" class="btn-close-deck" id="btn-close-deck" title="Close Drawer &amp; Return to Full-Screen 3D Street">
+            ✕ Street
           </button>
         </div>
 
@@ -681,6 +766,30 @@
             <button type="submit" class="btn-primary">🚀 Complete Sign Up &amp; Launch Abuja Life</button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <!-- ================================================================== -->
+    <!-- MODAL 4: FULL INTERACTIVE NIGERIA STREET GPS MAP (ABUJA & LAGOS)    -->
+    <!-- ================================================================== -->
+    <div id="nigeria-gps-modal" class="modal-backdrop" hidden>
+      <div class="modal-card" style="max-width: 900px; width: 95vw; max-height: 92vh; display:flex; flex-direction:column; gap:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+          <div>
+            <span class="modal-badge" style="background:rgba(16,185,129,0.2); color:#4ade80; border-color:rgba(16,185,129,0.4);">🛰️ NIGERIA LIVE STREET GPS • OPENSTREETMAP SATELLITE NAV</span>
+            <h2 style="margin-top:4px;">Real Nigeria Street GPS Map (Abuja FCT &amp; Lagos Corridor)</h2>
+          </div>
+          <div style="display:flex; gap:6px; align-items:center;">
+            <button type="button" id="btn-gps-focus-abuja" class="btn-xs" style="border-color:#4ade80; color:#4ade80;">📍 Focus Abuja Streets</button>
+            <button type="button" id="btn-gps-focus-lagos" class="btn-xs" style="border-color:#38bdf8; color:#38bdf8;">🌊 Focus Lagos Streets</button>
+            <button type="button" id="btn-close-gps-modal" class="gta-icon-btn">✕</button>
+          </div>
+        </div>
+        <p style="font-size:12px; color:#cbd5e1; margin:0;">
+          Explore real Nigerian streets (<em>Shehu Shagari Way, Adetokunbo Ademola Crescent, Aso Drive, Aguiyi Ironsi St, Bala Sokoto Way, Kubwa Expressway, Admiralty Way Lekki, Ozumba Mbadiwe</em>). Click any district pin on the GPS map or street button below to teleport/commute onto that street in 3D!
+        </p>
+        <div id="nigeria-full-gps-map" style="width:100%; height:420px; border-radius:12px; border:2px solid rgba(74,222,128,0.5); overflow:hidden; background:#0f172a;"></div>
+        <div id="nigeria-gps-street-chips" style="display:flex; gap:6px; flex-wrap:wrap; max-height:110px; overflow-y:auto;"></div>
       </div>
     </div>
 

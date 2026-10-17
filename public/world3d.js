@@ -34,16 +34,16 @@ export function map3DTo2D(wx, wz) {
 export class AbujaWorld3D {
   constructor(containerEl, callbacks = {}) {
     this.container = containerEl;
-    this.callbacks = callbacks; // { onEnterDistrict(id), onSelectPlayer(player), onSelectDistrict(id) }
+    this.callbacks = callbacks; // { onEnterDistrict(id), onSelectPlayer(player), onSelectDistrict(id), onStreetPunch(info) }
 
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x0b1528);
-    this.scene.fog = new THREE.FogExp2(0x0b1528, 0.00095);
+    this.scene.background = new THREE.Color(0x7dd3fc);
+    this.scene.fog = new THREE.FogExp2(0xbae6fd, 0.00032);
 
     this.camera = new THREE.PerspectiveCamera(
-      52,
+      50,
       Math.max(1, containerEl.clientWidth) / Math.max(1, containerEl.clientHeight),
-      1,
+      0.5,
       3200
     );
 
@@ -69,21 +69,23 @@ export class AbujaWorld3D {
     this.clock = new THREE.Clock();
     this.currentDistrictId = 'cbd';
     this.weather = 'sunny';
-    this.hourOfDay = 8;
+    this.hourOfDay = 13;
     this.cameraMode = 'chase'; // 'chase' | 'helicopter'
-    this.cameraYaw = 0.4;
-    this.cameraPitch = 0.42;
-    this.cameraDistance = 88;
+    this.cameraYaw = 0.25;
+    this.cameraPitch = 0.22;
+    this.cameraDistance = 15.5; // Close-up 3rd-person Nigeria GTA camera
     this.isPointerDragging = false;
     this.lastPointer = { x: 0, y: 0 };
 
-    // Player 3D controller state
+    // Player 3D controller state (starts on foot in 3rd-person Nigeria GTA style)
     const startD = DISTRICT_BY_ID.cbd || DISTRICTS[0];
     const startPos = map2DTo3D(startD.x, startD.y);
-    this.playerPos = new THREE.Vector3(startPos.x, 0, startPos.z);
-    this.playerHeading = 0;
+    this.playerPos = new THREE.Vector3(startPos.x, 0, startPos.z + 10);
+    this.playerHeading = Math.PI;
     this.playerSpeed = 0;
-    this.inVehicle = true;
+    this.inVehicle = false;
+    this.walkCycle = 0;
+    this.punchTimer = 0;
     this.keys = { w: false, a: false, s: false, d: false, shift: false };
     this.touchVector = { x: 0, y: 0 };
 
@@ -101,6 +103,7 @@ export class AbujaWorld3D {
     this.districtNodes = new Map();
     this.districtLabels = new Map();
     this.trafficCars = [];
+    this.streetPedestrians = [];
     this.remotePlayers = new Map();
     this.nairaParticles = [];
     this.spinningMeshes = [];
@@ -115,6 +118,7 @@ export class AbujaWorld3D {
     this._buildDistrictsAndSkyline();
     this._buildIconicLandmarks();
     this._buildTrafficSwarm();
+    this._buildStreetPedestrians();
     this._buildLocalPlayerRig();
     this._bindInputs();
 
@@ -123,15 +127,15 @@ export class AbujaWorld3D {
   }
 
   _initLights() {
-    this.ambientLight = new THREE.HemisphereLight(0x93c5fd, 0x1e293b, 0.85);
+    this.ambientLight = new THREE.HemisphereLight(0xe0f2fe, 0x4d7c0f, 1.15);
     this.scene.add(this.ambientLight);
 
-    this.sunLight = new THREE.DirectionalLight(0xfef08a, 1.45);
-    this.sunLight.position.set(320, 460, -240);
+    this.sunLight = new THREE.DirectionalLight(0xfffbeb, 1.75);
+    this.sunLight.position.set(280, 480, 220);
     this.sunLight.castShadow = true;
     this.sunLight.shadow.mapSize.width = 1024;
     this.sunLight.shadow.mapSize.height = 1024;
-    this.sunLight.shadow.camera.near = 50;
+    this.sunLight.shadow.camera.near = 20;
     this.sunLight.shadow.camera.far = 1600;
     const d = 550;
     this.sunLight.shadow.camera.left = -d;
@@ -140,12 +144,13 @@ export class AbujaWorld3D {
     this.sunLight.shadow.camera.bottom = -d;
     this.scene.add(this.sunLight);
 
-    this.cityGlow = new THREE.PointLight(0xf59e0b, 1.2, 650);
+    this.cityGlow = new THREE.PointLight(0xfef08a, 0.85, 650);
     this.cityGlow.position.set(0, 65, 0);
     this.scene.add(this.cityGlow);
   }
 
   _buildTerrainAndWater() {
+    // Lush Nigerian tropical green grass terrain matching Nigeria GTA screenshots
     const groundGeo = new THREE.PlaneGeometry(3400, 3400, 48, 48);
     groundGeo.rotateX(-Math.PI / 2);
 
@@ -154,27 +159,34 @@ export class AbujaWorld3D {
       const vx = pos.getX(i);
       const vz = pos.getZ(i);
       const distFromCenter = Math.hypot(vx, vz);
-      if (distFromCenter > 580) {
-        const ridge = Math.sin(vx * 0.008) * Math.cos(vz * 0.008) * 28;
+      if (distFromCenter > 620) {
+        const ridge = Math.sin(vx * 0.008) * Math.cos(vz * 0.008) * 26;
         pos.setY(i, Math.max(0, ridge));
       }
     }
     groundGeo.computeVertexNormals();
 
     const groundMat = new THREE.MeshStandardMaterial({
-      color: 0x121d24,
-      roughness: 0.92,
-      metalness: 0.05
+      color: 0x4d7c0f,
+      roughness: 0.9,
+      metalness: 0.02
     });
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.receiveShadow = true;
     this.scene.add(ground);
 
-    const grid = new THREE.GridHelper(2200, 55, 0x1e3a5f, 0x162436);
-    grid.position.y = 0.25;
-    grid.material.transparent = true;
-    grid.material.opacity = 0.35;
-    this.scene.add(grid);
+    // Subtle sandy laterite earth shoulders across urban FCT zone
+    const sandGeo = new THREE.PlaneGeometry(1650, 1650);
+    sandGeo.rotateX(-Math.PI / 2);
+    const sandMat = new THREE.MeshStandardMaterial({
+      color: 0x65a30d,
+      roughness: 0.95,
+      metalness: 0.02
+    });
+    const sandBase = new THREE.Mesh(sandGeo, sandMat);
+    sandBase.position.y = 0.08;
+    sandBase.receiveShadow = true;
+    this.scene.add(sandBase);
 
     // Jabi Lake water body
     const jabiD = DISTRICT_BY_ID.jabi;
@@ -183,7 +195,7 @@ export class AbujaWorld3D {
     this.lakeMaterial = new THREE.MeshStandardMaterial({
       color: 0x0284c7,
       emissive: 0x0369a1,
-      emissiveIntensity: 0.25,
+      emissiveIntensity: 0.2,
       roughness: 0.18,
       metalness: 0.75
     });
@@ -199,7 +211,7 @@ export class AbujaWorld3D {
       new THREE.MeshStandardMaterial({
         color: 0x06b6d4,
         emissive: 0x0891b2,
-        emissiveIntensity: 0.35,
+        emissiveIntensity: 0.3,
         roughness: 0.15,
         metalness: 0.8
       })
@@ -210,9 +222,9 @@ export class AbujaWorld3D {
 
   _buildAsoRockAndHills() {
     const rockMat = new THREE.MeshStandardMaterial({
-      color: 0x292524,
+      color: 0x57534e,
       roughness: 0.88,
-      metalness: 0.12,
+      metalness: 0.08,
       flatShading: true
     });
 
@@ -256,17 +268,23 @@ export class AbujaWorld3D {
   _buildRoadNetwork() {
     this.roadSegments = [];
     const roadMat = new THREE.MeshStandardMaterial({
-      color: 0x1e293b,
+      color: 0x475569,
       roughness: 0.85,
-      metalness: 0.1
+      metalness: 0.05
+    });
+    const shoulderSandMat = new THREE.MeshStandardMaterial({
+      color: 0xd6bfa3,
+      roughness: 0.95
     });
     const railMat = new THREE.MeshStandardMaterial({
       color: 0x059669,
       emissive: 0x047857,
-      emissiveIntensity: 0.35,
+      emissiveIntensity: 0.25,
       roughness: 0.4
     });
-    const stripeMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
+    const stripeMat = new THREE.MeshBasicMaterial({ color: 0xf8fafc });
+    const kerbBlackMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.7 });
+    const kerbWhiteMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.7 });
 
     for (const edge of EDGES) {
       const dA = DISTRICT_BY_ID[edge.a];
@@ -275,8 +293,8 @@ export class AbujaWorld3D {
 
       const pA = map2DTo3D(dA.x, dA.y);
       const pB = map2DTo3D(dB.x, dB.y);
-      const vA = new THREE.Vector3(pA.x, 0.5, pA.z);
-      const vB = new THREE.Vector3(pB.x, 0.5, pB.z);
+      const vA = new THREE.Vector3(pA.x, 0.35, pA.z);
+      const vB = new THREE.Vector3(pB.x, 0.35, pB.z);
 
       const diff = new THREE.Vector3().subVectors(vB, vA);
       const len = diff.length();
@@ -284,9 +302,19 @@ export class AbujaWorld3D {
       const angle = Math.atan2(diff.x, diff.z);
 
       const isRail = edge.type === 'rail';
-      const width = isRail ? 6 : edge.type === 'expressway' ? 15 : 9;
+      const width = isRail ? 6 : edge.type === 'expressway' ? 15 : 10;
 
-      const geo = new THREE.BoxGeometry(width, isRail ? 1.1 : 0.55, len);
+      // Sandy earth road shoulder (like Nigeria GTA streets)
+      if (!isRail) {
+        const shoulderGeo = new THREE.BoxGeometry(width + 5.5, 0.22, len);
+        const shoulder = new THREE.Mesh(shoulderGeo, shoulderSandMat);
+        shoulder.position.set(mid.x, 0.14, mid.z);
+        shoulder.rotation.y = angle;
+        shoulder.receiveShadow = true;
+        this.scene.add(shoulder);
+      }
+
+      const geo = new THREE.BoxGeometry(width, isRail ? 0.9 : 0.42, len);
       const mesh = new THREE.Mesh(geo, isRail ? railMat : roadMat);
       mesh.position.copy(mid);
       mesh.rotation.y = angle;
@@ -294,12 +322,33 @@ export class AbujaWorld3D {
       this.scene.add(mesh);
 
       if (!isRail) {
-        const stripeGeo = new THREE.PlaneGeometry(0.65, len * 0.94);
+        const stripeGeo = new THREE.PlaneGeometry(0.45, len * 0.94);
         stripeGeo.rotateX(-Math.PI / 2);
         const stripe = new THREE.Mesh(stripeGeo, stripeMat);
-        stripe.position.set(mid.x, 0.85, mid.z);
+        stripe.position.set(mid.x, 0.62, mid.z);
         stripe.rotation.y = angle;
         this.scene.add(stripe);
+
+        // Iconic alternating black-and-white painted Nigerian street kerbs
+        const kerbCount = Math.min(36, Math.floor(len / 8));
+        const kerbSegLen = len / Math.max(1, kerbCount);
+        const kerbGeo = new THREE.BoxGeometry(0.65, 0.62, kerbSegLen * 0.92);
+        for (let k = 0; k < kerbCount; k++) {
+          const frac = (k + 0.5) / kerbCount - 0.5;
+          const alongZ = frac * len;
+          const kMat = k % 2 === 0 ? kerbBlackMat : kerbWhiteMat;
+          for (const side of [-1, 1]) {
+            const kerb = new THREE.Mesh(kerbGeo, kMat);
+            const offsetSide = side * (width * 0.5 + 0.35);
+            kerb.position.set(
+              mid.x + Math.sin(angle) * alongZ + Math.cos(angle) * offsetSide,
+              0.52,
+              mid.z + Math.cos(angle) * alongZ - Math.sin(angle) * offsetSide
+            );
+            kerb.rotation.y = angle;
+            this.scene.add(kerb);
+          }
+        }
       }
 
       this.roadSegments.push({
@@ -314,17 +363,157 @@ export class AbujaWorld3D {
     }
   }
 
+  _buildNigerianDuplex(width, height, depth, wallHex, roofHex, winMat) {
+    const house = new THREE.Group();
+
+    // Main 2-storey painted plaster body
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(width, height, depth),
+      new THREE.MeshStandardMaterial({ color: wallHex, roughness: 0.65, metalness: 0.05 })
+    );
+    body.position.y = height * 0.5;
+    body.castShadow = true;
+    body.receiveShadow = true;
+    house.add(body);
+
+    // White horizontal floor fascia band between ground & 1st floor
+    const band = new THREE.Mesh(
+      new THREE.BoxGeometry(width + 0.35, 0.45, depth + 0.35),
+      new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.5 })
+    );
+    band.position.y = height * 0.52;
+    house.add(band);
+
+    // Pitched hip roof (dark brown / terracotta aluminum roofing sheets)
+    const roof = new THREE.Mesh(
+      new THREE.ConeGeometry(Math.max(width, depth) * 0.78, 4.4, 4),
+      new THREE.MeshStandardMaterial({ color: roofHex, roughness: 0.55, metalness: 0.2 })
+    );
+    roof.position.y = height + 2.2;
+    roof.rotation.y = Math.PI / 4;
+    roof.castShadow = true;
+    house.add(roof);
+
+    // Framed windows on front & back facades (2 rows × 3 columns like Nigeria GTA screenshots)
+    const frameMat = new THREE.MeshBasicMaterial({ color: 0xf8fafc });
+    const glassMat = winMat || new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.2, metalness: 0.8 });
+    const floors = [height * 0.28, height * 0.74];
+    const cols = [-width * 0.28, 0, width * 0.28];
+
+    for (const fy of floors) {
+      for (const cx of cols) {
+        for (const side of [-1, 1]) {
+          const frame = new THREE.Mesh(new THREE.BoxGeometry(1.7, 1.8, 0.18), frameMat);
+          frame.position.set(cx, fy, side * (depth * 0.5 + 0.06));
+          house.add(frame);
+
+          const pane = new THREE.Mesh(new THREE.BoxGeometry(1.35, 1.45, 0.22), glassMat);
+          pane.position.set(cx, fy, side * (depth * 0.5 + 0.08));
+          house.add(pane);
+        }
+      }
+    }
+
+    return house;
+  }
+
+  _buildParkedKoropeVan(colorHex = 0xe2e8f0) {
+    const van = new THREE.Group();
+    // Silver/white Nigerian minibus body (like Image 4)
+    const lowerBody = new THREE.Mesh(
+      new THREE.BoxGeometry(3.4, 1.5, 6.8),
+      new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.35, metalness: 0.55 })
+    );
+    lowerBody.position.y = 1.25;
+    lowerBody.castShadow = true;
+    van.add(lowerBody);
+
+    const upperCabin = new THREE.Mesh(
+      new THREE.BoxGeometry(3.2, 1.35, 6.2),
+      new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.3, metalness: 0.4 })
+    );
+    upperCabin.position.y = 2.6;
+    van.add(upperCabin);
+
+    // Dark tinted passenger window band
+    const winBand = new THREE.Mesh(
+      new THREE.BoxGeometry(3.28, 0.85, 5.6),
+      new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.15, metalness: 0.85 })
+    );
+    winBand.position.y = 2.65;
+    van.add(winBand);
+
+    // Black front/rear bumpers & 4 tires
+    const bumperMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.8 });
+    const frontBumper = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.45, 0.4), bumperMat);
+    frontBumper.position.set(0, 0.7, 3.45);
+    const rearBumper = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.45, 0.4), bumperMat);
+    rearBumper.position.set(0, 0.7, -3.45);
+    van.add(frontBumper, rearBumper);
+
+    const wheelGeo = new THREE.CylinderGeometry(0.62, 0.62, 0.45, 12);
+    wheelGeo.rotateZ(Math.PI / 2);
+    for (const [wx, wz] of [[-1.65, 2.1], [1.65, 2.1], [-1.65, -2.1], [1.65, -2.1]]) {
+      const wheel = new THREE.Mesh(wheelGeo, bumperMat);
+      wheel.position.set(wx, 0.62, wz);
+      van.add(wheel);
+    }
+    return van;
+  }
+
+  _buildMiniFootballPitch() {
+    const pitch = new THREE.Group();
+    // Lush green 5-aside turf pad (matching Image 5)
+    const turf = new THREE.Mesh(
+      new THREE.PlaneGeometry(18, 26),
+      new THREE.MeshStandardMaterial({ color: 0x3f6212, roughness: 0.85 })
+    );
+    turf.rotateX(-Math.PI / 2);
+    turf.position.y = 0.26;
+    turf.receiveShadow = true;
+    pitch.add(turf);
+
+    // White touchline border & halfway line
+    const lineMat = new THREE.MeshBasicMaterial({ color: 0xf8fafc });
+    const midLine = new THREE.Mesh(new THREE.PlaneGeometry(16.8, 0.25), lineMat);
+    midLine.rotateX(-Math.PI / 2);
+    midLine.position.y = 0.29;
+    pitch.add(midLine);
+
+    // Two white football goalposts at North & South ends
+    const postMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
+    for (const side of [-1, 1]) {
+      const gz = side * 12.2;
+      const leftPost = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 3.2, 8), postMat);
+      leftPost.position.set(-2.8, 1.6, gz);
+      const rightPost = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 3.2, 8), postMat);
+      rightPost.position.set(2.8, 1.6, gz);
+      const crossbar = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 5.8, 8), postMat);
+      crossbar.rotation.z = Math.PI / 2;
+      crossbar.position.set(0, 3.2, gz);
+      pitch.add(leftPost, rightPost, crossbar);
+    }
+    return pitch;
+  }
+
   _buildDistrictsAndSkyline() {
     this.clickableDistrictMeshes = [];
 
     const winLitMat = new THREE.MeshStandardMaterial({
       color: 0x1e293b,
       emissive: 0xfef08a,
-      emissiveIntensity: 0.45,
-      roughness: 0.3,
-      metalness: 0.7
+      emissiveIntensity: 0.22,
+      roughness: 0.25,
+      metalness: 0.75
     });
     this.windowMaterials.push(winLitMat);
+
+    const duplexWallColors = [0xfed7aa, 0xfde68a, 0xfdba74, 0xfef3c7, 0xe2e8f0];
+    const duplexRoofColors = [0x5c2415, 0x7c2d12, 0x451a03, 0x334155];
+    const hedgeMat = new THREE.MeshStandardMaterial({ color: 0x365314, roughness: 0.9 });
+    const kerbBlackMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.7 });
+    const kerbWhiteMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.7 });
+    const poleMat = new THREE.MeshStandardMaterial({ color: 0x57534e, roughness: 0.85 });
 
     for (const d of DISTRICTS) {
       const id = d.id;
@@ -336,92 +525,107 @@ export class AbujaWorld3D {
       const isZone1 = d.zone === 1;
       const zoneColor = isZone1 ? 0xf59e0b : 0x10b981;
 
-      const ringGeo = new THREE.RingGeometry(36, 41, 40);
+      const ringGeo = new THREE.RingGeometry(42, 45, 40);
       ringGeo.rotateX(-Math.PI / 2);
       const ringMat = new THREE.MeshBasicMaterial({
         color: zoneColor,
         side: THREE.DoubleSide,
         transparent: true,
-        opacity: 0.55
+        opacity: 0.45
       });
       const ring = new THREE.Mesh(ringGeo, ringMat);
-      ring.position.y = 0.9;
+      ring.position.y = 0.35;
       group.add(ring);
 
-      const padGeo = new THREE.CylinderGeometry(35, 35, 0.8, 32);
+      // Sandy earth outer compound pad + gray interlocking stone inner courtyard (matching Nigeria GTA screenshots)
+      const sandPad = new THREE.Mesh(
+        new THREE.CylinderGeometry(41, 41, 0.25, 32),
+        new THREE.MeshStandardMaterial({ color: 0xd6bfa3, roughness: 0.95 })
+      );
+      sandPad.position.y = 0.12;
+      sandPad.receiveShadow = true;
+      group.add(sandPad);
+
+      const padGeo = new THREE.BoxGeometry(52, 0.36, 52);
       const padMat = new THREE.MeshStandardMaterial({
-        color: isZone1 ? 0x1e293b : 0x27272a,
-        roughness: 0.8
+        color: 0x9ca3af,
+        roughness: 0.82
       });
       const pad = new THREE.Mesh(padGeo, padMat);
-      pad.position.y = 0.4;
+      pad.position.y = 0.2;
+      pad.receiveShadow = true;
       pad.userData = { districtId: id };
       this.clickableDistrictMeshes.push(pad);
       group.add(pad);
 
-      const bCount = isZone1 ? 14 : 18;
+      // Black-and-white painted curb stones (kerbs) framing the compound walkway
+      for (let k = -6; k <= 6; k++) {
+        const kMat = Math.abs(k) % 2 === 0 ? kerbBlackMat : kerbWhiteMat;
+        const kFront = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.55, 0.65), kMat);
+        kFront.position.set(k * 3.8, 0.45, 14.5);
+        const kBack = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.55, 0.65), kMat);
+        kBack.position.set(k * 3.8, 0.45, -14.5);
+        group.add(kFront, kBack);
+      }
+
+      // Manicured green hedges along the compound walkway (matching Images 3, 4 & 5)
+      for (const hx of [-16, 16]) {
+        const hedge = new THREE.Mesh(new THREE.BoxGeometry(2.2, 2.1, 22), hedgeMat);
+        hedge.position.set(hx, 1.2, 0);
+        hedge.castShadow = true;
+        group.add(hedge);
+      }
+
+      // Mini Football Turf with White Goalposts + Parked Korope Minibus + Utility Poles
+      const pitch = this._buildMiniFootballPitch();
+      pitch.position.set(-24, 0, 12);
+      group.add(pitch);
+
+      const van1 = this._buildParkedKoropeVan(0xe2e8f0);
+      van1.position.set(19, 0.2, 18);
+      van1.rotation.y = -0.35;
+      group.add(van1);
+
+      const van2 = this._buildParkedKoropeVan(0xfacc15);
+      van2.position.set(-19, 0.2, -18);
+      van2.rotation.y = 0.45;
+      group.add(van2);
+
+      // Concrete utility poles
+      for (const [px, pz] of [[-14, 15], [14, 15], [14, -15]]) {
+        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.28, 15, 8), poleMat);
+        pole.position.set(px, 7.5, pz);
+        pole.castShadow = true;
+        group.add(pole);
+      }
+
+      // Surround district with authentic 2-storey Nigerian residential duplexes (and towers in CBD)
+      const bCount = 10;
       for (let i = 0; i < bCount; i++) {
-        const ang = (i / bCount) * Math.PI * 2 + (i % 2) * 0.22;
-        const rad = 22 + (i % 3) * 18;
+        const ang = (i / bCount) * Math.PI * 2 + 0.25;
+        const rad = 28 + (i % 2) * 12;
         const bx = Math.cos(ang) * rad;
         const bz = Math.sin(ang) * rad;
 
-        let bw = 8 + (i % 4) * 3;
-        let bd = 8 + ((i + 1) % 4) * 3;
-        let bh = 12;
-        let bColor = 0x334155;
+        const bw = 12 + (i % 3) * 2;
+        const bd = 10 + ((i + 1) % 2) * 2;
+        const bh = (id === 'cbd' && i < 3) ? 32 + i * 10 : 10.5 + (i % 2) * 2.5;
+        const wallHex = duplexWallColors[i % duplexWallColors.length];
+        const roofHex = duplexRoofColors[i % duplexRoofColors.length];
 
-        if (id === 'cbd') {
-          bh = 36 + (i % 5) * 18;
-          bColor = i % 2 === 0 ? 0x0f172a : 0x1e3a5f;
-        } else if (id === 'wuse2') {
-          bh = 22 + (i % 4) * 10;
-          bColor = i % 2 === 0 ? 0x31102f : 0x1e1b4b;
-        } else if (id === 'maitama' || id === 'asokoro' || id === 'guzape') {
-          bh = 14 + (i % 3) * 6;
-          bw = 13;
-          bd = 11;
-          bColor = 0xf8fafc;
-        } else {
-          bh = 8 + (i % 3) * 4.5;
-          bColor = i % 2 === 0 ? 0x7c2d12 : 0x475569;
-        }
-
-        const bGeo = new THREE.BoxGeometry(bw, bh, bd);
-        const bMat = new THREE.MeshStandardMaterial({
-          color: bColor,
-          roughness: 0.55,
-          metalness: isZone1 ? 0.35 : 0.1
+        const duplex = this._buildNigerianDuplex(bw, bh, bd, wallHex, roofHex, winLitMat);
+        duplex.position.set(bx, 0.2, bz);
+        duplex.rotation.y = -ang + Math.PI / 2;
+        duplex.traverse((child) => {
+          if (child.isMesh) {
+            child.userData = { districtId: id };
+            this.clickableDistrictMeshes.push(child);
+          }
         });
-        const bMesh = new THREE.Mesh(bGeo, bMat);
-        bMesh.position.set(bx, bh / 2, bz);
-        bMesh.castShadow = true;
-        bMesh.receiveShadow = true;
-        bMesh.userData = { districtId: id };
-        this.clickableDistrictMeshes.push(bMesh);
-        group.add(bMesh);
-
-        if (bh >= 20) {
-          const winStrip = new THREE.Mesh(
-            new THREE.BoxGeometry(bw + 0.3, bh * 0.72, bd + 0.3),
-            winLitMat
-          );
-          winStrip.position.set(bx, bh * 0.52, bz);
-          group.add(winStrip);
-        }
-
-        if (id === 'maitama' || id === 'asokoro') {
-          const roof = new THREE.Mesh(
-            new THREE.ConeGeometry(bw * 0.75, 5, 4),
-            new THREE.MeshStandardMaterial({ color: 0x065f46, roughness: 0.7 })
-          );
-          roof.position.set(bx, bh + 2.5, bz);
-          roof.rotation.y = Math.PI / 4;
-          group.add(roof);
-        }
+        group.add(duplex);
       }
 
-      const beaconGeo = new THREE.OctahedronGeometry(5.5, 0);
+      const beaconGeo = new THREE.OctahedronGeometry(4.5, 0);
       const beaconMat = new THREE.MeshStandardMaterial({
         color: zoneColor,
         emissive: zoneColor,
@@ -430,7 +634,7 @@ export class AbujaWorld3D {
         metalness: 0.8
       });
       const beacon = new THREE.Mesh(beaconGeo, beaconMat);
-      beacon.position.y = id === 'cbd' ? 115 : 64;
+      beacon.position.y = id === 'cbd' ? 115 : 54;
       beacon.userData = { districtId: id };
       this.clickableDistrictMeshes.push(beacon);
       this.spinningMeshes.push(beacon);
@@ -882,19 +1086,159 @@ export class AbujaWorld3D {
     }
   }
 
+  _buildHumanoidRig({
+    jacketColor = 0xf472b6,
+    shirtColor = 0xf8fafc,
+    pantsColor = 0x111827,
+    shoeColor = 0xfacc15,
+    skinColor = 0x6b3e26
+  } = {}) {
+    const root = new THREE.Group();
+
+    const skinMat = new THREE.MeshStandardMaterial({ color: skinColor, roughness: 0.65 });
+    const hairMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.85 });
+    const jacketMat = new THREE.MeshStandardMaterial({ color: jacketColor, roughness: 0.48 });
+    const shirtMat = new THREE.MeshStandardMaterial({ color: shirtColor, roughness: 0.55 });
+    const pantsMat = new THREE.MeshStandardMaterial({ color: pantsColor, roughness: 0.7 });
+    const shoeMat = new THREE.MeshStandardMaterial({ color: shoeColor, roughness: 0.4 });
+    const soleMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 });
+
+    // Torso / Pastel Pink Jacket (matching Nigeria GTA screenshots)
+    const torso = new THREE.Mesh(new THREE.BoxGeometry(1.45, 1.85, 0.78), jacketMat);
+    torso.position.y = 2.65;
+    torso.castShadow = true;
+    root.add(torso);
+
+    // Inner White Shirt strip on front (+Z is forward)
+    const innerTee = new THREE.Mesh(new THREE.BoxGeometry(0.55, 1.78, 0.82), shirtMat);
+    innerTee.position.set(0, 2.65, 0.02);
+    root.add(innerTee);
+
+    // Hip / Belt waist block
+    const pelvis = new THREE.Mesh(new THREE.BoxGeometry(1.38, 0.42, 0.74), pantsMat);
+    pelvis.position.y = 1.62;
+    root.add(pelvis);
+
+    // Neck & Head with neat Nigerian low-cut fade
+    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.26, 0.35, 10), skinMat);
+    neck.position.y = 3.72;
+    root.add(neck);
+
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.82, 0.76), skinMat);
+    head.position.y = 4.22;
+    head.castShadow = true;
+    root.add(head);
+
+    const hair = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.32, 0.8), hairMat);
+    hair.position.y = 4.54;
+    root.add(hair);
+
+    // Articulated Left & Right Arms (pivoted at shoulder y = 3.45)
+    const leftArmPivot = new THREE.Group();
+    leftArmPivot.position.set(-0.92, 3.45, 0);
+    const leftSleeve = new THREE.Mesh(new THREE.BoxGeometry(0.42, 1.35, 0.42), jacketMat);
+    leftSleeve.position.y = -0.58;
+    leftSleeve.castShadow = true;
+    const leftHand = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.38, 0.36), skinMat);
+    leftHand.position.y = -1.35;
+    leftArmPivot.add(leftSleeve, leftHand);
+    root.add(leftArmPivot);
+
+    const rightArmPivot = new THREE.Group();
+    rightArmPivot.position.set(0.92, 3.45, 0);
+    const rightSleeve = new THREE.Mesh(new THREE.BoxGeometry(0.42, 1.35, 0.42), jacketMat);
+    rightSleeve.position.y = -0.58;
+    rightSleeve.castShadow = true;
+    const rightHand = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.38, 0.36), skinMat);
+    rightHand.position.y = -1.35;
+    rightArmPivot.add(rightSleeve, rightHand);
+    root.add(rightArmPivot);
+
+    // Articulated Left & Right Legs in Black Jeans & Yellow Sneakers (pivoted at hip y = 1.55)
+    const leftLegPivot = new THREE.Group();
+    leftLegPivot.position.set(-0.38, 1.55, 0);
+    const leftTrouser = new THREE.Mesh(new THREE.BoxGeometry(0.52, 1.35, 0.52), pantsMat);
+    leftTrouser.position.y = -0.68;
+    leftTrouser.castShadow = true;
+    const leftShoe = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.32, 0.78), shoeMat);
+    leftShoe.position.set(0, -1.38, 0.12);
+    const leftSole = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.1, 0.82), soleMat);
+    leftSole.position.set(0, -1.5, 0.12);
+    leftLegPivot.add(leftTrouser, leftShoe, leftSole);
+    root.add(leftLegPivot);
+
+    const rightLegPivot = new THREE.Group();
+    rightLegPivot.position.set(0.38, 1.55, 0);
+    const rightTrouser = new THREE.Mesh(new THREE.BoxGeometry(0.52, 1.35, 0.52), pantsMat);
+    rightTrouser.position.y = -0.68;
+    rightTrouser.castShadow = true;
+    const rightShoe = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.32, 0.78), shoeMat);
+    rightShoe.position.set(0, -1.38, 0.12);
+    const rightSole = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.1, 0.82), soleMat);
+    rightSole.position.set(0, -1.5, 0.12);
+    rightLegPivot.add(rightTrouser, rightShoe, rightSole);
+    root.add(rightLegPivot);
+
+    return {
+      root,
+      torso,
+      leftArmPivot,
+      rightArmPivot,
+      leftLegPivot,
+      rightLegPivot
+    };
+  }
+
+  _buildStreetPedestrians() {
+    const npcOutfits = [
+      { jacketColor: 0x16a34a, shirtColor: 0xffffff, pantsColor: 0x1e293b, shoeColor: 0xffffff }, // Green/white jersey (like Image 4)
+      { jacketColor: 0xeab308, shirtColor: 0x111827, pantsColor: 0x0f172a, shoeColor: 0xfacc15 },
+      { jacketColor: 0x2563eb, shirtColor: 0xf8fafc, pantsColor: 0x1e293b, shoeColor: 0xe2e8f0 },
+      { jacketColor: 0xdc2626, shirtColor: 0xfef08a, pantsColor: 0x111827, shoeColor: 0xffffff }
+    ];
+
+    for (let dIdx = 0; dIdx < DISTRICTS.length; dIdx++) {
+      const d = DISTRICTS[dIdx];
+      const basePos = map2DTo3D(d.x, d.y);
+      // Spawn 2 street pedestrians per district compound walkway
+      for (let n = 0; n < 2; n++) {
+        const outfit = npcOutfits[(dIdx + n) % npcOutfits.length];
+        const rig = this._buildHumanoidRig(outfit);
+        const startX = basePos.x + (n === 0 ? 0 : -8);
+        const startZ = basePos.z + (n === 0 ? 3 : -6);
+        rig.root.position.set(startX, 0.2, startZ);
+        this.scene.add(rig.root);
+
+        this.streetPedestrians.push({
+          rig,
+          districtId: d.id,
+          homeX: startX,
+          homeZ: startZ,
+          patrolRadius: 9 + n * 4,
+          phase: (dIdx * 1.3 + n * 2.1),
+          speed: 0.75 + (n * 0.2),
+          knockedTimer: 0
+        });
+      }
+    }
+  }
+
   _buildLocalPlayerRig() {
     this.playerGroup = new THREE.Group();
     this.playerGroup.position.copy(this.playerPos);
+    this.playerGroup.rotation.y = this.playerHeading;
 
-    const ringGeo = new THREE.RingGeometry(5.2, 6.8, 32);
+    // Subtle ground shadow ring under player
+    const ringGeo = new THREE.RingGeometry(1.1, 1.45, 24);
     ringGeo.rotateX(-Math.PI / 2);
     this.playerRing = new THREE.Mesh(
       ringGeo,
-      new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide })
+      new THREE.MeshBasicMaterial({ color: 0x10b981, side: THREE.DoubleSide, transparent: true, opacity: 0.65 })
     );
-    this.playerRing.position.y = 0.8;
+    this.playerRing.position.y = 0.24;
     this.playerGroup.add(this.playerRing);
 
+    // Player SUV Vehicle Mesh (visible when inVehicle === true)
     this.playerVehicleMesh = new THREE.Group();
     const chassis = new THREE.Mesh(
       new THREE.BoxGeometry(4.4, 2.2, 8.6),
@@ -918,34 +1262,57 @@ export class AbujaWorld3D {
     grille.position.set(0, 1.8, 4.35);
     this.playerVehicleMesh.add(grille);
 
+    this.playerVehicleMesh.visible = this.inVehicle;
     this.playerGroup.add(this.playerVehicleMesh);
 
-    this.playerPedMesh = new THREE.Group();
-    const torso = new THREE.Mesh(
-      new THREE.CylinderGeometry(1.1, 1.5, 3.8, 12),
-      new THREE.MeshStandardMaterial({ color: 0x10b981, roughness: 0.4 })
-    );
-    torso.position.y = 2.4;
-    this.playerPedMesh.add(torso);
-
-    const head = new THREE.Mesh(
-      new THREE.SphereGeometry(0.95, 16, 16),
-      new THREE.MeshStandardMaterial({ color: 0x8d5524, roughness: 0.6 })
-    );
-    head.position.y = 5.0;
-    this.playerPedMesh.add(head);
-
-    const filaCap = new THREE.Mesh(
-      new THREE.CylinderGeometry(1.0, 1.05, 0.7, 12),
-      new THREE.MeshStandardMaterial({ color: 0xfacc15 })
-    );
-    filaCap.position.y = 5.75;
-    this.playerPedMesh.add(filaCap);
-
-    this.playerPedMesh.visible = false;
+    // Articulated 3rd-Person Nigeria GTA Character (Pastel Pink Jacket, Black Jeans, Yellow Sneakers)
+    this.playerHuman = this._buildHumanoidRig({
+      jacketColor: 0xf472b6,
+      shirtColor: 0xf8fafc,
+      pantsColor: 0x111827,
+      shoeColor: 0xfacc15,
+      skinColor: 0x6b3e26
+    });
+    this.playerPedMesh = this.playerHuman.root;
+    this.playerPedMesh.position.y = 0.2;
+    this.playerPedMesh.visible = !this.inVehicle;
     this.playerGroup.add(this.playerPedMesh);
 
     this.scene.add(this.playerGroup);
+  }
+
+  triggerStreetPunch() {
+    if (this.inVehicle) {
+      this.toggleVehicleMode();
+    }
+    this.punchTimer = 0.42;
+
+    // Check if any street pedestrian is nearby to knock down (like Image 4!)
+    let hitNpc = null;
+    let bestDist = 14;
+    for (const npc of this.streetPedestrians) {
+      const dist = Math.hypot(
+        npc.rig.root.position.x - this.playerPos.x,
+        npc.rig.root.position.z - this.playerPos.z
+      );
+      if (dist < bestDist) {
+        bestDist = dist;
+        hitNpc = npc;
+      }
+    }
+
+    if (hitNpc) {
+      hitNpc.knockedTimer = 4.2;
+      // Push NPC slightly away along player heading
+      hitNpc.rig.root.position.x += Math.sin(this.playerHeading) * 2.4;
+      hitNpc.rig.root.position.z += Math.cos(this.playerHeading) * 2.4;
+      this.spawnNairaRain(10);
+    }
+
+    if (this.callbacks.onStreetPunch) {
+      this.callbacks.onStreetPunch({ hitNpc: Boolean(hitNpc), districtId: this.currentDistrictId });
+    }
+    return Boolean(hitNpc);
   }
 
   _bindInputs() {
@@ -959,6 +1326,10 @@ export class AbujaWorld3D {
       if (k === 'shift') this.keys.shift = true;
       if (k === 'f') this.toggleVehicleMode();
       if (k === 'v') this.cycleCameraMode();
+      if (k === ' ' || k === 'e') {
+        e.preventDefault();
+        this.triggerStreetPunch();
+      }
     });
 
     window.addEventListener('keyup', (e) => {
@@ -985,7 +1356,7 @@ export class AbujaWorld3D {
       const dy = e.clientY - this.lastPointer.y;
       this.lastPointer = { x: e.clientX, y: e.clientY };
       this.cameraYaw -= dx * 0.0065;
-      this.cameraPitch = Math.max(0.18, Math.min(1.25, this.cameraPitch + dy * 0.005));
+      this.cameraPitch = Math.max(0.08, Math.min(1.15, this.cameraPitch + dy * 0.005));
     });
 
     window.addEventListener('pointerup', (e) => {
@@ -999,7 +1370,7 @@ export class AbujaWorld3D {
 
     canvas.addEventListener('wheel', (e) => {
       e.preventDefault();
-      this.cameraDistance = Math.max(38, Math.min(420, this.cameraDistance + e.deltaY * 0.12));
+      this.cameraDistance = Math.max(10, Math.min(360, this.cameraDistance + e.deltaY * 0.06));
     }, { passive: false });
 
     window.addEventListener('resize', () => this.resize());
@@ -1033,13 +1404,17 @@ export class AbujaWorld3D {
     this.inVehicle = !this.inVehicle;
     this.playerVehicleMesh.visible = this.inVehicle;
     this.playerPedMesh.visible = !this.inVehicle;
+    if (this.cameraMode === 'chase') {
+      this.cameraDistance = this.inVehicle ? 34 : 15.5;
+      this.cameraPitch = this.inVehicle ? 0.32 : 0.22;
+    }
     return this.inVehicle;
   }
 
   cycleCameraMode() {
     this.cameraMode = this.cameraMode === 'chase' ? 'helicopter' : 'chase';
-    this.cameraDistance = this.cameraMode === 'helicopter' ? 235 : 88;
-    this.cameraPitch = this.cameraMode === 'helicopter' ? 0.85 : 0.42;
+    this.cameraDistance = this.cameraMode === 'helicopter' ? 195 : (this.inVehicle ? 34 : 15.5);
+    this.cameraPitch = this.cameraMode === 'helicopter' ? 0.78 : (this.inVehicle ? 0.32 : 0.22);
     return this.cameraMode;
   }
 
@@ -1059,7 +1434,7 @@ export class AbujaWorld3D {
     const d = DISTRICT_BY_ID[districtId];
     if (!d) return;
     const target3D = map2DTo3D(d.x, d.y);
-    const destVec = new THREE.Vector3(target3D.x, 0, target3D.z);
+    const destVec = new THREE.Vector3(target3D.x, 0, target3D.z + 10);
 
     this.currentDistrictId = districtId;
 
@@ -1088,36 +1463,37 @@ export class AbujaWorld3D {
     this.hourOfDay = hour;
     this.weather = weather;
 
-    const isNight = hour >= 19 || hour < 6;
-    const isDusk = (hour >= 17 && hour < 19) || (hour >= 6 && hour < 7);
+    // Keep bright tropical Nigeria GTA daytime look clearly visible, with atmospheric tint for night/harmattan
+    const isNight = hour >= 20 || hour < 6;
+    const isDusk = (hour >= 18 && hour < 20) || (hour >= 6 && hour < 7);
 
     if (weather === 'harmattan' || weather === 'dry') {
-      this.scene.background.setHex(isNight ? 0x1c1917 : 0x78350f);
-      this.scene.fog.color.setHex(isNight ? 0x1c1917 : 0x92400e);
-      this.scene.fog.density = 0.0016;
+      this.scene.background.setHex(isNight ? 0x334155 : 0xfde68a);
+      this.scene.fog.color.setHex(isNight ? 0x334155 : 0xfef3c7);
+      this.scene.fog.density = 0.00055;
     } else if (weather === 'storm' || weather === 'downpour') {
-      this.scene.background.setHex(0x090d16);
-      this.scene.fog.color.setHex(0x0f172a);
-      this.scene.fog.density = 0.0016;
+      this.scene.background.setHex(0x64748b);
+      this.scene.fog.color.setHex(0x94a3b8);
+      this.scene.fog.density = 0.00065;
     } else if (isNight) {
-      this.scene.background.setHex(0x050811);
-      this.scene.fog.color.setHex(0x050811);
-      this.scene.fog.density = 0.00095;
+      this.scene.background.setHex(0x1e293b);
+      this.scene.fog.color.setHex(0x1e293b);
+      this.scene.fog.density = 0.00045;
     } else if (isDusk) {
-      this.scene.background.setHex(0x31102f);
-      this.scene.fog.color.setHex(0x4c1d95);
-      this.scene.fog.density = 0.0009;
+      this.scene.background.setHex(0x7dd3fc);
+      this.scene.fog.color.setHex(0xfed7aa);
+      this.scene.fog.density = 0.00038;
     } else {
-      this.scene.background.setHex(0x0c4a6e);
-      this.scene.fog.color.setHex(0x0c4a6e);
-      this.scene.fog.density = 0.00075;
+      this.scene.background.setHex(0x7dd3fc);
+      this.scene.fog.color.setHex(0xbae6fd);
+      this.scene.fog.density = 0.00032;
     }
 
-    this.sunLight.intensity = isNight ? 0.25 : isDusk ? 0.9 : 1.5;
-    this.sunLight.color.setHex(isDusk ? 0xf97316 : isNight ? 0x38bdf8 : 0xfef08a);
+    this.sunLight.intensity = isNight ? 0.95 : isDusk ? 1.35 : 1.75;
+    this.sunLight.color.setHex(isDusk ? 0xfdba74 : isNight ? 0x93c5fd : 0xfffbeb);
 
     for (const mat of this.windowMaterials) {
-      mat.emissiveIntensity = isNight ? 0.95 : 0.2;
+      mat.emissiveIntensity = isNight ? 0.85 : 0.22;
     }
   }
 
@@ -1165,19 +1541,21 @@ export class AbujaWorld3D {
         group.position.set(pos3D.x, 0, pos3D.z);
 
         const color = p.isBot ? 0xf59e0b : 0xec4899;
-        const mesh = new THREE.Mesh(
-          new THREE.BoxGeometry(3.8, 2.2, 7.2),
-          new THREE.MeshStandardMaterial({ color, roughness: 0.25, metalness: 0.8 })
-        );
-        mesh.position.y = 1.6;
-        group.add(mesh);
+        const avatarRig = this._buildHumanoidRig({
+          jacketColor: color,
+          shirtColor: 0xffffff,
+          pantsColor: 0x111827,
+          shoeColor: 0xfacc15
+        });
+        avatarRig.root.position.y = 0.2;
+        group.add(avatarRig.root);
 
         const halo = new THREE.Mesh(
-          new THREE.RingGeometry(4.2, 5.2, 24),
+          new THREE.RingGeometry(1.6, 2.2, 24),
           new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide })
         );
         halo.rotateX(-Math.PI / 2);
-        halo.position.y = 0.7;
+        halo.position.y = 0.35;
         group.add(halo);
 
         this.scene.add(group);
@@ -1273,6 +1651,31 @@ export class AbujaWorld3D {
       car.group.rotation.y = car.dir > 0 ? angle : angle + Math.PI;
     }
 
+    // Animate street pedestrians walking along compounds (or knocked down like Image 4)
+    for (const npc of this.streetPedestrians) {
+      if (npc.knockedTimer > 0) {
+        npc.knockedTimer -= dt;
+        npc.rig.root.rotation.x = -Math.PI / 2.1;
+        npc.rig.root.position.y = 0.55;
+      } else {
+        npc.rig.root.rotation.x = 0;
+        npc.rig.root.position.y = 0.2;
+        npc.phase += dt * npc.speed;
+        const nx = npc.homeX + Math.sin(npc.phase) * npc.patrolRadius;
+        const nz = npc.homeZ + Math.cos(npc.phase * 0.7) * (npc.patrolRadius * 0.6);
+        const dx = nx - npc.rig.root.position.x;
+        const dz = nz - npc.rig.root.position.z;
+        npc.rig.root.position.set(nx, 0.2, nz);
+        npc.rig.root.rotation.y = Math.atan2(dx, dz);
+
+        const swing = Math.sin(npc.phase * 6) * 0.55;
+        npc.rig.leftLegPivot.rotation.x = swing;
+        npc.rig.rightLegPivot.rotation.x = -swing;
+        npc.rig.leftArmPivot.rotation.x = -swing * 0.8;
+        npc.rig.rightArmPivot.rotation.x = swing * 0.8;
+      }
+    }
+
     if (this.skyCam.active) {
       this.skyCam.elapsed += dt;
       const u = Math.min(1, this.skyCam.elapsed / this.skyCam.duration);
@@ -1281,14 +1684,14 @@ export class AbujaWorld3D {
       this.playerPos.lerpVectors(this.skyCam.from, this.skyCam.to, ease);
       this.playerGroup.position.copy(this.playerPos);
 
-      const altitudeArc = Math.sin(u * Math.PI) * 340;
+      const altitudeArc = Math.sin(u * Math.PI) * 280;
       const camPos = new THREE.Vector3(
-        this.playerPos.x + Math.sin(this.cameraYaw) * (this.cameraDistance + altitudeArc * 0.4),
-        48 + altitudeArc,
-        this.playerPos.z + Math.cos(this.cameraYaw) * (this.cameraDistance + altitudeArc * 0.4)
+        this.playerPos.x + Math.sin(this.cameraYaw) * (this.cameraDistance + altitudeArc * 0.35),
+        12 + altitudeArc,
+        this.playerPos.z + Math.cos(this.cameraYaw) * (this.cameraDistance + altitudeArc * 0.35)
       );
       this.camera.position.copy(camPos);
-      this.camera.lookAt(this.playerPos.x, 8, this.playerPos.z);
+      this.camera.lookAt(this.playerPos.x, 3.8, this.playerPos.z);
 
       if (u >= 1) {
         this.skyCam.active = false;
@@ -1321,7 +1724,7 @@ export class AbujaWorld3D {
     const forwardInput = (this.keys.w ? 1 : 0) - (this.keys.s ? 1 : 0) - this.touchVector.y;
     const turnInput = (this.keys.a ? 1 : 0) - (this.keys.d ? 1 : 0) - this.touchVector.x;
 
-    const maxSpeed = this.inVehicle ? (this.keys.shift ? 135 : 88) : 34;
+    const maxSpeed = this.inVehicle ? (this.keys.shift ? 125 : 82) : (this.keys.shift ? 36 : 22);
 
     if (Math.abs(forwardInput) > 0.05 || Math.abs(turnInput) > 0.05) {
       const inputAngle = Math.atan2(-turnInput, forwardInput);
@@ -1338,20 +1741,45 @@ export class AbujaWorld3D {
       this.playerGroup.position.copy(this.playerPos);
       this.playerGroup.rotation.y = this.playerHeading;
 
+      this.walkCycle += dt * (this.keys.shift ? 15 : 10);
       this._checkDistrictProximity();
     } else {
-      this.playerSpeed *= 0.85;
+      this.playerSpeed *= 0.82;
+      this.walkCycle *= 0.85;
+    }
+
+    // Animate 3rd-person humanoid limbs (walking stride + street punch right hook)
+    if (this.playerHuman) {
+      const moving = this.playerSpeed > 1.2;
+      const legSwing = moving ? Math.sin(this.walkCycle) * 0.72 : 0;
+      this.playerHuman.leftLegPivot.rotation.x = legSwing;
+      this.playerHuman.rightLegPivot.rotation.x = -legSwing;
+      this.playerHuman.leftArmPivot.rotation.x = -legSwing * 0.85;
+
+      if (this.punchTimer > 0) {
+        this.punchTimer = Math.max(0, this.punchTimer - dt);
+        this.playerHuman.rightArmPivot.rotation.x = -Math.PI * 0.58;
+        this.playerHuman.rightArmPivot.rotation.z = -0.22;
+        this.playerHuman.torso.rotation.y = 0.28;
+      } else {
+        this.playerHuman.rightArmPivot.rotation.x = legSwing * 0.85;
+        this.playerHuman.rightArmPivot.rotation.z = 0;
+        this.playerHuman.torso.rotation.y = 0;
+      }
     }
 
     const horizDist = Math.cos(this.cameraPitch) * this.cameraDistance;
     const vertDist = Math.sin(this.cameraPitch) * this.cameraDistance;
+    const minCamHeight = this.inVehicle ? 7.5 : 3.6;
+    const lookTargetY = this.inVehicle ? 4.2 : 3.5;
+
     const desiredCam = new THREE.Vector3(
       this.playerPos.x + Math.sin(this.cameraYaw) * horizDist,
-      Math.max(12, vertDist),
+      Math.max(minCamHeight, vertDist + 1.5),
       this.playerPos.z + Math.cos(this.cameraYaw) * horizDist
     );
-    this.camera.position.lerp(desiredCam, Math.min(1, dt * 8));
-    this.camera.lookAt(this.playerPos.x, 6, this.playerPos.z);
+    this.camera.position.lerp(desiredCam, Math.min(1, dt * 10));
+    this.camera.lookAt(this.playerPos.x, lookTargetY, this.playerPos.z);
   }
 
   _checkDistrictProximity() {
@@ -1537,7 +1965,7 @@ export class AbujaWorld3D {
     for (const [id, label] of this.districtLabels.entries()) {
       const node = this.districtNodes.get(id);
       if (!node) continue;
-      tempV.set(node.pos.x, id === 'cbd' ? 126 : 74, node.pos.z);
+      tempV.set(node.pos.x, this.cameraMode === 'helicopter' ? 54 : 18, node.pos.z);
       tempV.project(this.camera);
 
       if (tempV.z > 1) {
@@ -1553,7 +1981,7 @@ export class AbujaWorld3D {
 
     for (const entry of this.remotePlayers.values()) {
       tempV.copy(entry.group.position);
-      tempV.y += 14;
+      tempV.y += 5.8;
       tempV.project(this.camera);
 
       if (tempV.z > 1) {
@@ -1569,7 +1997,7 @@ export class AbujaWorld3D {
     if (this.playerHouseEntries) {
       for (const entry of this.playerHouseEntries.values()) {
         tempV.copy(entry.group.position);
-        tempV.y += 22;
+        tempV.y += 18;
         tempV.project(this.camera);
 
         if (tempV.z > 1) {

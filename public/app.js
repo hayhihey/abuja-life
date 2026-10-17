@@ -279,25 +279,36 @@ class AbujaClientApp {
         if (districtId && districtId !== this.game.s.loc.district && !this.game.locked) {
           this.game.arrive(districtId);
           const dName = DISTRICT_BY_ID[districtId]?.name || districtId;
-          this.game.log(`Drove into ${dName}.`, 'info', '🚙');
+          this.game.log(`Entered ${dName} street corridor.`, 'info', '🚶🏾');
         }
       },
       onSelectDistrict: (districtId) => {
         if (!districtId) return;
         if (districtId === this.game.s.loc.district) {
-          this.switchTab('actions');
-          this.showToast(`📍 Currently in ${DISTRICT_BY_ID[districtId].name}`);
+          this.openDeckTab('actions');
+          this.showToast(`📍 Currently on ${DISTRICT_BY_ID[districtId].name} street`);
         } else {
           this.selectedCommuteDest = districtId;
-          this.switchTab('commute');
+          this.openDeckTab('commute');
           this._renderCommuteTab();
           this.showToast(`🛣️ Route planner set to ${DISTRICT_BY_ID[districtId].name}`);
         }
       },
       onSelectPlayer: (player) => {
         if (!player) return;
-        this.switchTab('multiplayer');
+        this.openDeckTab('multiplayer');
         this.openDirectMessage(player.id, player.name);
+      },
+      onStreetPunch: ({ hitNpc, districtId }) => {
+        if (hitNpc) {
+          const dropCash = 2500;
+          this.game.earn(dropCash, { cash: true });
+          this.game.stat('clout', 1);
+          this._renderHUD();
+          this.showToast(`👊🏾 Street Knockout in ${DISTRICT_BY_ID[districtId]?.short || 'FCT'}! Rival dropped ₦2,500 cash! (+1 Clout)`);
+        } else {
+          this.showToast('👊🏾 Street Punch! Walk up to any street rival on the walkway and press Space / Punch!');
+        }
       }
     });
 
@@ -365,7 +376,7 @@ class AbujaClientApp {
       g.addEventListener('click', () => {
         if (d.id !== this.game.s.loc.district) {
           this.selectedCommuteDest = d.id;
-          this.switchTab('commute');
+          this.openDeckTab('commute');
           this._renderCommuteTab();
         }
       });
@@ -390,47 +401,170 @@ class AbujaClientApp {
   }
 
   // --------------------------------------------------------------------------
-  // 4. GTA V RADAR MINIMAP CANVAS RENDERER
+  // 4. REAL NIGERIA STREET GPS MAP & CIRCULAR GTA RADAR RENDERER
   // --------------------------------------------------------------------------
+  _getNigeriaDistrictGPS(districtId) {
+    const GPS_TABLE = {
+      cbd: { lat: 9.0579, lng: 7.4951, street: 'SHEHU SHAGARI WAY • CBD' },
+      wuse2: { lat: 9.0787, lng: 7.4813, street: 'ADETOKUNBO ADEMOLA CRES • WUSE 2' },
+      maitama: { lat: 9.0882, lng: 7.4934, street: 'AGUIYI IRONSI ST • MAITAMA' },
+      asokoro: { lat: 9.0465, lng: 7.5255, street: 'ASO DRIVE • ASOKORO' },
+      garki: { lat: 9.0312, lng: 7.4898, street: 'TAFAWA BALEWA WAY • GARKI' },
+      jabi: { lat: 9.0642, lng: 7.4245, street: 'BALA SOKOTO WAY • JABI LAKE' },
+      utako: { lat: 9.0685, lng: 7.4418, street: 'OBAFEMI AWOLOWO WAY • UTAKO' },
+      guzape: { lat: 9.0076, lng: 7.5082, street: 'HASSAN MUSA KATSINA ST • GUZAPE' },
+      lugbe: { lat: 8.9830, lng: 7.3814, street: 'AIRPORT ROAD • LUGBE' },
+      kubwa: { lat: 9.1538, lng: 7.3220, street: 'GADO NASKO RD • KUBWA' },
+      dawaki: { lat: 9.1245, lng: 7.3982, street: 'MURTALA MOHAMMED EXP • DAWAKI' },
+      mpape: { lat: 9.1288, lng: 7.4910, street: 'MPAPE CRUSH ROCK RD • MPAPE' },
+      nyanya: { lat: 9.0205, lng: 7.5750, street: 'ABUJA-KEFFI EXP • NYANYA' },
+      lagos_island: { lat: 6.4312, lng: 3.4526, street: 'ADMIRALTY WAY • LEKKI / VI LAGOS' },
+      lagos_mainland: { lat: 6.5965, lng: 3.3421, street: 'OBAFEMI AWOLOWO WAY • IKEJA LAGOS' }
+    };
+    return GPS_TABLE[districtId] || GPS_TABLE.cbd;
+  }
+
+  _initNigeriaGPSRadar() {
+    const radarEl = document.getElementById('gta-leaflet-radar');
+    if (!radarEl || !window.L || this.leafletRadarMap) return;
+
+    try {
+      const startGps = this._getNigeriaDistrictGPS(this.game.s.loc.district);
+      this.leafletRadarMap = window.L.map(radarEl, {
+        center: [startGps.lat, startGps.lng],
+        zoom: 16,
+        zoomControl: false,
+        attributionControl: false,
+        dragging: false,
+        scrollWheelZoom: false,
+        doubleClickZoom: false,
+        boxZoom: false,
+        keyboard: false
+      });
+
+      window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19
+      }).addTo(this.leafletRadarMap);
+
+      this.leafletRadarReady = true;
+    } catch (err) {
+      this.leafletRadarReady = false;
+    }
+  }
+
+  openNigeriaGPSModal() {
+    const modal = document.getElementById('nigeria-gps-modal');
+    if (!modal) return;
+    modal.hidden = false;
+
+    const chipsEl = document.getElementById('nigeria-gps-street-chips');
+    if (chipsEl) {
+      chipsEl.innerHTML = DISTRICTS.map((d) => {
+        const gps = this._getNigeriaDistrictGPS(d.id);
+        const isCur = d.id === this.game.s.loc.district;
+        return `
+          <button type="button" class="btn-xs btn-gps-jump" data-id="${d.id}" style="${isCur ? 'border-color:#4ade80; color:#4ade80; background:rgba(16,185,129,0.2);' : ''}">
+            📍 ${d.short}: ${gps.street.split(' • ')[0]}
+          </button>
+        `;
+      }).join('');
+
+      chipsEl.querySelectorAll('.btn-gps-jump').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const distId = btn.dataset.id;
+          if (!distId) return;
+          this.game.arrive(distId);
+          if (this.world3d) this.world3d.flyToDistrict(distId);
+          this._renderAll();
+          modal.hidden = true;
+          const gps = this._getNigeriaDistrictGPS(distId);
+          this.showToast(`🛰️ GPS Navigated to ${gps.street}!`);
+        });
+      });
+    }
+
+    const mapContainer = document.getElementById('nigeria-full-gps-map');
+    if (mapContainer && window.L) {
+      if (!this.fullNigeriaMap) {
+        const curGps = this._getNigeriaDistrictGPS(this.game.s.loc.district);
+        this.fullNigeriaMap = window.L.map(mapContainer, {
+          center: [curGps.lat, curGps.lng],
+          zoom: 13
+        });
+        window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '© OpenStreetMap Nigeria Streets'
+        }).addTo(this.fullNigeriaMap);
+
+        for (const d of DISTRICTS) {
+          const gps = this._getNigeriaDistrictGPS(d.id);
+          const marker = window.L.marker([gps.lat, gps.lng]).addTo(this.fullNigeriaMap);
+          marker.bindPopup(`
+            <div style="font-family:Inter,sans-serif; color:#0f172a; min-width:160px;">
+              <strong>${d.name}</strong><br/>
+              <span style="font-size:11px; color:#047857; font-weight:700;">🛣️ ${gps.street}</span><br/>
+              <span style="font-size:11px; color:#475569;">${d.blurb}</span>
+            </div>
+          `);
+          marker.on('click', () => {
+            this.game.arrive(d.id);
+            if (this.world3d) this.world3d.flyToDistrict(d.id);
+            this._renderAll();
+            this.showToast(`🛰️ GPS Street Route: Arrived at ${gps.street}!`);
+          });
+        }
+      } else {
+        setTimeout(() => {
+          this.fullNigeriaMap.invalidateSize();
+          const curGps = this._getNigeriaDistrictGPS(this.game.s.loc.district);
+          this.fullNigeriaMap.setView([curGps.lat, curGps.lng], 14);
+        }, 80);
+      }
+    }
+  }
+
   _startRadarLoop() {
     const canvas = document.getElementById('gta-radar-canvas');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
+
+    this._initNigeriaGPSRadar();
 
     const drawRadar = () => {
       const w = canvas.width;
       const h = canvas.height;
       ctx.clearRect(0, 0, w, h);
 
-      ctx.fillStyle = '#06101e';
-      ctx.fillRect(0, 0, w, h);
-
-      ctx.strokeStyle = 'rgba(56, 189, 248, 0.12)';
-      ctx.lineWidth = 1;
-      for (let gx = 0; gx < w; gx += 26) {
-        ctx.beginPath();
-        ctx.moveTo(gx, 0);
-        ctx.lineTo(gx, h);
-        ctx.stroke();
-      }
-      for (let gy = 0; gy < h; gy += 26) {
-        ctx.beginPath();
-        ctx.moveTo(0, gy);
-        ctx.lineTo(w, gy);
-        ctx.stroke();
-      }
-
       const curD = this.game.district || DISTRICT_BY_ID.cbd;
       const pCoords = this.world3d
         ? this.world3d.getPlayer2DCoords()
         : { x: curD.x, y: curD.y };
 
-      const scale = 2.2;
+      // Pan live Leaflet Nigeria Street GPS map as player walks/drives in 3D
+      const baseGps = this._getNigeriaDistrictGPS(curD.id);
+      const dLon = (pCoords.x - curD.x) * 0.00055;
+      const dLat = -(pCoords.y - curD.y) * 0.00055;
+      const liveLat = baseGps.lat + dLat;
+      const liveLng = baseGps.lng + dLon;
+
+      if (this.leafletRadarReady && this.leafletRadarMap) {
+        if (!this._lastRadarPan || Math.hypot(liveLat - this._lastRadarPan.lat, liveLng - this._lastRadarPan.lng) > 0.00003) {
+          this.leafletRadarMap.setView([liveLat, liveLng], 16, { animate: false });
+          this._lastRadarPan = { lat: liveLat, lng: liveLng };
+        }
+      } else {
+        // Fallback street background if offline
+        ctx.fillStyle = '#e2e8f0';
+        ctx.fillRect(0, 0, w, h);
+      }
+
+      const scale = 2.4;
       const toRadarX = (x) => w / 2 + (x - pCoords.x) * scale;
       const toRadarY = (y) => h / 2 + (y - pCoords.y) * scale;
 
-      ctx.strokeStyle = 'rgba(148, 163, 184, 0.42)';
-      ctx.lineWidth = 2;
+      // Subtle GTA route lines overlay
+      ctx.strokeStyle = 'rgba(124, 58, 237, 0.55)';
+      ctx.lineWidth = 3;
       for (const e of EDGES) {
         const a = DISTRICT_BY_ID[e.a];
         const b = DISTRICT_BY_ID[e.b];
@@ -447,11 +581,14 @@ class AbujaClientApp {
         if (rx < -10 || rx > w + 10 || ry < -10 || ry > h + 10) continue;
 
         ctx.fillStyle = d.id === this.game.s.loc.district
-          ? '#38bdf8'
-          : (d.zone === 1 ? '#f59e0b' : '#10b981');
+          ? '#2563eb'
+          : (d.zone === 1 ? '#d97706' : '#059669');
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.arc(rx, ry, d.id === this.game.s.loc.district ? 4.5 : 3, 0, Math.PI * 2);
+        ctx.arc(rx, ry, d.id === this.game.s.loc.district ? 5 : 3.5, 0, Math.PI * 2);
         ctx.fill();
+        ctx.stroke();
       }
 
       for (const p of this.onlinePlayers) {
@@ -463,24 +600,28 @@ class AbujaClientApp {
         const ry = toRadarY(py);
         if (rx < 0 || rx > w || ry < 0 || ry > h) continue;
 
-        ctx.fillStyle = p.isBot ? '#fbbf24' : '#ec4899';
+        ctx.fillStyle = p.isBot ? '#f59e0b' : '#ec4899';
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.arc(rx, ry, 3.2, 0, Math.PI * 2);
+        ctx.arc(rx, ry, 3.8, 0, Math.PI * 2);
         ctx.fill();
+        ctx.stroke();
       }
 
+      // Center GTA Player Arrow on the Nigerian street map
       ctx.save();
       ctx.translate(w / 2, h / 2);
       const heading = this.world3d ? -this.world3d.playerHeading : 0;
       ctx.rotate(heading);
       ctx.fillStyle = '#ffffff';
       ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 2.2;
       ctx.beginPath();
-      ctx.moveTo(0, -6);
-      ctx.lineTo(5, 5);
-      ctx.lineTo(0, 2.5);
-      ctx.lineTo(-5, 5);
+      ctx.moveTo(0, -8);
+      ctx.lineTo(6.5, 6.5);
+      ctx.lineTo(0, 3);
+      ctx.lineTo(-6.5, 6.5);
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
@@ -612,9 +753,13 @@ class AbujaClientApp {
   _renderClockAndWeather() {
     const s = this.game.s;
     const clockEl = document.getElementById('hud-clock');
+    const classicClockEl = document.getElementById('gta-classic-clock');
     const weatherEl = document.getElementById('hud-weather');
     if (clockEl) {
       clockEl.textContent = `Day ${this.game.day} • ${Clock.dateStr(s.t)} • ${Clock.clockStr(s.t)}`;
+    }
+    if (classicClockEl) {
+      classicClockEl.textContent = Clock.clockStr(s.t);
     }
     if (weatherEl) {
       const w = s.market.today.weather;
@@ -649,8 +794,11 @@ class AbujaClientApp {
 
     const gpsLabel = document.getElementById('radar-gps-label');
     if (gpsLabel) {
-      const spotName = spot ? LANDMARK_INDEX[spot]?.landmark?.name : 'Street Level';
-      gpsLabel.textContent = `GPS • ${d.short.toUpperCase()} (${spotName})`;
+      const gpsInfo = this._getNigeriaDistrictGPS(loc);
+      const streetShort = gpsInfo.street.split(' • ')[0];
+      gpsLabel.textContent = spot
+        ? `GPS • ${(LANDMARK_INDEX[spot]?.landmark?.name || streetShort).toUpperCase()}`
+        : `GPS • ${streetShort}`;
     }
 
     const lmContainer = document.getElementById('banner-landmarks');
@@ -3438,6 +3586,7 @@ class AbujaClientApp {
     setPill('unread-global', gCount);
     setPill('unread-district', dCount);
     setPill('unread-dm', dmCount);
+    setPill('dock-chat-badge', totalUnread);
 
     const recoveryBar = document.getElementById('chat-unread-recovery-bar');
     const summaryEl = document.getElementById('chat-unread-summary');
@@ -4075,6 +4224,76 @@ class AbujaClientApp {
         });
     });
 
+    // Floating GTA Icon Dock ("Make All The Others Like Icon")
+    document.querySelectorAll('.gta-dock-icon[data-dock-tab]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const tabId = btn.dataset.dockTab;
+        const deck = document.getElementById('command-deck-panel');
+        const isClosed = deck?.classList.contains('is-drawer-closed');
+        if (!isClosed && this.activeTab === tabId) {
+          this.closeDeckDrawer();
+        } else {
+          this.openDeckTab(tabId);
+        }
+      });
+    });
+
+    document.getElementById('btn-close-deck')?.addEventListener('click', () => {
+      this.closeDeckDrawer();
+    });
+
+    // Classic Top-Right Nigeria GTA Fist Icon (Street Punch / Knockdown)
+    document.getElementById('btn-gta-fist')?.addEventListener('click', () => {
+      if (this.world3d) {
+        this.world3d.triggerStreetPunch();
+      }
+    });
+
+    // Top-Right Cash Readout & Dock Vault Icon -> Open CBN Naira Vault
+    document.getElementById('btn-classic-cash-vault')?.addEventListener('click', () => {
+      this.openNairaVaultModal();
+    });
+    document.getElementById('btn-dock-vault')?.addEventListener('click', () => {
+      this.openNairaVaultModal();
+    });
+
+    // Dock Profile Icon -> Citizen Sign-Up & Caliber Creator
+    document.getElementById('btn-dock-profile')?.addEventListener('click', () => {
+      this._openNewCharModal();
+    });
+
+    // Toggle Top-Left District Postcard Info Card
+    document.getElementById('btn-toggle-district-card')?.addEventListener('click', () => {
+      const card = document.getElementById('district-postcard-card');
+      if (card) card.hidden = !card.hidden;
+    });
+
+    // Full Interactive Nigeria Street GPS Map Modal triggers
+    document.getElementById('btn-dock-gps')?.addEventListener('click', () => {
+      this.openNigeriaGPSModal();
+    });
+    document.getElementById('btn-radar-north')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.openNigeriaGPSModal();
+    });
+    document.getElementById('btn-expand-gps-radar')?.addEventListener('dblclick', () => {
+      this.openNigeriaGPSModal();
+    });
+    document.getElementById('btn-close-gps-modal')?.addEventListener('click', () => {
+      const m = document.getElementById('nigeria-gps-modal');
+      if (m) m.hidden = true;
+    });
+    document.getElementById('btn-gps-focus-abuja')?.addEventListener('click', () => {
+      if (this.fullNigeriaMap) {
+        this.fullNigeriaMap.setView([9.0642, 7.4813], 13);
+      }
+    });
+    document.getElementById('btn-gps-focus-lagos')?.addEventListener('click', () => {
+      if (this.fullNigeriaMap) {
+        this.fullNigeriaMap.setView([6.4550, 3.4050], 12);
+      }
+    });
+
     // New Character & Nigerian Lifestyle Caliber Modal
     document.getElementById('btn-new-char')?.addEventListener('click', () => {
       this._openNewCharModal();
@@ -4161,10 +4380,30 @@ class AbujaClientApp {
     });
   }
 
+  openDeckTab(tabId) {
+    const deck = document.getElementById('command-deck-panel');
+    if (deck) deck.classList.remove('is-drawer-closed');
+    this.switchTab(tabId);
+  }
+
+  closeDeckDrawer() {
+    const deck = document.getElementById('command-deck-panel');
+    if (deck) deck.classList.add('is-drawer-closed');
+    document.querySelectorAll('.gta-dock-icon[data-dock-tab]').forEach((b) => {
+      b.classList.remove('active');
+    });
+  }
+
   switchTab(tabId) {
     this.activeTab = tabId;
+    const deck = document.getElementById('command-deck-panel');
+    if (deck) deck.classList.remove('is-drawer-closed');
+
     document.querySelectorAll('.deck-tabs .tab-btn').forEach((b) => {
       b.classList.toggle('active', b.dataset.tab === tabId);
+    });
+    document.querySelectorAll('.gta-dock-icon[data-dock-tab]').forEach((b) => {
+      b.classList.toggle('active', b.dataset.dockTab === tabId);
     });
     document.querySelectorAll('.tab-pane').forEach((p) => {
       p.classList.toggle('active', p.id === `tab-${tabId}`);

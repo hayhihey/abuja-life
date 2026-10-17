@@ -1983,3 +1983,443 @@ html, body {
   font-size: 11.5px;
 }
 
+/* ==========================================================================
+   NIGERIA GTA FULL-SCREEN 3D STREET EDITION, TOP-RIGHT HUD, ICON DOCK & GPS
+   ========================================================================== */
+.gta-shell.nigeria-gta-fullscreen {
+  display: block;
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #7dd3fc;
+}
+
+.nigeria-gta-fullscreen .gta-topbar-minimal {
+  position: fixed;
+  top: 8px;
+  left: 10px;
+  z-index: 30;
+  background: rgba(9, 13, 22, 0.78);
+  backdrop-filter: blur(8px);
+  border: 1.5px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  padding: 4px 10px;
+  height: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100vw - 260px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+}
+
+.nigeria-gta-fullscreen .gta-badge-logo {
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+
+.nigeria-gta-fullscreen .badge-main {
+  font-size: 12px;
+}
+
+.nigeria-gta-fullscreen .badge-top,
+.nigeria-gta-fullscreen .badge-sub {
+  font-size: 7.5px;
+}
+
+.nigeria-gta-fullscreen .player-id-card {
+  padding: 2px 6px;
+  background: transparent;
+  border: none;
+}
+
+.nigeria-gta-fullscreen .hud-avatar-slot {
+  width: 28px;
+  height: 28px;
+}
+
+.nigeria-gta-fullscreen .gta-radio-pill {
+  max-width: 210px;
+  padding: 3px 8px;
+}
+
+.nigeria-gta-fullscreen .radio-track {
+  display: none;
+}
+
+.nigeria-gta-fullscreen .gta-main-stage {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+}
+
+.nigeria-gta-fullscreen .world-stage-panel {
+  width: 100vw;
+  height: 100vh;
+  border: none;
+}
+
+.nigeria-gta-fullscreen .stage-top-left-overlay {
+  top: 56px;
+  left: 10px;
+  z-index: 25;
+}
+
+/* Classic Nigeria GTA Top-Right HUD (Fist Box + Clock + Red/White Bars + Green Naira) */
+.ngta-topright-hud {
+  position: fixed;
+  top: 10px;
+  right: 70px;
+  z-index: 32;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  pointer-events: auto;
+  user-select: none;
+}
+
+.ngta-fist-box {
+  width: 68px;
+  height: 68px;
+  background: rgba(12, 16, 23, 0.92);
+  border: 3.5px solid #e2e8f0;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.7), inset 0 0 12px rgba(255, 255, 255, 0.15);
+  transition: transform 0.12s ease, border-color 0.15s ease;
+}
+
+.ngta-fist-box:hover {
+  transform: scale(1.06);
+  border-color: #facc15;
+}
+
+.ngta-fist-box:active {
+  transform: scale(0.94);
+}
+
+.ngta-fist-emoji {
+  font-size: 32px;
+  line-height: 1;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.9));
+}
+
+.ngta-fist-sub {
+  font-family: var(--font-display);
+  font-size: 9px;
+  font-weight: 800;
+  color: #f8fafc;
+  letter-spacing: 0.8px;
+  margin-top: 2px;
+}
+
+.ngta-stats-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.ngta-clock-digits {
+  font-family: var(--font-display);
+  font-size: 27px;
+  font-weight: 900;
+  color: #f8fafc;
+  line-height: 1;
+  letter-spacing: 1.5px;
+  text-shadow:
+    -2px -2px 0 #000,
+     2px -2px 0 #000,
+    -2px  2px 0 #000,
+     2px  2px 0 #000,
+     0px  3px 6px rgba(0, 0, 0, 0.85);
+}
+
+.ngta-bar-outer {
+  width: 118px;
+  height: 11px;
+  background: #111827;
+  border: 2.5px solid #000000;
+  border-radius: 3px;
+  overflow: hidden;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.75);
+}
+
+.ngta-bar-fill {
+  height: 100%;
+  transition: width 0.25s ease;
+}
+
+.ngta-bar-fill.health {
+  background: linear-gradient(90deg, #dc2626 0%, #ef4444 100%);
+}
+
+.ngta-bar-fill.armor {
+  background: linear-gradient(90deg, #cbd5e1 0%, #ffffff 100%);
+}
+
+.ngta-cash-row {
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.ngta-cash-digits {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 900;
+  color: #22c55e;
+  line-height: 1.05;
+  letter-spacing: 0.8px;
+  text-shadow:
+    -2px -2px 0 #000,
+     2px -2px 0 #000,
+    -2px  2px 0 #000,
+     2px  2px 0 #000,
+     0px  3px 6px rgba(0, 0, 0, 0.9);
+}
+
+.ngta-wanted-row .wanted-stars {
+  font-size: 16px;
+  letter-spacing: 2px;
+  text-shadow: -1.5px -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 1.5px 0 #000, 1.5px 1.5px 0 #000;
+}
+
+/* Floating GTA Icon Dock ("Make All The Others Like Icon") */
+.gta-floating-icon-dock {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  bottom: 10px;
+  z-index: 35;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px;
+  background: rgba(9, 13, 22, 0.65);
+  backdrop-filter: blur(8px);
+  border: 1.5px solid rgba(255, 255, 255, 0.22);
+  border-radius: 16px;
+  scrollbar-width: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+}
+
+.gta-floating-icon-dock::-webkit-scrollbar {
+  display: none;
+}
+
+.gta-dock-icon {
+  position: relative;
+  width: 46px;
+  min-height: 44px;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1.5px solid rgba(148, 163, 184, 0.35);
+  border-radius: 11px;
+  color: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  cursor: pointer;
+  padding: 3px 2px;
+  transition: transform 0.12s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.gta-dock-icon:hover,
+.gta-dock-icon.active {
+  transform: scale(1.06);
+  border-color: #facc15;
+  background: rgba(234, 179, 8, 0.22);
+}
+
+.gta-dock-icon .gdi-ico {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.gta-dock-icon .gdi-lbl {
+  font-family: var(--font-display);
+  font-size: 8px;
+  font-weight: 700;
+  color: #e2e8f0;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+}
+
+.gta-dock-icon .gdi-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  background: #ec4899;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 999px;
+  border: 1.5px solid #000;
+}
+
+/* Collapsible Floating Command Deck Drawer */
+.nigeria-gta-fullscreen .command-deck-panel {
+  position: fixed;
+  top: 12px;
+  right: 68px;
+  bottom: 12px;
+  width: min(470px, calc(100vw - 82px));
+  z-index: 40;
+  border-radius: 16px;
+  border: 2px solid rgba(250, 204, 21, 0.55);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85);
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.18s ease;
+}
+
+.nigeria-gta-fullscreen .command-deck-panel.is-drawer-closed {
+  transform: translateX(115%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.btn-close-deck {
+  background: #ef4444;
+  color: #fff;
+  border: 1.5px solid #fca5a5;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-family: var(--font-display);
+  font-size: 11.5px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-close-deck:hover {
+  background: #dc2626;
+}
+
+/* Bottom-Left Circular Nigeria Street GPS Radar (Matching Nigeria GTA Screenshots) */
+.nigeria-gta-fullscreen .gta-radar-dock {
+  bottom: 14px;
+  left: 14px;
+  z-index: 28;
+  width: auto;
+  background: transparent;
+  border: none;
+  padding: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  align-items: center;
+}
+
+.gta-radar-frame.circular-ngta-radar {
+  position: relative;
+  width: 176px;
+  height: 176px;
+  border-radius: 50%;
+  border: 7px solid rgba(20, 24, 33, 0.92);
+  outline: 2.5px solid rgba(255, 255, 255, 0.55);
+  overflow: hidden;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.75);
+  background: #cbd5e1;
+  cursor: pointer;
+}
+
+.gta-leaflet-radar {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.circular-ngta-radar #gta-radar-canvas {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  pointer-events: none;
+}
+
+.circular-ngta-radar .radar-north-badge {
+  z-index: 4;
+  top: 6px;
+  right: 18px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #000;
+  color: #fff;
+  border: 2px solid #fff;
+  font-size: 12px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.circular-ngta-radar .radar-gps-label {
+  z-index: 4;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(9, 13, 22, 0.88);
+  color: #4ade80;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 8.5px;
+  white-space: nowrap;
+  border: 1px solid rgba(74, 222, 128, 0.45);
+}
+
+.nigeria-gta-fullscreen .gta-radar-stats-legend {
+  background: rgba(9, 13, 22, 0.82);
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  margin-top: 5px;
+  gap: 8px;
+  font-size: 10px;
+}
+
+.nigeria-gta-fullscreen .gta-drive-pad {
+  right: 72px;
+  bottom: 14px;
+  z-index: 28;
+}
+
+@media (max-width: 768px) {
+  .nigeria-gta-fullscreen .gta-topbar-minimal {
+    max-width: calc(100vw - 180px);
+    padding: 3px 7px;
+  }
+  .nigeria-gta-fullscreen .gta-center-hud {
+    display: none;
+  }
+  .gta-radar-frame.circular-ngta-radar {
+    width: 136px;
+    height: 136px;
+    border-width: 5px;
+  }
+  .ngta-fist-box {
+    width: 54px;
+    height: 54px;
+  }
+  .ngta-clock-digits,
+  .ngta-cash-digits {
+    font-size: 20px;
+  }
+}
+
+
