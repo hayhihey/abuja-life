@@ -759,6 +759,15 @@ class AbujaClientApp {
     document.getElementById('hud-energy-val').textContent = Math.round(s.energy);
     document.getElementById('hud-clout-val').textContent = Math.round(s.clout);
     document.getElementById('hud-network-val').textContent = s.contacts.length;
+
+    // Synchronize 3D Sims Plumbob Emerald Diamond above player avatar with 8 motives
+    if (this.world3d && s.sims?.motives) {
+      const motives = Object.values(s.sims.motives);
+      const avg = motives.reduce((a, b) => a + b, 0) / Math.max(1, motives.length);
+      const minMotive = Math.min(...motives);
+      const score = minMotive < 30 ? minMotive : avg;
+      this.world3d.updatePlumbobMotive(score);
+    }
   }
 
   _renderClockAndWeather() {

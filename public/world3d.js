@@ -410,6 +410,56 @@ export class AbujaWorld3D {
     return tree;
   }
 
+  _buildBougainvilleaTree(scale = 1, flowerColor = 0xe11d48) {
+    const tree = new THREE.Group();
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x473322, roughness: 0.9 });
+    const leafMat = new THREE.MeshStandardMaterial({ color: 0x166534, roughness: 0.65 });
+    const flowerMat = new THREE.MeshStandardMaterial({
+      color: flowerColor,
+      roughness: 0.52,
+      emissive: flowerColor,
+      emissiveIntensity: 0.32
+    });
+
+    // Twisted tropical trunk with branches
+    const trunk = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.32, 0.46, 5.4, 10),
+      trunkMat
+    );
+    trunk.position.y = 2.7;
+    trunk.castShadow = true;
+    tree.add(trunk);
+
+    // Lush canopy spheres with vibrant blossom clusters
+    const canopyCoords = [
+      [0, 5.8, 0, 2.5],
+      [-1.3, 5.3, 0.8, 1.8],
+      [1.3, 5.4, -0.6, 1.8],
+      [0.5, 6.3, 1.1, 1.6],
+      [-0.7, 6.4, -0.9, 1.7]
+    ];
+    for (const [cx, cy, cz, cr] of canopyCoords) {
+      const leafBlob = new THREE.Mesh(
+        new THREE.SphereGeometry(cr, 12, 10),
+        leafMat
+      );
+      leafBlob.position.set(cx, cy, cz);
+      leafBlob.castShadow = true;
+      tree.add(leafBlob);
+
+      // Vibrant blossom pops
+      const flowerBlob = new THREE.Mesh(
+        new THREE.SphereGeometry(cr * 0.72, 10, 8),
+        flowerMat
+      );
+      flowerBlob.position.set(cx * 1.12, cy + 0.15, cz * 1.12);
+      tree.add(flowerBlob);
+    }
+
+    tree.scale.setScalar(scale);
+    return tree;
+  }
+
   _buildRoadNetwork() {
     this.roadSegments = [];
 
@@ -546,17 +596,20 @@ export class AbujaWorld3D {
             this.scene.add(kerb);
           }
 
-          // Line avenues with tropical palm trees every ~40 units
+          // Line avenues with alternating tropical palms and blooming bougainvillea trees
           if (k % 5 === 0) {
-            const palm = this._buildPalmTree(0.9 + (k % 3) * 0.15);
-            const pSide = (k % 2 === 0 ? 1 : -1) * (width * 0.5 + 3.2);
-            palm.position.set(
+            const isBougainvillea = Math.floor(k / 5) % 2 === 1;
+            const tree = isBougainvillea
+              ? this._buildBougainvilleaTree(0.85 + (k % 3) * 0.12, (k % 4 === 1 ? 0xe11d48 : 0xd946ef))
+              : this._buildPalmTree(0.9 + (k % 3) * 0.15);
+            const pSide = (k % 2 === 0 ? 1 : -1) * (width * 0.5 + 3.4);
+            tree.position.set(
               mid.x + Math.sin(angle) * alongZ + Math.cos(angle) * pSide,
               0.15,
               mid.z + Math.cos(angle) * alongZ - Math.sin(angle) * pSide
             );
-            palm.rotation.y = k * 1.1;
-            this.scene.add(palm);
+            tree.rotation.y = k * 1.1;
+            this.scene.add(tree);
           }
         }
       }
@@ -1905,7 +1958,7 @@ export class AbujaWorld3D {
     });
     const rimMat = new THREE.MeshStandardMaterial({
       color: 0xcbd5e1,
-      roughness: 0.22,
+      roughness: 0.20,
       metalness: 0.88
     });
     const tireMat = new THREE.MeshStandardMaterial({
@@ -1920,12 +1973,32 @@ export class AbujaWorld3D {
 
     // Soft dark ground contact shadow underneath the car
     const shadowPlane = new THREE.Mesh(
-      new THREE.PlaneGeometry(5.6, 10.2),
-      new THREE.MeshBasicMaterial({ color: 0x020617, transparent: true, opacity: 0.52 })
+      new THREE.PlaneGeometry(5.8, 10.4),
+      new THREE.MeshBasicMaterial({ color: 0x020617, transparent: true, opacity: 0.55 })
     );
     shadowPlane.rotation.x = -Math.PI / 2;
-    shadowPlane.position.y = 0.26;
+    shadowPlane.position.y = 0.22;
     car.add(shadowPlane);
+
+    // Modern Cyan Neon Chassis Underglow
+    const underglow = new THREE.Mesh(
+      new THREE.PlaneGeometry(4.6, 9.2),
+      new THREE.MeshBasicMaterial({
+        color: 0x06b6d4,
+        transparent: true,
+        opacity: 0.42,
+        blending: THREE.AdditiveBlending,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      })
+    );
+    underglow.rotation.x = -Math.PI / 2;
+    underglow.position.y = 0.15;
+    car.add(underglow);
+
+    // Chassis Group: Suspended body with pitch & roll dynamics
+    const chassisGroup = new THREE.Group();
+    car.add(chassisGroup);
 
     // 1. Sculpted Lower Widebody Chassis
     const mainChassis = new THREE.Mesh(
@@ -1934,7 +2007,7 @@ export class AbujaWorld3D {
     );
     mainChassis.position.set(0, 1.38, 0);
     mainChassis.castShadow = true;
-    car.add(mainChassis);
+    chassisGroup.add(mainChassis);
 
     // Flared Widebody Wheel Arches / Side Fenders (Front & Rear)
     for (const side of [-1, 1]) {
@@ -1944,7 +2017,7 @@ export class AbujaWorld3D {
       );
       fenderFlare.position.set(side * 2.28, 1.24, 0);
       fenderFlare.castShadow = true;
-      car.add(fenderFlare);
+      chassisGroup.add(fenderFlare);
 
       // Carbon fiber side skirt lip
       const sideSkirt = new THREE.Mesh(
@@ -1952,7 +2025,7 @@ export class AbujaWorld3D {
         carbonMat
       );
       sideSkirt.position.set(side * 2.32, 0.72, 0);
-      car.add(sideSkirt);
+      chassisGroup.add(sideSkirt);
     }
 
     // 2. Aerodynamic Fastback Cabin & Tinted Windows
@@ -1961,23 +2034,23 @@ export class AbujaWorld3D {
       glassMat
     );
     cabinCore.position.set(0, 2.52, -0.35);
-    car.add(cabinCore);
+    chassisGroup.add(cabinCore);
 
     const roofPanel = new THREE.Mesh(
       new THREE.BoxGeometry(3.45, 0.14, 3.6),
       paintMat
     );
     roofPanel.position.set(0, 3.18, -0.35);
-    car.add(roofPanel);
+    chassisGroup.add(roofPanel);
 
-    // Shark-fin roof antenna (like reference screenshot)
+    // Shark-fin roof antenna
     const sharkFin = new THREE.Mesh(
       new THREE.ConeGeometry(0.14, 0.45, 4),
       carbonMat
     );
     sharkFin.position.set(0, 3.38, -1.65);
     sharkFin.rotation.x = -0.25;
-    car.add(sharkFin);
+    chassisGroup.add(sharkFin);
 
     // Side wing mirrors
     for (const side of [-1, 1]) {
@@ -1986,17 +2059,17 @@ export class AbujaWorld3D {
         paintMat
       );
       mirror.position.set(side * 2.15, 2.25, 1.35);
-      car.add(mirror);
+      chassisGroup.add(mirror);
     }
 
-    // 3. Carbon GT Rear Wing Spoiler on Dual Struts (exact match to screenshot)
+    // 3. Carbon GT Rear Wing Spoiler on Dual Struts
     const wingBlade = new THREE.Mesh(
       new THREE.BoxGeometry(4.45, 0.14, 0.72),
       carbonMat
     );
     wingBlade.position.set(0, 2.72, -4.18);
     wingBlade.rotation.x = 0.08;
-    car.add(wingBlade);
+    chassisGroup.add(wingBlade);
 
     for (const side of [-1, 1]) {
       const wingEndplate = new THREE.Mesh(
@@ -2004,31 +2077,31 @@ export class AbujaWorld3D {
         carbonMat
       );
       wingEndplate.position.set(side * 2.22, 2.72, -4.18);
-      car.add(wingEndplate);
+      chassisGroup.add(wingEndplate);
 
       const wingStrut = new THREE.Mesh(
         new THREE.BoxGeometry(0.12, 0.68, 0.38),
         carbonMat
       );
       wingStrut.position.set(side * 1.15, 2.34, -4.05);
-      car.add(wingStrut);
+      chassisGroup.add(wingStrut);
     }
 
-    // 4. Aggressive Rear Fascia: Wrap-Around LED Taillights + Red & Cyan M-Stripe Bumper + Diffuser + Quad Exhausts
+    // 4. Aggressive Rear Fascia Taillights & Bumpers
     for (const side of [-1, 1]) {
       const outerTail = new THREE.Mesh(
         new THREE.BoxGeometry(1.38, 0.36, 0.18),
         tailGlowMat
       );
       outerTail.position.set(side * 1.42, 1.72, -4.62);
-      car.add(outerTail);
+      chassisGroup.add(outerTail);
 
       const innerTail = new THREE.Mesh(
         new THREE.BoxGeometry(0.85, 0.18, 0.20),
         amberGlowMat
       );
       innerTail.position.set(side * 1.35, 1.70, -4.64);
-      car.add(innerTail);
+      chassisGroup.add(innerTail);
     }
 
     // Rear License Plate ("ABJ-01VB")
@@ -2037,22 +2110,21 @@ export class AbujaWorld3D {
       new THREE.MeshBasicMaterial({ color: 0xf8fafc })
     );
     plate.position.set(0, 1.56, -4.63);
-    car.add(plate);
+    chassisGroup.add(plate);
 
-    // Signature Red + Cyan Horizontal Rear Bumper Trim Stripes (from user screenshot)
     const rearRedStripe = new THREE.Mesh(
       new THREE.BoxGeometry(4.35, 0.12, 0.16),
       redStripeMat
     );
     rearRedStripe.position.set(0, 1.16, -4.63);
-    car.add(rearRedStripe);
+    chassisGroup.add(rearRedStripe);
 
     const rearCyanStripe = new THREE.Mesh(
       new THREE.BoxGeometry(3.85, 0.10, 0.16),
       cyanStripeMat
     );
     rearCyanStripe.position.set(0, 1.02, -4.63);
-    car.add(rearCyanStripe);
+    chassisGroup.add(rearCyanStripe);
 
     // Carbon Rear Diffuser & Quad Exhaust Tips
     const rearDiffuser = new THREE.Mesh(
@@ -2060,23 +2132,23 @@ export class AbujaWorld3D {
       carbonMat
     );
     rearDiffuser.position.set(0, 0.76, -4.52);
-    car.add(rearDiffuser);
+    chassisGroup.add(rearDiffuser);
 
     const exhaustGeo = new THREE.CylinderGeometry(0.14, 0.14, 0.45, 12);
     exhaustGeo.rotateX(Math.PI / 2);
     for (const ex of [-1.45, -1.12, 1.12, 1.45]) {
       const pipe = new THREE.Mesh(exhaustGeo, rimMat);
       pipe.position.set(ex, 0.72, -4.68);
-      car.add(pipe);
+      chassisGroup.add(pipe);
     }
 
-    // 5. Front Kidney Grille & Angel-Eye LED Headlights (+Z is forward)
+    // 5. Front Kidney Grille & Angel-Eye LED Headlights & Projector Cones (+Z is forward)
     const frontGrille = new THREE.Mesh(
       new THREE.BoxGeometry(2.1, 0.68, 0.22),
       carbonMat
     );
     frontGrille.position.set(0, 1.28, 4.62);
-    car.add(frontGrille);
+    chassisGroup.add(frontGrille);
 
     for (const side of [-1, 1]) {
       const headLamp = new THREE.Mesh(
@@ -2084,38 +2156,189 @@ export class AbujaWorld3D {
         headLightMat
       );
       headLamp.position.set(side * 1.55, 1.52, 4.62);
-      car.add(headLamp);
+      chassisGroup.add(headLamp);
+
+      // Forward Xenon Light Projector Beams
+      const beamGeo = new THREE.ConeGeometry(1.5, 20, 12, 1, true);
+      beamGeo.rotateX(Math.PI / 2);
+      beamGeo.translate(0, 0, 10);
+      const beam = new THREE.Mesh(
+        beamGeo,
+        new THREE.MeshBasicMaterial({
+          color: 0x93c5fd,
+          transparent: true,
+          opacity: 0.16,
+          blending: THREE.AdditiveBlending,
+          side: THREE.DoubleSide,
+          depthWrite: false
+        })
+      );
+      beam.position.set(side * 1.55, 1.48, 4.62);
+      chassisGroup.add(beam);
     }
 
-    // 6. 4 Deep-Dish Alloy Wheels with Tires & Red Brembo Brake Calipers
+    // 6. 4 Deep-Dish Alloy Wheels with Rotating Rims & Red Brembo Calipers
     const tireGeo = new THREE.CylinderGeometry(0.78, 0.78, 0.58, 20);
     tireGeo.rotateZ(Math.PI / 2);
     const alloyGeo = new THREE.CylinderGeometry(0.54, 0.54, 0.62, 14);
     alloyGeo.rotateZ(Math.PI / 2);
 
-    const wheelCoords = [
-      [-2.22, 0.78, 2.85],
-      [2.22, 0.78, 2.85],
-      [-2.22, 0.78, -2.85],
-      [2.22, 0.78, -2.85]
-    ];
-    for (const [wx, wy, wz] of wheelCoords) {
+    const wheels = [];
+    const buildWheelAssembly = (isLeft) => {
+      const assembly = new THREE.Group();
+      const wheelRoll = new THREE.Group();
+
       const tire = new THREE.Mesh(tireGeo, tireMat);
-      tire.position.set(wx, wy, wz);
-      car.add(tire);
+      tire.castShadow = true;
+      wheelRoll.add(tire);
 
       const alloy = new THREE.Mesh(alloyGeo, rimMat);
-      alloy.position.set(wx, wy, wz);
-      car.add(alloy);
-    }
+      wheelRoll.add(alloy);
+
+      for (let sp = 0; sp < 5; sp++) {
+        const spoke = new THREE.Mesh(
+          new THREE.BoxGeometry(0.56, 0.08, 0.10),
+          rimMat
+        );
+        spoke.rotation.x = (sp * Math.PI * 2) / 5;
+        spoke.position.x = isLeft ? -0.05 : 0.05;
+        wheelRoll.add(spoke);
+      }
+      assembly.add(wheelRoll);
+      wheels.push(wheelRoll);
+
+      const caliper = new THREE.Mesh(
+        new THREE.BoxGeometry(0.48, 0.26, 0.18),
+        new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.25 })
+      );
+      caliper.position.set(isLeft ? 0.04 : -0.04, 0.35, 0.18);
+      assembly.add(caliper);
+
+      return assembly;
+    };
+
+    const frontLeftPivot = new THREE.Group();
+    frontLeftPivot.position.set(-2.22, 0.78, 2.85);
+    frontLeftPivot.add(buildWheelAssembly(true));
+    car.add(frontLeftPivot);
+
+    const frontRightPivot = new THREE.Group();
+    frontRightPivot.position.set(2.22, 0.78, 2.85);
+    frontRightPivot.add(buildWheelAssembly(false));
+    car.add(frontRightPivot);
+
+    const rearLeftAssembly = buildWheelAssembly(true);
+    rearLeftAssembly.position.set(-2.22, 0.78, -2.85);
+    car.add(rearLeftAssembly);
+
+    const rearRightAssembly = buildWheelAssembly(false);
+    rearRightAssembly.position.set(2.22, 0.78, -2.85);
+    car.add(rearRightAssembly);
 
     car.userData = {
       paintMat,
       glassMat,
-      trimMat: rearRedStripe.material
+      trimMat: rearRedStripe.material,
+      chassisGroup,
+      wheels,
+      frontLeftPivot,
+      frontRightPivot,
+      underglow
     };
 
     return car;
+  }
+
+  _buildPlumbob() {
+    const group = new THREE.Group();
+    group.position.set(0, 5.8, 0);
+
+    // Classic Sims Diamond (Bipyramid / Octahedron)
+    const diamondMat = new THREE.MeshStandardMaterial({
+      color: 0x22c55e,
+      emissive: 0x15803d,
+      emissiveIntensity: 0.72,
+      roughness: 0.12,
+      metalness: 0.42,
+      transparent: true,
+      opacity: 0.94
+    });
+
+    const diamond = new THREE.Mesh(
+      new THREE.OctahedronGeometry(0.48, 0),
+      diamondMat
+    );
+    diamond.scale.set(0.68, 1.48, 0.68);
+    diamond.castShadow = true;
+    group.add(diamond);
+
+    // Glowing Inner Prism Core
+    const inner = new THREE.Mesh(
+      new THREE.OctahedronGeometry(0.26, 0),
+      new THREE.MeshBasicMaterial({ color: 0x86efac })
+    );
+    inner.scale.set(0.68, 1.48, 0.68);
+    group.add(inner);
+
+    // Outer faint aura ring
+    const aura = new THREE.Mesh(
+      new THREE.RingGeometry(0.45, 0.55, 16),
+      new THREE.MeshBasicMaterial({ color: 0x4ade80, transparent: true, opacity: 0.45, side: THREE.DoubleSide })
+    );
+    aura.rotation.x = -Math.PI / 2;
+    group.add(aura);
+
+    group.userData = { diamond, inner, aura, diamondMat };
+    return group;
+  }
+
+  updatePlumbobMotive(score = 80) {
+    if (!this.plumbob?.userData?.diamondMat) return;
+    const mat = this.plumbob.userData.diamondMat;
+    const innerMat = this.plumbob.userData.inner.material;
+    const auraMat = this.plumbob.userData.aura.material;
+
+    if (score >= 65) {
+      mat.color.setHex(0x22c55e);
+      mat.emissive.setHex(0x15803d);
+      innerMat.color.setHex(0x86efac);
+      auraMat.color.setHex(0x4ade80);
+    } else if (score >= 38) {
+      mat.color.setHex(0xf59e0b);
+      mat.emissive.setHex(0xb45309);
+      innerMat.color.setHex(0xfde68a);
+      auraMat.color.setHex(0xfbbf24);
+    } else {
+      mat.color.setHex(0xef4444);
+      mat.emissive.setHex(0x991b1b);
+      innerMat.color.setHex(0xfecaca);
+      auraMat.color.setHex(0xf87171);
+    }
+  }
+
+  _spawnExhaustNitro(left = true) {
+    if (this.lowPowerMode) return;
+    const puffGeo = new THREE.SphereGeometry(0.18 + Math.random() * 0.12, 6, 6);
+    const puffMat = new THREE.MeshBasicMaterial({
+      color: Math.random() > 0.4 ? 0x06b6d4 : 0x38bdf8,
+      transparent: true,
+      opacity: 0.75,
+      depthWrite: false
+    });
+    const puff = new THREE.Mesh(puffGeo, puffMat);
+    const carHeading = this.playerHeading;
+    const exOffset = left ? -1.25 : 1.25;
+    const px = this.playerPos.x + Math.sin(carHeading) * -4.7 + Math.cos(carHeading) * exOffset;
+    const pz = this.playerPos.z + Math.cos(carHeading) * -4.7 - Math.sin(carHeading) * exOffset;
+    puff.position.set(px, 0.72 + Math.random() * 0.15, pz);
+    this.scene.add(puff);
+    this.nairaParticles.push({
+      mesh: puff,
+      life: 0.35,
+      vy: -0.4,
+      rx: Math.random() * 4,
+      rz: Math.random() * 4
+    });
   }
 
   _buildLocalPlayerRig() {
@@ -2132,6 +2355,11 @@ export class AbujaWorld3D {
     );
     this.playerRing.position.y = 0.24;
     this.playerGroup.add(this.playerRing);
+
+    // Dynamic 3D Sims Plumbob Emerald Diamond (rotates and reacts to player needs)
+    this.plumbob = this._buildPlumbob();
+    this.plumbob.position.y = this.inVehicle ? 4.3 : 5.8;
+    this.playerGroup.add(this.plumbob);
 
     // Player Widebody Sports Car (visible when inVehicle === true, matching user screenshot)
     this.playerVehicleMesh = this._buildWidebodySportsCar();
@@ -2283,6 +2511,9 @@ export class AbujaWorld3D {
     this.inVehicle = !this.inVehicle;
     this.playerVehicleMesh.visible = this.inVehicle;
     this.playerPedMesh.visible = !this.inVehicle;
+    if (this.plumbob) {
+      this.plumbob.position.y = this.inVehicle ? 4.3 : 5.8;
+    }
     if (this.cameraMode === 'chase') {
       this.cameraDistance = this.inVehicle ? 26 : 15.5;
       this.cameraPitch = this.inVehicle ? 0.24 : 0.20;
@@ -2590,6 +2821,16 @@ export class AbujaWorld3D {
       this._updatePlayerDriving(dt);
     }
 
+    // Animate Sims 3D Plumbob Diamond above player avatar
+    if (this.plumbob) {
+      this.plumbob.rotation.y += dt * 2.2;
+      const t = this.clock.elapsedTime;
+      const baseHeight = this.inVehicle ? 4.3 : 5.8;
+      this.plumbob.position.y = baseHeight + Math.sin(t * 3.2) * 0.12;
+      const pulse = 1.0 + Math.sin(t * 4.0) * 0.05;
+      this.plumbob.scale.set(pulse, pulse, pulse);
+    }
+
     for (const entry of this.remotePlayers.values()) {
       entry.group.position.lerp(entry.targetPos, Math.min(1, dt * 4.5));
     }
@@ -2600,7 +2841,10 @@ export class AbujaWorld3D {
       p.mesh.position.y -= p.vy * dt;
       p.mesh.rotation.x += p.rx * dt;
       p.mesh.rotation.z += p.rz * dt;
-      if (p.life <= 0 || p.mesh.position.y <= 0.5) {
+      if (p.mesh.material && p.mesh.material.transparent) {
+        p.mesh.material.opacity = Math.max(0, p.life * 1.8);
+      }
+      if (p.life <= 0 || p.mesh.position.y <= 0.3) {
         this.scene.remove(p.mesh);
         this.nairaParticles.splice(i, 1);
       }
@@ -2613,11 +2857,11 @@ export class AbujaWorld3D {
   _updatePlayerDriving(dt) {
     // Camera-relative vectors:
     // Camera sits at playerPos + (sin(yaw), cos(yaw)) * dist looking at playerPos.
-    // Therefore Screen-Forward = (-sin(yaw), -cos(yaw)) and Screen-Right = (+cos(yaw), -sin(yaw)).
+    // Screen-Forward = (-sin(yaw), -cos(yaw)), Screen-Right = (+cos(yaw), -sin(yaw)).
     const forwardInput = (this.keys.w ? 1 : 0) - (this.keys.s ? 1 : 0) - this.touchVector.y;
     const rightInput = (this.keys.d ? 1 : 0) - (this.keys.a ? 1 : 0) + this.touchVector.x;
 
-    const maxSpeed = this.inVehicle ? (this.keys.shift ? 132 : 86) : (this.keys.shift ? 38 : 24);
+    const maxSpeed = this.inVehicle ? (this.keys.shift ? 135 : 88) : (this.keys.shift ? 40 : 25);
     const inputMag = Math.min(1, Math.hypot(forwardInput, rightInput));
 
     if (inputMag > 0.04) {
@@ -2647,28 +2891,89 @@ export class AbujaWorld3D {
         this.cameraYaw -= rightInput * dt * 0.95;
       }
 
-      this.walkCycle += dt * (this.keys.shift ? 15 : 10);
+      this.walkCycle += dt * (this.keys.shift ? 16 : 10);
       this._checkDistrictProximity();
     } else {
       this.playerSpeed *= 0.82;
       this.walkCycle *= 0.85;
     }
 
-    // Animate 3rd-person humanoid limbs (walking stride + street punch right hook)
+    // ── SUPERB SPORTS CAR DRIVING DYNAMICS ──────────────────────────────────
+    if (this.inVehicle && this.playerVehicleMesh?.userData) {
+      const ud = this.playerVehicleMesh.userData;
+      const rollDelta = (this.playerSpeed * dt) / 0.78;
+      const rollDir = forwardInput >= -0.05 ? 1 : -1;
+
+      // Continuous 3D alloy wheel rotation
+      if (ud.wheels) {
+        for (const w of ud.wheels) {
+          w.rotation.x += rollDelta * rollDir;
+        }
+      }
+
+      // Smooth steering of front wheels into turns
+      const targetSteer = rightInput * -0.42;
+      if (ud.frontLeftPivot) ud.frontLeftPivot.rotation.y = THREE.MathUtils.lerp(ud.frontLeftPivot.rotation.y, targetSteer, dt * 10);
+      if (ud.frontRightPivot) ud.frontRightPivot.rotation.y = THREE.MathUtils.lerp(ud.frontRightPivot.rotation.y, targetSteer, dt * 10);
+
+      // Chassis suspension pitch (squat on accel, dive on brake) & roll into turns
+      if (ud.chassisGroup) {
+        const targetPitch = forwardInput > 0.1 ? -0.045 : (forwardInput < -0.1 ? 0.038 : 0);
+        const targetRoll = rightInput * (this.playerSpeed / 75) * 0.06;
+        ud.chassisGroup.rotation.x = THREE.MathUtils.lerp(ud.chassisGroup.rotation.x, targetPitch, dt * 8);
+        ud.chassisGroup.rotation.z = THREE.MathUtils.lerp(ud.chassisGroup.rotation.z, targetRoll, dt * 8);
+        ud.chassisGroup.position.y = 1.38 + (this.playerSpeed > 2 ? Math.sin(this.walkCycle * 2) * 0.025 : 0);
+      }
+
+      // Nitro exhaust flame puffs when driving fast or boosting
+      if (this.playerSpeed > 35 || (this.keys.shift && this.playerSpeed > 15)) {
+        if (Math.random() > 0.35) {
+          this._spawnExhaustNitro(Math.random() > 0.5);
+        }
+      }
+    }
+
+    // ── SUPERB HUMANOID AVATAR ANIMATION ────────────────────────────────────
     if (this.playerHuman) {
       const moving = this.playerSpeed > 1.2;
-      const legSwing = moving ? Math.sin(this.walkCycle) * 0.72 : 0;
-      this.playerHuman.leftLegPivot.rotation.x = legSwing;
-      this.playerHuman.rightLegPivot.rotation.x = -legSwing;
-      this.playerHuman.leftArmPivot.rotation.x = -legSwing * 0.85;
+      const isSprinting = this.keys.shift && this.playerSpeed > 18;
+
+      if (moving) {
+        const strideScale = isSprinting ? 1.15 : 0.72;
+        const legSwing = Math.sin(this.walkCycle) * strideScale;
+        this.playerHuman.leftLegPivot.rotation.x = legSwing;
+        this.playerHuman.rightLegPivot.rotation.x = -legSwing;
+        this.playerHuman.leftArmPivot.rotation.x = -legSwing * 0.9;
+
+        // Sprinting forward athletic lean
+        const targetTorsoLean = isSprinting ? 0.25 : 0.05;
+        this.playerHuman.torso.rotation.x = THREE.MathUtils.lerp(this.playerHuman.torso.rotation.x, targetTorsoLean, dt * 10);
+        this.playerHuman.headGroup.rotation.x = isSprinting ? -0.14 : 0;
+      } else {
+        // Idle breathing and natural stance
+        this.playerHuman.leftLegPivot.rotation.x = 0;
+        this.playerHuman.rightLegPivot.rotation.x = 0;
+        this.playerHuman.torso.rotation.x = 0;
+        this.playerHuman.headGroup.rotation.x = 0;
+
+        const breathe = Math.sin(this.clock.elapsedTime * 2.5) * 0.025;
+        this.playerHuman.torso.position.y = 2.68 + breathe;
+        this.playerHuman.headGroup.position.y = 4.24 + breathe * 0.5;
+        this.playerHuman.leftArmPivot.rotation.x = 0.08 + Math.sin(this.clock.elapsedTime * 1.8) * 0.025;
+        this.playerHuman.rightArmPivot.rotation.x = 0.08 - Math.sin(this.clock.elapsedTime * 1.8) * 0.025;
+      }
 
       if (this.punchTimer > 0) {
         this.punchTimer = Math.max(0, this.punchTimer - dt);
-        this.playerHuman.rightArmPivot.rotation.x = -Math.PI * 0.58;
-        this.playerHuman.rightArmPivot.rotation.z = -0.22;
-        this.playerHuman.torso.rotation.y = 0.28;
+        this.playerHuman.rightArmPivot.rotation.x = -Math.PI * 0.62;
+        this.playerHuman.rightArmPivot.rotation.z = -0.25;
+        this.playerHuman.torso.rotation.y = 0.32;
+      } else if (moving) {
+        const legSwing = Math.sin(this.walkCycle) * (isSprinting ? 1.15 : 0.72);
+        this.playerHuman.rightArmPivot.rotation.x = legSwing * 0.9;
+        this.playerHuman.rightArmPivot.rotation.z = 0;
+        this.playerHuman.torso.rotation.y = 0;
       } else {
-        this.playerHuman.rightArmPivot.rotation.x = legSwing * 0.85;
         this.playerHuman.rightArmPivot.rotation.z = 0;
         this.playerHuman.torso.rotation.y = 0;
       }
