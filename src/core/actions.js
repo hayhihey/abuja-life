@@ -251,12 +251,119 @@ export const ACTIONS = [
     },
   },
   {
-    id: 'park_chill', group: 'Place', name: 'Chill at the park', icon: '🌳',
-    desc: () => 'Fresh air and a bottle of zobo.', where: (g) => atKind(g, 'recreation'), cost: () => ({ min: 90, ngn: 2000 }),
+    id: 'park_chill', group: 'Place', name: 'Chill & enjoy the breeze', icon: '🌳',
+    desc: () => 'Fresh air, scenic Abuja views, and a chilled bottle of zobo.', where: (g) => atKind(g, 'recreation', 'crushed_rock', 'amusement', 'zuma'), cost: () => ({ min: 90, ngn: 2000 }),
     async run(g) {
       g.stat('sanity', 10); g.stat('energy', 4);
       g.log('A breeze, a view, and no one asking for a file.', 'good', '🌳');
       if (g.s.loc.spot === 'jabi_lake' && Clock.hourIn(g.s.t, 16, 20) && g.rng.chance(0.1)) gainContact(g, 'tech_founder', 1, 'Jogging by the lake, you meet');
+    },
+  },
+  {
+    id: 'banex_flip', group: 'Work', name: 'Flip UK-used iPhones & MacBooks at Banex (₦40k)', icon: '📱',
+    desc: () => 'Hustle at Banex Plaza, Abuja\u2019s undisputed gadget capital. High daily turnover.',
+    where: (g) => atKind(g, 'banex'),
+    cost: () => ({ min: 120, energy: 14, ngn: 40000 }),
+    async run(g) {
+      if (g.rng.chance(0.78)) {
+        const payout = nice(g.rng.int(58000, 86000), 1000);
+        g.earn(payout, { cash: true });
+        g.stat('clout', 0.8);
+        g.log(`Clean UK-used iPhone 15 Pro & MacBook deal closed at Banex Plaza! You pocket ${ngn(payout)}.`, 'good', '📱');
+      } else {
+        g.earn(40000, { cash: true });
+        g.log('Tough bargaining at Banex today. You sold at cost price, but made a solid gadget plug.', 'info', '📱');
+        if (g.rng.chance(0.4)) gainContact(g, 'tech_founder', 1, 'At a Banex repair counter, you link up with');
+      }
+    },
+  },
+  {
+    id: 'area1_kilishi_pack', group: 'Place', name: 'Buy Area 1 Fiery Beef Kilishi Pack (₦9k)', icon: '🥩',
+    desc: () => 'Abuja\u2019s legendary sun-dried beef coated in spicy yaji peanut paste. Boosts energy, sanity & contact affinity!',
+    where: (g) => atKind(g, 'kilishi'),
+    cost: () => ({ min: 40, ngn: 9000 }),
+    async run(g) {
+      g.stat('energy', 16); g.stat('sanity', 12); g.stat('clout', 0.5);
+      for (const c of g.s.contacts) c.affinity = clamp((c.affinity || 50) + 4, 0, 100);
+      g.log('Freshly roasted Area 1 Kilishi wrapped in brown paper! Shared parcels with your contacts (+4 Affinity all round).', 'good', '🥩');
+    },
+  },
+  {
+    id: 'arts_village_tour', group: 'Place', name: 'Patronise Abuja Arts & Crafts Village (₦22k)', icon: '🎭',
+    desc: () => 'Thatched huts opposite Hilton: Nok terracotta, Hausa leather, Benin bronze & Ankara art.',
+    where: (g) => atKind(g, 'crafts'),
+    cost: () => ({ min: 90, energy: 6, ngn: 22000 }),
+    async run(g) {
+      g.stat('clout', 2.2); g.stat('sanity', 9);
+      g.log('Picked up handcrafted bronze & leather pieces at the Arts & Crafts Village.', 'good', '🎭');
+      if (g.rng.chance(0.38)) gainContact(g, randomContactType(g.rng, { civil_servant: 2, contractor: 2, promoter: 1 }), 2, 'Admiring a Nok sculpture, you strike up a chat with');
+    },
+  },
+  {
+    id: 'icc_summit', group: 'Network', name: 'Attend ECOWAS / AfCFTA MICE Summit at ICC (₦35k)', icon: '🎙️',
+    desc: () => 'Abuja is West Africa\u2019s conference capital. Rub shoulders with delegates, directors, and investors.',
+    where: (g) => atKind(g, 'conference'),
+    cost: () => ({ min: 150, energy: 14, ngn: 35000 }),
+    async run(g) {
+      g.stat('clout', 3.2); g.stat('sanity', 4);
+      g.log('Lanyard on neck, espresso in hand at the International Conference Centre plenary.', 'good', '🎙️');
+      if (g.rng.chance(0.65)) gainContact(g, randomContactType(g.rng, { civil_servant: 3, contractor: 3, tech_founder: 2 }), g.rng.chance(0.35) ? 3 : 2, 'During the VIP communiqué break, you exchange cards with');
+    },
+  },
+  {
+    id: 'magicland_rides', group: 'Place', name: 'Ferris Wheel & Rollercoaster at Magicland (₦7.5k)', icon: '🎡',
+    desc: () => 'Unwind at Wonderland/Magicland by Abuja City Gate. Best stress relief in the FCT.',
+    where: (g) => atKind(g, 'amusement'),
+    cost: () => ({ min: 120, energy: 8, ngn: 7500 }),
+    async run(g) {
+      g.stat('sanity', 22); g.stat('clout', 0.6);
+      g.log('Top of the Magicland Ferris Wheel overlooking the Abuja City Gate skyline! Stress wiped clean.', 'good', '🎡');
+    },
+  },
+  {
+    id: 'crushed_rock_hike', group: 'Place', name: 'Hike & Shoot Content at Mpape Crushed Rock Lagoon (₦5k)', icon: '🏞️',
+    desc: () => 'Abuja\u2019s viral abandoned stone quarry with emerald-blue rainwater cliffs.',
+    where: (g) => atKind(g, 'crushed_rock'),
+    cost: () => ({ min: 120, energy: 14, ngn: 5000 }),
+    async run(g) {
+      g.stat('sanity', 18); g.stat('clout', 1.6);
+      g.log('Sunrise hike above Mpape Crushed Rock\u2019s turquoise lagoon! The drone shots go viral on Abuja Twitter.', 'good', '🏞️');
+      if (g.rng.chance(0.4)) gainContact(g, randomContactType(g.rng, { promoter: 3, tech_founder: 2 }), 1, 'At the quarry cliff edge, you meet');
+    },
+  },
+  {
+    id: 'zuma_rock_tour', group: 'Place', name: 'Excursion to Zuma Rock Monolith (₦6k)', icon: '🗿',
+    desc: () => 'Stand before the 725m igneous monolith ("Gateway to Abuja") featured on the ₦100 note.',
+    where: (g) => atKind(g, 'zuma'),
+    cost: () => ({ min: 110, energy: 10, ngn: 6000 }),
+    async run(g) {
+      g.stat('sanity', 16); g.stat('clout', 1.2);
+      g.log('Gazing up at the natural face etched into Zuma Rock along the Kaduna-Abuja corridor. Majestic!', 'good', '🗿');
+    },
+  },
+  {
+    id: 'nysc_mammy_market', group: 'Work', name: 'Trade & Network at NYSC Kubwa Camp Mammy Market (₦12k)', icon: '🪖',
+    desc: () => 'Supply white-on-white kits, waist pouches & cold drinks to fresh FCT Youth Corpers.',
+    where: (g) => atKind(g, 'nysc'),
+    cost: () => ({ min: 150, energy: 15, ngn: 12000 }),
+    async run(g) {
+      const rev = nice(g.rng.int(22000, 34000), 500);
+      g.earn(rev, { cash: true });
+      g.stat('sanity', 4);
+      g.log(`Brisk business at NYSC Kubwa Orientation Camp Mammy Market! Cleared ${ngn(rev)} while the bugle blew.`, 'good', '🪖');
+      if (g.rng.chance(0.35)) gainContact(g, randomContactType(g.rng, { dispatcher: 2, tech_founder: 2, civil_servant: 1 }), 1, 'By the parade ground, you connect with');
+    },
+  },
+  {
+    id: 'baze_exec_seminar', group: 'Network', name: 'Attend Baze University Executive Seminar (₦20k)', icon: '🎓',
+    desc: () => 'Network with young senators, founders, and lecturers at Jabi\u2019s premier private campus.',
+    where: (g) => atKind(g, 'university'),
+    cost: () => ({ min: 120, energy: 10, ngn: 20000 }),
+    async run(g) {
+      g.stat('clout', 2.2);
+      if (isTrack(g, 'civil')) g.s.career.promoFile = clamp(g.s.career.promoFile + 5, 0, 100);
+      g.log('Executive roundtable at Baze University Jabi complete. Sharp insights and high-powered classmates.', 'good', '🎓');
+      if (g.rng.chance(0.45)) gainContact(g, randomContactType(g.rng, { civil_servant: 2, contractor: 2, tech_founder: 2 }), 2, 'After the lecture in Jabi, you link up with');
     },
   },
   {

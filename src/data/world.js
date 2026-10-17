@@ -18,6 +18,8 @@ export const DISTRICTS = [
       { id: 'nnpc_towers', name: 'NNPC Towers', kind: 'govt', icon: '🏢', gate: { clout: 25, label: 'NNPC security desk' }, employer: 'NNPC' },
       { id: 'cbn_hq', name: 'Central Bank (CBN) HQ', kind: 'govt', icon: '🏦', gate: { clout: 25, label: 'CBN access control' }, employer: 'CBN' },
       { id: 'bpp_tenders', name: 'Procurement Bureau (BPP) Desk', kind: 'tenders', icon: '📑' },
+      { id: 'icc_conference', name: 'Intl Conference Centre (ICC / MICE)', kind: 'conference', icon: '🎙️' },
+      { id: 'arts_village', name: 'Abuja Arts & Crafts Village', kind: 'crafts', icon: '🎭' },
     ],
   },
   {
@@ -25,7 +27,7 @@ export const DISTRICTS = [
     rent: 12_000_000, living: 14000, power: 0.97, isp: 0.95, footfall: 1.0, prestige: 5, housing: true,
     blurb: 'Embassies, ministers and old money behind high walls. Everybody here knows somebody - and wants you to know it.',
     landmarks: [
-      { id: 'transcorp_lobby', name: 'Hotel Lobby (Power Lunch)', kind: 'lobby', icon: '🍸' },
+      { id: 'transcorp_lobby', name: 'Transcorp Hilton Lobby (Power Lunch)', kind: 'lobby', icon: '🍸' },
       { id: 'embassy_row', name: 'Embassy Row', kind: 'diplomatic', icon: '🏛️', gate: { clout: 30, label: 'Embassy Row police post' } },
       { id: 'lobby_house', name: 'Lobbyists\u2019 House', kind: 'lobbyists', icon: '🗝️', gate: { clout: 15, label: 'Lobby house gateman' } },
       { id: 'millennium_park', name: 'Millennium Park', kind: 'recreation', icon: '🌳' },
@@ -37,7 +39,7 @@ export const DISTRICTS = [
     blurb: 'Quiet, tight security, big names. The road to the Villa runs through here, so convoys do too.',
     landmarks: [
       { id: 'protocol_lodge', name: 'Protocol Lodge', kind: 'protocol', icon: '🎫' },
-      { id: 'villa_gate', name: 'Villa Gate Road', kind: 'govt', icon: '🚧', gate: { clout: 40, label: 'Presidential Guard checkpoint' } },
+      { id: 'villa_gate', name: 'Aso Rock Villa Gate', kind: 'govt', icon: '🚧', gate: { clout: 40, label: 'Presidential Guard checkpoint' } },
     ],
   },
   {
@@ -51,10 +53,12 @@ export const DISTRICTS = [
   {
     id: 'wuse2', name: 'Wuse 2', short: 'Wuse 2', zone: 1, x: 44, y: 38,
     rent: 6_000_000, living: 10000, power: 0.9, isp: 0.93, footfall: 1.25, prestige: 3, housing: true,
-    blurb: 'Lounges, shawarma, boutiques and the Wuse annex of the Federal Secretariat. Abuja\u2019s night drive starts here.',
+    blurb: 'Banex Plaza gadgets, Wuse Market, lounges, shawarma, boutiques and the Wuse annex of the Federal Secretariat.',
     landmarks: [
-      { id: 'lounge_strip', name: 'Lounge Strip', kind: 'nightlife', icon: '🍾' },
-      { id: 'shawarma_corner', name: 'Shawarma Corner', kind: 'shawarma', icon: '🌯' },
+      { id: 'banex_plaza', name: 'Banex Plaza (Tech & Gadget Hub)', kind: 'banex', icon: '📱' },
+      { id: 'wuse_market', name: 'Wuse Market', kind: 'market', icon: '🛍️' },
+      { id: 'lounge_strip', name: 'Adetokunbo Ademola Lounge Strip', kind: 'nightlife', icon: '🍾' },
+      { id: 'shawarma_corner', name: 'Yahuza Suya & Shawarma Corner', kind: 'shawarma', icon: '🌯' },
       { id: 'boutique_row', name: 'Boutique Row', kind: 'boutique', icon: '👔' },
       { id: 'wuse_secretariat', name: 'Federal Secretariat (Wuse Annex)', kind: 'govt', icon: '🏛️', gate: { clout: 8, label: 'Secretariat reception' }, employer: 'Fed. Ministry' },
     ],
@@ -62,11 +66,12 @@ export const DISTRICTS = [
   {
     id: 'jabi', name: 'Jabi', short: 'Jabi', zone: 1, x: 28, y: 36,
     rent: 4_500_000, living: 8500, power: 0.85, isp: 0.9, footfall: 1.1, prestige: 3, housing: true,
-    blurb: 'Lake, mall, tech hub and NCDC. Joggers at dawn, founders at noon, traffic at six.',
+    blurb: 'Jabi Lake, Mall, Baze University, tech hub and NCDC. Joggers at dawn, founders at noon, traffic at six.',
     landmarks: [
-      { id: 'jabi_lake', name: 'Jabi Lake Park', kind: 'recreation', icon: '🛶' },
+      { id: 'jabi_lake', name: 'Jabi Lake Park & Boat Club', kind: 'recreation', icon: '🛶' },
       { id: 'jabi_hub', name: 'Jabi Tech Hub (co-working)', kind: 'cowork', icon: '💻' },
       { id: 'jabi_mall', name: 'Jabi Lake Mall Cafe', kind: 'cafe', icon: '☕' },
+      { id: 'baze_uni', name: 'Baze University Campus', kind: 'university', icon: '🎓' },
       { id: 'ncdc_hq', name: 'NCDC Headquarters', kind: 'govt', icon: '🧪', gate: { clout: 12, label: 'NCDC front desk' }, employer: 'NCDC' },
     ],
   },
@@ -82,8 +87,9 @@ export const DISTRICTS = [
   {
     id: 'garki', name: 'Garki', short: 'Garki', zone: 1, x: 50, y: 68,
     rent: 3_000_000, living: 6500, power: 0.8, isp: 0.85, footfall: 1.2, prestige: 2, housing: true,
-    blurb: 'Federal secretariat blocks, VIO office, car mart and the market. Paperwork capital of Nigeria.',
+    blurb: 'Area 1 Kilishi market, Federal Secretariat blocks, VIO office, car mart and AGIS land registry.',
     landmarks: [
+      { id: 'area1_kilishi', name: 'Area 1 Kilishi & Suya Market', kind: 'kilishi', icon: '🥩' },
       { id: 'fed_secretariat', name: 'Federal Secretariat (FCDA)', kind: 'govt', icon: '🏛️', gate: { clout: 8, label: 'Secretariat reception' }, employer: 'FCDA' },
       { id: 'vio_office', name: 'VIO Office', kind: 'vio', icon: '🪪' },
       { id: 'car_mart', name: 'Garki Car Mart', kind: 'carmart', icon: '🚗' },
@@ -93,18 +99,21 @@ export const DISTRICTS = [
   {
     id: 'lugbe', name: 'Lugbe', short: 'Lugbe', zone: 2, x: 62, y: 90,
     rent: 1_200_000, living: 3800, power: 0.62, isp: 0.7, footfall: 1.0, prestige: 1, housing: true,
-    blurb: 'Airport Road hold-up capital. Dense estates, FRSC at every bend, and a lot of people with early alarms.',
+    blurb: 'Airport Road hold-up capital, Abuja City Gate & Magicland Amusement Park. Dense estates and FRSC at every bend.',
     landmarks: [
-      { id: 'airport_junction', name: 'Airport Road Junction', kind: 'transport', icon: '✈️' },
+      { id: 'airport_junction', name: 'Airport Road / City Gate Junction', kind: 'transport', icon: '✈️' },
+      { id: 'magicland_park', name: 'Magicland Amusement Park (Wonderland)', kind: 'amusement', icon: '🎡' },
       { id: 'lugbe_market', name: 'Lugbe Market', kind: 'market', icon: '🛒' },
     ],
   },
   {
     id: 'kubwa', name: 'Kubwa', short: 'Kubwa', zone: 2, x: 12, y: 18,
     rent: 900_000, living: 3300, power: 0.6, isp: 0.7, footfall: 1.1, prestige: 1, housing: true,
-    blurb: 'Civil servants\u2019 starter homes, a train link into town and a restless young crowd.',
+    blurb: 'NYSC Orientation Camp, Abuja Light Rail train link, Zuma Rock gateway corridor and civil servants\u2019 starter homes.',
     landmarks: [
-      { id: 'kubwa_station', name: 'Kubwa Train Station', kind: 'transport', icon: '🚆' },
+      { id: 'kubwa_station', name: 'Kubwa Light Rail Station', kind: 'transport', icon: '🚆' },
+      { id: 'nysc_camp', name: 'NYSC Kubwa Orientation Camp', kind: 'nysc', icon: '🪖' },
+      { id: 'zuma_gateway', name: 'Zuma Rock Monolith Viewpoint', kind: 'zuma', icon: '🗿' },
       { id: 'kubwa_market', name: 'Kubwa Market', kind: 'market', icon: '🛒' },
       { id: 'youth_joint', name: 'Kubwa Youth Joint', kind: 'youthjoint', icon: '🎶' },
     ],
@@ -112,7 +121,7 @@ export const DISTRICTS = [
   {
     id: 'dawaki', name: 'Dawaki', short: 'Dawaki', zone: 2, x: 28, y: 20,
     rent: 700_000, living: 3000, power: 0.58, isp: 0.65, footfall: 0.8, prestige: 1, housing: true,
-    blurb: 'Quiet estates off the Gwarinpa side. Cheap enough for freelancers, as long as the light holds.',
+    blurb: 'Quiet estates off the Gwarinpa side and Kukwaba hills. Cheap enough for freelancers, as long as the light holds.',
     landmarks: [
       { id: 'dawaki_cafe', name: 'Dawaki Estate Cafe', kind: 'cafe', icon: '☕' },
       { id: 'dawaki_market', name: 'Dawaki Market', kind: 'market', icon: '🛒' },
@@ -121,10 +130,10 @@ export const DISTRICTS = [
   {
     id: 'mpape', name: 'Mpape', short: 'Mpape', zone: 2, x: 42, y: 14,
     rent: 600_000, living: 2600, power: 0.5, isp: 0.55, footfall: 0.9, prestige: 0, housing: true,
-    blurb: 'Quarry views, cliffside houses and the artisans who supply half the city. Wholesale prices, hard roads.',
+    blurb: 'Famous Crushed Rock Blue Lagoon quarry, cliffside houses overlooking Maitama, and artisans supplying half the city.',
     landmarks: [
       { id: 'artisan_hub', name: 'Artisan Supply Hub', kind: 'market', icon: '🧱', wholesale: true },
-      { id: 'quarry_view', name: 'Quarry Viewpoint', kind: 'recreation', icon: '⛰️' },
+      { id: 'quarry_view', name: 'Mpape Crushed Rock Blue Lagoon', kind: 'crushed_rock', icon: '🏞️' },
     ],
   },
   {

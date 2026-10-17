@@ -1026,6 +1026,18 @@ class AbujaClientApp {
       const canCollectRent = isMansion && daysSinceRent >= 30;
       const rentAmount = RENT_PAYOUTS[plotDef.id] || 350000;
 
+      const SHORTLET_RATES = {
+        kubwa: 65000,
+        lugbe: 80000,
+        jabi: 165000,
+        wuse2: 240000,
+        maitama: 380000
+      };
+      const daysSinceShortlet = this.game.day - (owned.lastShortletDay || 0);
+      const canHostShortlet = isMansion && daysSinceShortlet >= 3;
+      const baseShortlet = SHORTLET_RATES[plotDef.id] || 95000;
+      const shortletPayout = this.game.s.social.solarInstalled ? Math.round(baseShortlet * 1.25) : baseShortlet;
+
       return `
         <div class="game-card" style="border-left: 3px solid ${isMansion ? '#facc15' : '#10b981'}; background: ${isMansion ? 'rgba(234,179,8,0.06)' : 'rgba(16,185,129,0.04)'};">
           <div class="card-top">
@@ -1042,7 +1054,7 @@ class AbujaClientApp {
           </div>
           <p class="card-desc">
             ${isMansion 
-              ? 'Mansion fully completed! Rendered with golden halo & Gerard roof in 3D Abuja. Live rent-free or collect massive 2-year upfront rent from tenants.' 
+              ? 'Mansion fully completed! Rendered with golden halo & Gerard roof in 3D Abuja. Live rent-free, host VIP Shortlet/Airbnb guests every 3 days, or collect massive 2-year upfront rent.' 
               : 'Active building site rendered in 3D. Advance the construction stages or hire players in the Tasks tab to haul Mpape granite to advance automatically!'}
           </p>
           <div class="card-meta-row" style="flex-wrap:wrap; gap:8px;">
@@ -1051,17 +1063,20 @@ class AbujaClientApp {
               ${!hasCofO ? `<button class="btn-xs btn-apply-cofo" data-id="${plotDef.id}" style="border-color:#f59e0b; color:#fbbf24;">🏛️ Get AGIS C-of-O (₦45,000)</button>` : ''}
               ${stage < 5 ? `<button class="btn-xs btn-hire-granite" data-id="${plotDef.id}" style="border-color:#38bdf8; color:#7dd3fc;">📋 Hire Player to Haul Granite</button>` : ''}
             </div>
-            <div style="display:flex; gap:6px;">
+            <div style="display:flex; flex-wrap:wrap; gap:6px;">
               ${stage < 5 ? `
                 <button class="btn-primary btn-upgrade-plot" data-id="${plotDef.id}" data-cost="${nextCost}">
                   🔨 Advance Stage: ${STAGE_NAMES[stage + 1]?.split(':')[1] || 'Next'} (${formatNairaFull(nextCost)})
                 </button>
               ` : `
                 <button class="btn-secondary btn-movein-plot" data-id="${plotDef.id}" ${isLivingHere ? 'disabled' : ''}>
-                  ${isLivingHere ? '👑 Living Rent-Free' : '🏰 Move In as Landlord (Rent Free)'}
+                  ${isLivingHere ? '👑 Living Rent-Free' : '🏰 Move In (Rent Free)'}
+                </button>
+                <button class="btn-primary btn-host-shortlet" data-id="${plotDef.id}" data-payout="${shortletPayout}" ${canHostShortlet ? '' : 'disabled'} style="background:linear-gradient(135deg,#0284c7,#0369a1);">
+                  🏨 ${canHostShortlet ? `Host Shortlet / Airbnb (+${formatNairaFull(shortletPayout)})` : `Shortlet Checkout in ${Math.max(1, 3 - daysSinceShortlet)}d`}
                 </button>
                 <button class="btn-primary btn-collect-tenant-rent" data-id="${plotDef.id}" ${canCollectRent ? '' : 'disabled'}>
-                  💰 ${canCollectRent ? `Collect 2-Yr Rent (+${formatNairaFull(rentAmount)})` : `Tenant Rent in ${Math.max(1, 30 - daysSinceRent)} Days`}
+                  💰 ${canCollectRent ? `Collect 2-Yr Rent (+${formatNairaFull(rentAmount)})` : `2-Yr Rent in ${Math.max(1, 30 - daysSinceRent)}d`}
                 </button>
               `}
             </div>
@@ -1087,7 +1102,8 @@ class AbujaClientApp {
           name: DISTRICT_BY_ID[id]?.name || id,
           cofo: false,
           boughtDay: this.game.day,
-          lastRentCollection: 0
+          lastRentCollection: 0,
+          lastShortletDay: 0
         };
         this.game.s.social.plots = plots;
         this.game.log(`Purchased prime land plot in ${DISTRICT_BY_ID[id]?.name || id} for ${formatNairaFull(price)}!`, 'good', '📜');
@@ -1178,6 +1194,28 @@ class AbujaClientApp {
         this.game.s.home.paidThrough = this.game.s.t + 3650 * 24 * 60; // 10 years free
         this.game.log(`Moved into your private ${DISTRICT_BY_ID[id]?.name} Duplex Mansion as Landlord! Free of rent.`, 'good', '👑');
         this.showToast(`👑 Welcome home! Living rent-free in ${DISTRICT_BY_ID[id]?.name}!`);
+        this._renderAll();
+      });
+    });
+
+    // Host Shortlet / Airbnb Guests (every 3 days)
+    container.querySelectorAll('.btn-host-shortlet').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.id;
+        const payout = Number(btn.dataset.payout);
+        const plot = plots[id];
+        if (!plot || plot.stage < 5) return;
+        const daysSince = this.game.day - (plot.lastShortletDay || 0);
+        if (daysSince < 3) {
+          this.showToast(`⏳ Shortlet guests are still checked in. Next booking opens in ${3 - daysSince} day(s).`);
+          return;
+        }
+        plot.lastShortletDay = this.game.day;
+        this.game.earn(payout, { bank: true });
+        this.game.stat('clout', 2);
+        this.game.log(`Hosted weekend diplomats & expats in your ${plot.name} Shortlet Apartment: +${formatNairaFull(payout)}!`, 'good', '🏨');
+        if (this.world3d) this.world3d.spawnNairaRain(24);
+        this.showToast(`🏨 Shortlet / Airbnb Booking Paid: +${formatNairaFull(payout)}!`);
         this._renderAll();
       });
     });
@@ -1673,11 +1711,38 @@ class AbujaClientApp {
         }
       },
       {
+        id: 'area1_kilishi_box',
+        title: '🥩 Area 1 Garki Fiery Beef Kilishi Gift Box',
+        cost: 12000,
+        desc: 'Send a brown-paper parcel of spicy groundnut-coated Area 1 Kilishi to a Ministry Director or enjoy with cold drinks.',
+        perk: '+22 Sanity • +18 Energy • +4 Protocol Clout',
+        run: () => {
+          this.game.stat('sanity', 22);
+          this.game.stat('energy', 18);
+          this.game.stat('clout', 4);
+          this.game.log('Picked up authentic Area 1 Garki spicy beef Kilishi parcel! Shared with ministry allies.', 'good', '🥩');
+          this.showToast('🥩 Area 1 Kilishi Gift Box enjoyed! +22 Sanity, +18 Energy, +4 Clout.');
+        }
+      },
+      {
+        id: 'crushed_rock_drone',
+        title: '🏞️ Mpape Crushed Rock Lagoon VIP Picnic & Drone Shoot',
+        cost: 18500,
+        desc: 'Private weekend picnic overlooking the turquoise rainwater quarry lake in Mpape with 4K drone photography.',
+        perk: '+35 Sanity • +6 Clout • Viral Abuja Aesthetic',
+        run: () => {
+          this.game.stat('sanity', 35);
+          this.game.stat('clout', 6);
+          this.game.log('Hosted a scenic picnic & 4K drone shoot at Mpape Crushed Rock Blue Lagoon!', 'good', '🏞️');
+          this.showToast('🏞️ Mpape Crushed Rock Blue Lagoon picnic! +35 Sanity, +6 Clout.');
+        }
+      },
+      {
         id: 'solar_inverter',
         title: '⚡ 10kVA Felicity Solar & Lithium Inverter System',
         cost: 380000,
-        desc: 'Permanent rooftop solar installation. Never experience blackout at home again, 100% light guaranteed!',
-        perk: this.game.s.social.solarInstalled ? '✅ INSTALLED (Immune to FCT Blackouts)' : 'Permanent 100% Home Power',
+        desc: 'Permanent rooftop solar installation. Never experience blackout at home again, +25% Shortlet booking rates!',
+        perk: this.game.s.social.solarInstalled ? '✅ INSTALLED (Immune to Blackouts • +25% Shortlet Rate)' : 'Permanent 100% Home Power • +25% Shortlet Yield',
         run: () => {
           this.game.s.social.solarInstalled = true;
           this.game.stat('clout', 10);
@@ -2004,6 +2069,24 @@ class AbujaClientApp {
         clout: 12,
         cashBonus: 0,
         desc: 'Elite Abuja real estate & C-of-O verification credential. Grants +12 Protocol Clout & Maitama gate access.'
+      },
+      {
+        id: 'baze_exec_mba',
+        title: '🎓 Baze University Executive MBA & Public Policy Fellowship',
+        org: 'Baze University Abuja (Jabi Campus)',
+        cost: 48000,
+        clout: 16,
+        cashBonus: 0,
+        desc: 'Study alongside senators, directors, and Abuja startup founders at Baze University. Grants +16 Protocol Clout.'
+      },
+      {
+        id: 'nysc_kubwa_saed',
+        title: '🪖 NYSC Kubwa Camp SAED SME Startup Grant Program',
+        org: 'NYSC FCT Orientation Camp (Kubwa)',
+        cost: 12000,
+        clout: 5,
+        cashBonus: 28000,
+        desc: 'Complete the Kubwa Orientation Camp entrepreneurship pitch and receive a ₦28,000 FCT SME seed grant + 5 Clout!'
       }
     ];
 

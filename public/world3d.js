@@ -582,6 +582,114 @@ export class AbujaWorld3D {
       neonRing.position.set(wusePos.x - 16 + n * 16, 1, wusePos.z);
       this.scene.add(neonRing);
     }
+
+    // 6. ZUMA ROCK MONOLITH ("GATEWAY TO ABUJA" - North-West beyond Kubwa)
+    const kubwaD = DISTRICT_BY_ID.kubwa;
+    const kubwaPos = map2DTo3D(kubwaD.x, kubwaD.y);
+    const zumaGroup = new THREE.Group();
+    zumaGroup.position.set(kubwaPos.x - 75, 0, kubwaPos.z - 65);
+
+    const zumaRockMat = new THREE.MeshStandardMaterial({
+      color: 0x334155,
+      roughness: 0.88,
+      metalness: 0.15,
+      flatShading: true
+    });
+    const zumaMain = new THREE.Mesh(new THREE.DodecahedronGeometry(68, 1), zumaRockMat);
+    zumaMain.scale.set(1.35, 1.85, 0.95);
+    zumaMain.position.y = 48;
+    zumaMain.castShadow = true;
+    zumaGroup.add(zumaMain);
+
+    // Subtle glowing natural "Human Face" etching on Zuma Rock's south cliff
+    const faceGlowMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+    const leftEye = new THREE.Mesh(new THREE.BoxGeometry(5, 2.2, 2), faceGlowMat);
+    leftEye.position.set(-12, 68, 56);
+    const rightEye = new THREE.Mesh(new THREE.BoxGeometry(5, 2.2, 2), faceGlowMat);
+    rightEye.position.set(12, 68, 56);
+    const noseRidge = new THREE.Mesh(new THREE.BoxGeometry(2.8, 14, 2.5), faceGlowMat);
+    noseRidge.position.set(0, 58, 58);
+    zumaGroup.add(leftEye, rightEye, noseRidge);
+    this.scene.add(zumaGroup);
+
+    // 7. MPAPE CRUSHED ROCK BLUE LAGOON (Quarry Cliffs & Turquoise Water)
+    const mpapeD = DISTRICT_BY_ID.mpape;
+    const mpapePos = map2DTo3D(mpapeD.x, mpapeD.y);
+    const lagoonGroup = new THREE.Group();
+    lagoonGroup.position.set(mpapePos.x + 28, 0, mpapePos.z - 26);
+
+    const lagoonWater = new THREE.Mesh(
+      new THREE.CylinderGeometry(20, 20, 1.2, 24),
+      new THREE.MeshStandardMaterial({
+        color: 0x06b6d4,
+        emissive: 0x0891b2,
+        emissiveIntensity: 0.35,
+        roughness: 0.15,
+        metalness: 0.8
+      })
+    );
+    lagoonWater.position.y = 0.7;
+    lagoonGroup.add(lagoonWater);
+
+    for (let c = 0; c < 7; c++) {
+      const angle = (c / 7) * Math.PI * 1.35 - Math.PI * 0.2;
+      const cliff = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(11 + (c % 3) * 3, 0),
+        zumaRockMat
+      );
+      cliff.scale.set(1, 2.1, 1);
+      cliff.position.set(Math.cos(angle) * 22, 12, Math.sin(angle) * 22);
+      lagoonGroup.add(cliff);
+    }
+    this.scene.add(lagoonGroup);
+
+    // 8. MAGICLAND AMUSEMENT PARK FERRIS WHEEL (Near Abuja City Gate)
+    const ferrisGroup = new THREE.Group();
+    ferrisGroup.position.set(gateX + 42, 0, gateZ - 14);
+
+    const legLeft = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 1.4, 30, 8), whiteMarble);
+    legLeft.position.set(-6, 14, 0);
+    legLeft.rotation.z = -0.2;
+    const legRight = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 1.4, 30, 8), whiteMarble);
+    legRight.position.set(6, 14, 0);
+    legRight.rotation.z = 0.2;
+    ferrisGroup.add(legLeft, legRight);
+
+    const wheelRim = new THREE.Mesh(
+      new THREE.TorusGeometry(16, 0.9, 10, 28),
+      new THREE.MeshBasicMaterial({ color: 0xf43f5e })
+    );
+    wheelRim.position.set(0, 26, 0);
+    this.spinningMeshes.push(wheelRim);
+    ferrisGroup.add(wheelRim);
+    this.scene.add(ferrisGroup);
+
+    // 9. MILLENNIUM PARK & MILLENNIUM TOWER SPIRE (Maitama / CBD Border)
+    const maitamaD = DISTRICT_BY_ID.maitama;
+    const maitamaPos = map2DTo3D(maitamaD.x, maitamaD.y);
+    const milParkGroup = new THREE.Group();
+    milParkGroup.position.set((maitamaPos.x + cbdPos.x) * 0.5 + 18, 0, (maitamaPos.z + cbdPos.z) * 0.5);
+
+    const parkLawn = new THREE.Mesh(
+      new THREE.CylinderGeometry(24, 24, 0.7, 24),
+      new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.8 })
+    );
+    parkLawn.position.y = 0.35;
+    milParkGroup.add(parkLawn);
+
+    const milSpire = new THREE.Mesh(
+      new THREE.ConeGeometry(4.5, 115, 16),
+      new THREE.MeshStandardMaterial({
+        color: 0xe2e8f0,
+        emissive: 0x38bdf8,
+        emissiveIntensity: 0.25,
+        metalness: 0.85,
+        roughness: 0.2
+      })
+    );
+    milSpire.position.y = 57.5;
+    milParkGroup.add(milSpire);
+    this.scene.add(milParkGroup);
   }
 
   _buildTrafficSwarm() {
