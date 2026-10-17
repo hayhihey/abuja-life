@@ -9,30 +9,112 @@ import { START_T, dayNumber } from './clock.js';
 import { rankFor } from '../data/voice.js';
 import { uid } from './util.js';
 
+import { NIGERIAN_LIFESTYLES, GENDERS } from '../data/lifestyles.js';
+
 export const SAVE_VERSION = 1;
 
-export function newState({ name = 'Abuja Newcomer', track = 'civil', seed = (Date.now() >>> 0), avatar = '🧑🏾' } = {}) {
-  const P = START_PRESETS[track];
+export function newState({
+  name = 'Abuja Newcomer',
+  track = 'civil',
+  seed = (Date.now() >>> 0),
+  avatar = '🧑🏾',
+  gender = 'male',
+  age = 26,
+  lifeStage = 'adult',
+  lifestyle = null,
+  prevProperty = 'default'
+} = {}) {
+  const P = START_PRESETS[track] || START_PRESETS.civil;
+  const L = lifestyle ? NIGERIAN_LIFESTYLES[lifestyle] : null;
   const rng = new RNG(seed);
-  const D = DISTRICT_BY_ID[P.district];
+  const startDistrict = L ? L.district : P.district;
+  const D = DISTRICT_BY_ID[startDistrict] || DISTRICT_BY_ID[P.district];
   const day = dayNumber(START_T);
+
+  const gInfo = GENDERS[gender] || GENDERS.male;
+
+  // Determine starting plots & vehicles if a Nigerian lifestyle or previous property was selected
+  let initialPlots = {};
+  let initialCar = 'along';
+  let initialOwnedCars = ['along'];
+  let initialSolar = false;
+
+  if (L) {
+    initialCar = L.defaultCar || 'along';
+    if (initialCar !== 'along') initialOwnedCars.push(initialCar);
+    initialSolar = Boolean(L.defaultSolar);
+    if (L.defaultPlots) {
+      for (const [k, v] of Object.entries(L.defaultPlots)) {
+        initialPlots[k] = { ...v, boughtDay: day, lastRentCollection: 0, lastShortletDay: 0 };
+      }
+    }
+  }
+
+  if (prevProperty === 'none') {
+    initialPlots = {};
+    initialCar = 'along';
+    initialOwnedCars = ['along'];
+    initialSolar = false;
+  } else if (prevProperty === 'kubwa_starter') {
+    initialPlots = {
+      kubwa: { district: 'kubwa', stage: 3, name: 'Kubwa Extension Plot', cofo: true, boughtDay: day, lastRentCollection: 0, lastShortletDay: 0 }
+    };
+    initialCar = 'corolla';
+    if (!initialOwnedCars.includes('corolla')) initialOwnedCars.push('corolla');
+  } else if (prevProperty === 'jabi_shortlet') {
+    initialPlots = {
+      jabi: { district: 'jabi', stage: 5, name: 'Jabi Lakefront Terrace', cofo: true, boughtDay: day, lastRentCollection: 0, lastShortletDay: 0 }
+    };
+    initialCar = 'rx350';
+    if (!initialOwnedCars.includes('rx350')) initialOwnedCars.push('rx350');
+    initialSolar = true;
+  } else if (prevProperty === 'maitama_empire') {
+    initialPlots = {
+      maitama: { district: 'maitama', stage: 5, name: 'Maitama Minister’s Hill', cofo: true, boughtDay: day, lastRentCollection: 0, lastShortletDay: 0 },
+      wuse2: { district: 'wuse2', stage: 5, name: 'Wuse 2 Adetokunbo Plot', cofo: true, boughtDay: day, lastRentCollection: 0, lastShortletDay: 0 }
+    };
+    initialCar = 'g63';
+    for (const c of ['prado', 'g63', 'rx350']) {
+      if (!initialOwnedCars.includes(c)) initialOwnedCars.push(c);
+    }
+    initialSolar = true;
+  }
+
+  const hasCompletedHome = Object.values(initialPlots).some((p) => p.stage >= 5);
 
   const s = {
     v: SAVE_VERSION,
-    meta: { id: uid('p'), name, avatar, seed, created: Date.now() },
+    meta: {
+      id: uid('p'),
+      name,
+      avatar: gInfo.icon || avatar,
+      gender: gInfo.id,
+      age: Number(age) || 26,
+      lifeStage,
+      lifestyle: L ? L.id : 'standard',
+      caliber: L ? L.caliber : 'Standard FCT Citizen',
+      slangTag: L ? L.slangTag : 'We Move • FCT Hustle',
+      seed,
+      created: Date.now()
+    },
     t: START_T,
 
     // ---- the six vectors
-    cash: P.cash, bank: P.bank, // funds_ngn = cash + bank
-    clout: P.clout, // clout_protocol
+    cash: L ? L.cash : P.cash,
+    bank: L ? L.bank : P.bank, // funds_ngn = cash + bank
+    clout: L ? L.clout : P.clout, // clout_protocol
     energy: P.energy, // energy_stamina
     sanity: P.sanity, // sanity_stress
     heat: P.heat, // legal_heat
     contacts: P.contacts.map((type) => makeContact(rng, type, 1)), // network_connections
 
-    loc: { district: P.district, spot: null },
+    loc: { district: startDistrict, spot: null },
     home: {
-      district: P.district, rent: D.rent, paidUntilDay: day + P.rentDays, shock: null, evictions: 0,
+      district: startDistrict,
+      rent: D.rent,
+      paidUntilDay: day + (hasCompletedHome ? 3650 : P.rentDays),
+      shock: null,
+      evictions: 0,
     },
 
     career: {
@@ -40,6 +122,17 @@ export function newState({ name = 'Abuja Newcomer', track = 'civil', seed = (Dat
       posting: track === 'civil' ? { ...rng.pick(CIVIL_POSTINGS) } : null,
       kiosk: null, // trader L2 location
       since: day,
+    },
+
+    social: {
+      steeze: L ? L.steeze : 70,
+      composure: L ? L.composure : 75,
+      courses: [],
+      bae: null,
+      plots: initialPlots,
+      car: initialCar,
+      ownedCars: initialOwnedCars,
+      solarInstalled: initialSolar
     },
 
     vehicle: { kind: null, docsUntilDay: 0 },
@@ -67,11 +160,27 @@ export function newState({ name = 'Abuja Newcomer', track = 'civil', seed = (Dat
 // ---------------------------------------------------------------- selectors
 export const fundsOf = (s) => s.cash + s.bank;
 
+const PLOT_VALUATION = { kubwa: 1500000, lugbe: 2200000, jabi: 5500000, wuse2: 8500000, maitama: 16000000 };
+const CAR_VALUATION = { along: 0, corolla: 1200000, rx350: 4800000, prado: 9500000, g63: 15000000 };
+
 export function netWorth(s) {
   const pending = s.work.receivables.reduce((a, r) => a + r.amount * 0.8, 0);
   const vehicle = s.vehicle.kind ? (TRADER.vehicleCost[s.vehicle.kind] || 0) * 0.55 : 0;
   const fleet = s.work.fleet * TRADER.fleetUnitCost * 0.5;
-  return Math.round(s.cash + s.bank + s.work.frozen + pending + vehicle + fleet);
+  let realEstateVal = 0;
+  if (s.social?.plots) {
+    for (const p of Object.values(s.social.plots)) {
+      const base = PLOT_VALUATION[p.district] || 1500000;
+      realEstateVal += base * (0.3 + (p.stage || 0) * 0.25);
+    }
+  }
+  let garageVal = 0;
+  if (Array.isArray(s.social?.ownedCars)) {
+    for (const c of s.social.ownedCars) {
+      garageVal += CAR_VALUATION[c] || 0;
+    }
+  }
+  return Math.round(s.cash + s.bank + s.work.frozen + pending + vehicle + fleet + realEstateVal + garageVal);
 }
 
 /** The single "how are you doing in Abuja" number (drives rank and the street board). */

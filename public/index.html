@@ -35,15 +35,19 @@
           <span class="badge-main">ABUJA</span>
           <span class="badge-sub">GRAND PROTOCOL</span>
         </div>
-        <div class="player-id-card">
+        <div class="player-id-card" id="btn-hud-profile" style="cursor:pointer;" title="Click to customize Gender, Age, Lifestyle Caliber & Properties">
           <div id="hud-avatar-slot" class="hud-avatar-slot"></div>
           <div class="player-id-meta">
             <div class="player-id-row">
               <span id="hud-player-name" class="hud-player-name">Citizen</span>
+              <span id="hud-age-gender-pill" class="hud-online-pill" style="background:rgba(56,189,248,0.18); color:#7dd3fc; border:1px solid rgba(56,189,248,0.35);">👨🏾 26y</span>
               <span id="hud-online-pill" class="hud-online-pill" title="Connected FCT Players">● 8 ONLINE</span>
               <span id="hud-bae-pill" class="hud-bae-pill" hidden>💍 Bae</span>
             </div>
-            <span id="hud-career-badge" class="hud-career-badge">Hustler</span>
+            <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+              <span id="hud-career-badge" class="hud-career-badge">Hustler</span>
+              <span id="hud-caliber-pill" style="font-size:10px; color:#facc15; font-weight:700;">✨ Steeze 80%</span>
+            </div>
           </div>
         </div>
       </div>
@@ -346,6 +350,9 @@
 
         <!-- TAB 6: ABUJA LIFESTYLE, GARAGE, NAIJA WHOT/LUDO, COURSES & BAE -->
         <div id="tab-games" class="tab-pane">
+          <!-- NEW: NIGERIAN LIFESTYLE CALIBER, STEEZE, COMPOSURE & SLANG HUB -->
+          <div id="nigerian-slang-steeze-box" class="career-summary-box" style="border-color: rgba(250, 204, 21, 0.5); margin-bottom: 10px;"></div>
+
           <!-- Relationship / Ask to be Bae Banner -->
           <div id="bae-relationship-box" class="career-summary-box"></div>
 
@@ -487,12 +494,13 @@
 
               <div id="mp-chat-messages" class="mp-chat-messages"></div>
 
-              <!-- 1-Click Quick Abuja Chat & Task Prompts -->
+              <!-- 1-Click Quick Abuja Chat & Nigerian Slang Prompts -->
               <div class="chat-quick-Chips" id="chat-quick-chips" style="display:flex; gap:5px; padding:5px 8px; overflow-x:auto; background:rgba(15,23,42,0.85); border-top:1px solid var(--border-subtle);">
-                <button type="button" class="btn-xs btn-quick-phrase" data-text="How far Abuja people! Who dey online for deal today?">👋 How far?</button>
+                <button type="button" class="btn-xs btn-quick-phrase" data-text="Drop your Aza make I bless your weekend! 💸🕌">💸 Drop Aza!</button>
+                <button type="button" class="btn-xs btn-quick-phrase" data-text="Maintain your Steeze & Composure 100%! Zero Shalaye ✨">✨ Steeze 100%</button>
+                <button type="button" class="btn-xs btn-quick-phrase" data-text="No Gree For Anybody this year o! From Mararaba to Maitama! 🔥">🔥 No Gree!</button>
+                <button type="button" class="btn-xs btn-quick-phrase" data-text="🚨 DORIME! Sound the alarm at Wuse 2 tonight! Oblee mode activated! 🍾">🚨 Dorime / Oblee</button>
                 <button type="button" class="btn-xs btn-quick-phrase" data-text="I need someone to supply Mpape granite to my house site! Paying ₦30,000 in 📋 Tasks!">🪨 Need Granite (₦30k)</button>
-                <button type="button" class="btn-xs btn-quick-phrase" data-text="Who can help push my file on the Director's table at CBD Secretariat? Paying sharp Naira!">📄 Push File</button>
-                <button type="button" class="btn-xs btn-quick-phrase" data-text="Meet me at Wuse 2 Yahuza Suya & Whot lounge tonight! 🍾">🍢 Wuse 2 Linkup</button>
                 <button type="button" class="btn-xs" id="btn-chat-open-task" style="border-color:#10b981; color:#4ade80;">📋 + Assign Paid Task</button>
               </div>
 
@@ -606,25 +614,59 @@
     </div>
 
     <!-- ================================================================== -->
-    <!-- MODAL 3: NEW CHARACTER / SOCIOECONOMIC TRACK SELECTOR              -->
+    <!-- MODAL 3: NIGERIAN CHARACTER CREATOR (GENDER, CHILD/ADULT, LIFESTYLE & ASSETS) -->
     <!-- ================================================================== -->
     <div id="new-char-modal" class="modal-backdrop" hidden>
-      <div class="modal-card">
-        <div class="modal-badge">🇳🇬 FEDERAL CAPITAL TERRITORY ENTRY</div>
-        <h2>Initialize Your Abuja Life</h2>
-        <p>Every Abuja resident starts somewhere—from the Mararaba expressway hustle to the marble gates of the Federal Secretariat.</p>
+      <div class="modal-card" style="max-width: 760px; max-height: 90vh; overflow-y: auto;">
+        <div class="modal-badge">🇳🇬 ABUJA LIFE • CHARACTER &amp; CALIBER CREATOR</div>
+        <h2>Customize Your Nigerian Identity, Age &amp; Lifestyle Caliber</h2>
+        <p style="font-size:12px; color:#94a3b8; margin-bottom:10px;">
+          Choose your gender, start as a <strong>Child/Teen (8–17 yrs)</strong> or <strong>Adult (18–70 yrs)</strong>, pick your <strong>Nigerian Slang Lifestyle Caliber</strong> (<em>Alhaji, OS Soft-Life Baddie, Odogwu Dorime, Nepo Baby, Corper, or Sapa Trenches</em>), and select your <strong>Previous Properties &amp; Garage</strong>!
+        </p>
         <form id="new-char-form">
-          <div class="form-group">
-            <label for="char-name-input">Your Name / Alias</label>
-            <input id="char-name-input" type="text" placeholder="e.g. Tunde, Amina, Chidi, Zaynab" maxlength="24" required />
+          <div class="form-row-2col">
+            <div class="form-group">
+              <label for="char-name-input">1. Your Name / Abuja Alias</label>
+              <input id="char-name-input" type="text" placeholder="e.g. Alhaji Musa, Baddie Zaynab, Odogwu Chidi" maxlength="26" required />
+            </div>
+            <div class="form-group">
+              <label>2. Select Gender</label>
+              <div id="char-gender-options" style="display:grid; grid-template-columns:1fr 1fr; gap:8px;"></div>
+            </div>
           </div>
-          <div class="form-group">
-            <label>Select Starting Socioeconomic Track</label>
-            <div id="starter-track-options" class="starter-track-grid"></div>
+
+          <div class="form-row-2col" style="margin-top:4px;">
+            <div class="form-group">
+              <label>3. Life Stage (Start as Child/Teen or Adult)</label>
+              <div id="char-lifestage-options" style="display:grid; grid-template-columns:1fr 1fr; gap:6px;"></div>
+            </div>
+            <div class="form-group">
+              <label for="char-age-input">4. Exact Starting Age: <strong id="char-age-display" style="color:#4ade80;">26 Years Old</strong></label>
+              <input id="char-age-input" type="range" min="8" max="70" value="26" style="width:100%; accent-color:#10b981; margin-top:8px;" />
+              <div id="char-lifestage-desc" style="font-size:11px; color:#94a3b8; margin-top:4px;"></div>
+            </div>
           </div>
-          <div class="modal-actions">
-            <button type="button" id="btn-cancel-new-char" class="btn-secondary">Cancel</button>
-            <button type="submit" class="btn-primary">Enter 3D Abuja</button>
+
+          <div class="form-group" style="margin-top:6px;">
+            <label>5. Select Nigerian Lifestyle Slang, Caliber &amp; Starting Worth</label>
+            <div id="starter-lifestyle-options" class="starter-track-grid" style="grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); max-height: 220px; overflow-y: auto; padding-right: 4px;"></div>
+          </div>
+
+          <div class="form-row-2col" style="margin-top:6px;">
+            <div class="form-group">
+              <label for="char-prev-prop-select">6. Previous Properties &amp; Starting Garage</label>
+              <select id="char-prev-prop-select" style="width:100%; background:#090d16; color:#fff; border:1px solid var(--border-subtle); border-radius:6px; padding:8px; font-size:12px;"></select>
+              <div id="char-prev-prop-desc" style="font-size:10.5px; color:#a7f3d0; margin-top:4px;"></div>
+            </div>
+            <div class="form-group">
+              <label>7. Primary Abuja Career Track</label>
+              <div id="starter-track-options" class="starter-track-grid" style="grid-template-columns: 1fr 1fr;"></div>
+            </div>
+          </div>
+
+          <div class="modal-actions" style="margin-top:10px;">
+            <button type="button" id="btn-cancel-new-char" class="btn-secondary">Keep Current Character</button>
+            <button type="submit" class="btn-primary">🚀 Launch Abuja Life with This Caliber</button>
           </div>
         </form>
       </div>

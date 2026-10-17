@@ -645,6 +645,107 @@ export const ACTIONS = [
     check: (g) => (g.s.work.fleet >= 6 ? 'Your fleet is at capacity (6).' : null), cost: () => ({ min: 120, energy: 6, ngn: TRADER.fleetUnitCost }),
     async run(g) { g.s.work.fleet++; g.log(`Fleet grows to ${g.s.work.fleet} unit(s).`, 'good', '🛺'); },
   },
+
+  // ============================================================ Nigerian Slangs, Lifestyles & Child/Age Progression
+  {
+    id: 'billing_aza', group: 'Money',
+    name: (g) => (g.s.meta?.lifestyle === 'os_baddie' || g.s.meta?.lifestyle === 'nepo_baby' ? '💅 Send Heavy Soft-Life Billing ("Drop Aza")' : '📱 Drop Your Aza / Request "Urgent 2k" Billing'),
+    icon: '💸',
+    desc: () => ' Nigerian X/TikTok classic: drop your Aza or send a strategic "billing" text to your Abuja sponsors & network.',
+    where: () => true,
+    check: (g) => (g.s.flags.lastBillingDay === today(g) ? 'You already billed your contacts today. Maintain your composure till tomorrow!' : null),
+    cost: () => ({ min: 30, energy: 4 }),
+    async run(g) {
+      g.s.flags.lastBillingDay = today(g);
+      const ls = g.s.meta?.lifestyle || 'standard';
+      const steeze = g.s.social?.steeze || 70;
+      const mult = ls === 'os_baddie' ? 2.6 : ls === 'nepo_baby' ? 2.3 : ls === 'alhaji' ? 2.0 : 1.0;
+      if (g.rng.chance(0.82)) {
+        const base = nice(g.rng.int(12000, 45000) * mult * (0.7 + steeze / 140), 1000);
+        g.earn(base, { bank: true });
+        g.stat('sanity', 8);
+        g.log(`"Send your Aza!" Credit alert just entered: +${ngn(base)} from your Abuja sponsor. Soft life!`, 'good', '💸');
+      } else {
+        g.log('"No Gree For Anybody!" Your contact read the billing message and replied with "Sapa dey my side too o."', 'info', '📱');
+      }
+    },
+  },
+  {
+    id: 'tiktok_steeze_vlog', group: 'Network', name: '🕺🏾 Shoot TikTok "Steeze & Composure" Abuja Vlog (₦3k)', icon: '📱',
+    desc: () => 'Film a viral fit-check & Abuja lifestyle reel for TikTok, Instagram & X ("100% Steeze, 0% Shalaye").',
+    where: () => true,
+    cost: () => ({ min: 60, energy: 8, ngn: 3000 }),
+    async run(g) {
+      if (!g.s.social) g.s.social = { steeze: 75, composure: 75 };
+      g.s.social.steeze = clamp((g.s.social.steeze || 70) + 6, 0, 100);
+      g.s.social.composure = clamp((g.s.social.composure || 70) + 4, 0, 100);
+      const payout = nice(g.rng.int(15000, 58000) * (1 + g.s.clout / 60), 500);
+      g.earn(payout, { bank: true });
+      g.stat('clout', 1.6);
+      g.stat('sanity', 6);
+      g.log(`Your Abuja TikTok reel went viral ("Maximum Steeze & Composure! Clock it!"). Brand deal & creator payout: +${ngn(payout)}!`, 'good', '🕺🏾');
+    },
+  },
+  {
+    id: 'dorime_alarm', group: 'Nightlife', name: '🍾 Sound the Alarm! "DORIME" Club Shutdown (₦120k)', icon: '🚨',
+    desc: () => 'Order Azul & Ace of Spades with club sirens, sparkler girls, and "Ameno Dorime" blasting in Wuse 2!',
+    where: (g) => atKind(g, 'nightlife'),
+    cost: () => ({ min: 150, energy: 16, ngn: 120000 }),
+    async run(g) {
+      if (!g.s.social) g.s.social = { steeze: 80, composure: 80 };
+      g.s.social.steeze = clamp((g.s.social.steeze || 75) + 10, 0, 100);
+      g.stat('clout', 5.5);
+      g.stat('sanity', 18);
+      g.log('🚨 DORIME INTERIMO ADAPARE! Sirens blaring across the Wuse 2 VIP section as sparklers light up your table!', 'good', '🍾');
+      gainContact(g, randomContactType(g.rng, { contractor: 4, promoter: 3, civil_servant: 2 }), 3, 'Impressed by your Odogwu composure, a VIP sends over their card:');
+    },
+  },
+  {
+    id: 'child_pocket_money', group: 'Money', name: '🎒 Collect Daddy & Mummy’s Pocket Money Allowance', icon: '🧒🏾',
+    desc: () => 'Available while you are a Child/Teen (<18 yrs). Collect your family school & weekend allowance!',
+    where: (g) => (g.s.meta?.age || 26) < 18,
+    check: (g) => (g.s.flags.lastAllowanceDay === today(g) ? 'You already collected pocket money today!' : null),
+    cost: () => ({ min: 20 }),
+    async run(g) {
+      g.s.flags.lastAllowanceDay = today(g);
+      const ls = g.s.meta?.lifestyle || 'standard';
+      const amt = ls === 'alhaji' || ls === 'nepo_baby' ? 95000 : ls === 'sapa_trenches' ? 8000 : 30000;
+      g.earn(amt, { cash: true });
+      g.stat('sanity', 10);
+      g.log(`Collected ${ngn(amt)} pocket money allowance! Time to flex at Jabi Mall or save for your future.`, 'good', '🎒');
+    },
+  },
+  {
+    id: 'age_up_birthday', group: 'Place',
+    name: (g) => {
+      const curAge = g.s.meta?.age || 22;
+      return curAge < 18
+        ? `🎂 Celebrate Birthday (Age ${curAge} → ${curAge + 1} yrs)`
+        : `🎂 Celebrate Abuja Birthday Bash (Age ${curAge} → ${curAge + 1} yrs)`;
+    },
+    icon: '🎂',
+    desc: () => 'Advance your character’s age by +1 Year, boost your Composure & Clout, and unlock new adult milestones!',
+    where: () => true,
+    cost: () => ({ min: 60, ngn: 5000 }),
+    async run(g) {
+      if (!g.s.meta.age) g.s.meta.age = 22;
+      g.s.meta.age += 1;
+      const newAge = g.s.meta.age;
+      if (newAge < 18) g.s.meta.lifeStage = 'child';
+      else if (newAge <= 25) g.s.meta.lifeStage = 'young_adult';
+      else if (newAge <= 44) g.s.meta.lifeStage = 'adult';
+      else g.s.meta.lifeStage = 'elder';
+
+      g.stat('clout', 2);
+      g.stat('sanity', 14);
+      if (newAge === 18) {
+        g.earn(75000, { bank: true });
+        g.log(`🎓 Happy 18th Birthday! You are officially an Adult in Abuja! Received ${ngn(75000)} graduation gift!`, 'good', '🎂');
+      } else {
+        g.log(`🎂 Happy Birthday! You turned ${newAge} years old in Abuja (+2 Protocol Clout, +14 Sanity)!`, 'good', '🎂');
+      }
+    },
+  },
 ];
 
 export const ACTIONS_BY_ID = Object.fromEntries(ACTIONS.map((a) => [a.id, a]));

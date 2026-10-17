@@ -13,6 +13,13 @@ import { favoursFor, callFavour, checkIn, checkInCost } from '/src/core/contacts
 import { DISTRICTS, DISTRICT_BY_ID, EDGES, LANDMARK_INDEX } from '/src/data/world.js';
 import { TRACKS, START_PRESETS } from '/src/data/careers.js';
 import {
+  GENDERS,
+  LIFE_STAGES,
+  NIGERIAN_LIFESTYLES,
+  PREVIOUS_PROPERTY_OPTIONS,
+  NIGERIAN_SLANG_DICTIONARY
+} from '/src/data/lifestyles.js';
+import {
   formatNairaFull,
   breakdownNairaNotes,
   renderNairaNoteSVG,
@@ -69,7 +76,12 @@ class AbujaClientApp {
     this.playerTasks = [];
     this.votedPolls = new Set();
     this.lastFunds = null;
-    this.selectedStarterTrack = 'civil';
+    this.selectedStarterTrack = 'contractor';
+    this.selectedGender = 'male';
+    this.selectedLifeStage = 'adult';
+    this.selectedAge = 28;
+    this.selectedLifestyle = 'alhaji';
+    this.selectedPrevProp = 'default';
     this.selectedCommuteDest = 'cbd';
     this.realTimeTimer = null;
     this.simSpeed = 1;
@@ -85,12 +97,26 @@ class AbujaClientApp {
     this._initMultiplayerBridge();
     this._startRadarLoop();
     this.startRealTime(1);
+
+    // Open the Nigerian Character, Gender, Age & Lifestyle Caliber Creator at start if not yet configured
+    if (!this.game.s.meta.originConfigured) {
+      setTimeout(() => this._openNewCharModal(), 250);
+    }
   }
 
   _ensureExtendedPlayerState() {
     const s = this.game.s;
+    if (!s.meta.gender) s.meta.gender = 'male';
+    if (!s.meta.age) s.meta.age = 26;
+    if (!s.meta.lifeStage) s.meta.lifeStage = s.meta.age < 18 ? 'child' : s.meta.age <= 25 ? 'young_adult' : 'adult';
+    if (!s.meta.lifestyle) s.meta.lifestyle = 'alhaji';
+    if (!s.meta.caliber) s.meta.caliber = NIGERIAN_LIFESTYLES[s.meta.lifestyle]?.caliber || 'Standard FCT Citizen';
+    if (!s.meta.slangTag) s.meta.slangTag = NIGERIAN_LIFESTYLES[s.meta.lifestyle]?.slangTag || 'Steeze & Composure';
+
     if (!s.social) {
       s.social = {
+        steeze: 82,
+        composure: 85,
         courses: [],
         bae: null,
         plots: {},
@@ -107,6 +133,8 @@ class AbujaClientApp {
         }
       };
     }
+    if (typeof s.social.steeze !== 'number') s.social.steeze = 80;
+    if (typeof s.social.composure !== 'number') s.social.composure = 82;
     if (!s.social.plots) s.social.plots = {};
     if (!s.social.car) s.social.car = 'along';
     if (!Array.isArray(s.social.ownedCars)) s.social.ownedCars = ['along'];
@@ -462,6 +490,7 @@ class AbujaClientApp {
   }
 
   _renderHUD() {
+    this._ensureExtendedPlayerState();
     const s = this.game.s;
     const trackObj = TRACKS[s.career.track] || TRACKS.civil;
     const lvlObj = levelInfo(s);
@@ -472,6 +501,22 @@ class AbujaClientApp {
     }
     document.getElementById('hud-player-name').textContent = s.meta.name;
     document.getElementById('hud-career-badge').textContent = `${lvlObj.title} • ${trackObj.name}`;
+
+    const gInfo = GENDERS[s.meta.gender] || GENDERS.male;
+    const ageVal = s.meta.age || 26;
+    const stageTag = ageVal < 18 ? 'Teen/Child' : ageVal <= 25 ? 'Gen-Z' : ageVal >= 45 ? 'Elder VIP' : 'Adult';
+    const ageGenderEl = document.getElementById('hud-age-gender-pill');
+    if (ageGenderEl) {
+      ageGenderEl.textContent = `${gInfo.icon} ${ageVal}y • ${stageTag}`;
+    }
+
+    const lsObj = NIGERIAN_LIFESTYLES[s.meta.lifestyle];
+    const steezeVal = Math.round(s.social?.steeze ?? 80);
+    const compVal = Math.round(s.social?.composure ?? 82);
+    const calEl = document.getElementById('hud-caliber-pill');
+    if (calEl) {
+      calEl.textContent = `${lsObj ? lsObj.name.split(' (')[0] : '✨ Citizen'} • Steeze ${steezeVal}% • Composure ${compVal}%`;
+    }
 
     // Realistic Naira Wallet & Animated Cash Delta
     const currentFunds = Math.round(this.game.funds());
@@ -1515,9 +1560,215 @@ class AbujaClientApp {
   // TAB 6: NAIJA WHOT / LUDO, SHORT COURSES, GARAGE & LIFESTYLE
   // --------------------------------------------------------------------------
   _renderLifestyleTab() {
+    this._renderNigerianSlangSteezeHub();
     this._renderGarageAndLifestyle();
     this._renderCoursesList();
     this._renderBaeRelationshipBox();
+  }
+
+  _renderNigerianSlangSteezeHub() {
+    const box = document.getElementById('nigerian-slang-steeze-box');
+    if (!box) return;
+    this._ensureExtendedPlayerState();
+    const s = this.game.s;
+    const gInfo = GENDERS[s.meta.gender] || GENDERS.male;
+    const ls = NIGERIAN_LIFESTYLES[s.meta.lifestyle] || NIGERIAN_LIFESTYLES.alhaji;
+    const age = s.meta.age || 26;
+    const isChild = age < 18;
+    const steeze = Math.min(100, Math.max(0, Math.round(s.social.steeze || 80)));
+    const composure = Math.min(100, Math.max(0, Math.round(s.social.composure || 82)));
+    const totalWorth = netWorth(s);
+
+    box.innerHTML = `
+      <div class="card-top" style="flex-wrap:wrap; gap:8px;">
+        <div>
+          <span class="card-badge" style="background:rgba(250,204,21,0.18); color:#fde047; border:1px solid rgba(250,204,21,0.4);">
+            ${ls.caliber} • ${gInfo.icon} ${gInfo.short} (${age} yrs ${isChild ? '• 🧒🏾 Child/Teen' : '• Adult'})
+          </span>
+          <h3 class="card-title" style="margin-top:4px;">${ls.name}</h3>
+          <div style="font-size:11px; color:#38bdf8; font-weight:600;">"${s.meta.slangTag || ls.slangTag}" • Total Net Worth: ${formatNairaFull(totalWorth)}</div>
+        </div>
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          <button type="button" id="btn-hub-customize-char" class="btn-secondary">👤 Change Gender / Age / Caliber</button>
+          <button type="button" id="btn-hub-age-up" class="btn-primary">🎂 ${isChild ? `Grow Up (+1 Yr / Turn 18)` : `Birthday (+1 Yr)`}</button>
+        </div>
+      </div>
+
+      <!-- Steeze & Composure Meters -->
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:10px 0;">
+        <div style="background:rgba(15,23,42,0.85); padding:8px 10px; border-radius:8px; border:1px solid rgba(56,189,248,0.3);">
+          <div style="display:flex; justify-content:space-between; font-size:11px; font-weight:700; color:#7dd3fc; margin-bottom:4px;">
+            <span>✨ STEEZE (Drip, Aura &amp; Style)</span>
+            <span>${steeze}%</span>
+          </div>
+          <div style="height:7px; background:#090d16; border-radius:4px; overflow:hidden;">
+            <div style="width:${steeze}%; height:100%; background:linear-gradient(90deg,#38bdf8,#818cf8);"></div>
+          </div>
+        </div>
+        <div style="background:rgba(15,23,42,0.85); padding:8px 10px; border-radius:8px; border:1px solid rgba(16,185,129,0.3);">
+          <div style="display:flex; justify-content:space-between; font-size:11px; font-weight:700; color:#6ee7b7; margin-bottom:4px;">
+            <span>🧘🏾 COMPOSURE (0% Fear, No Shalaye)</span>
+            <span>${composure}%</span>
+          </div>
+          <div style="height:7px; background:#090d16; border-radius:4px; overflow:hidden;">
+            <div style="width:${composure}%; height:100%; background:linear-gradient(90deg,#10b981,#facc15);"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 1-Click Viral Nigerian TikTok / X / Instagram Lifestyle Actions -->
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(175px, 1fr)); gap:7px; margin-bottom:10px;">
+        <button type="button" id="btn-slang-aza" class="btn-primary" style="font-size:11.5px; padding:8px;">
+          💸 Drop Aza / Send Billing
+        </button>
+        <button type="button" id="btn-slang-oblee" class="btn-secondary" style="font-size:11.5px; padding:8px; border-color:#f43f5e; color:#fda4af;">
+          🕺🏾 Oblee! Detty Rave (₦15k)
+        </button>
+        <button type="button" id="btn-slang-dorime" class="btn-secondary" style="font-size:11.5px; padding:8px; border-color:#eab308; color:#fde047;">
+          🚨 Sound "DORIME" Siren (₦80k)
+        </button>
+        <button type="button" id="btn-slang-japa" class="btn-secondary" style="font-size:11.5px; padding:8px; border-color:#38bdf8; color:#7dd3fc;">
+          🛂 Flex UK/US Visa Stamp (₦45k)
+        </button>
+      </div>
+
+      <!-- Interactive Nigerian Slang Dictionary (Click to Flex in Live FCT Chat) -->
+      <div style="font-size:10.5px; color:#94a3b8; margin-bottom:5px;">
+        📱 <strong>Trending Naija TikTok / X Slangs</strong> (Click any slang to flex it on Live FCT Radio Chat):
+      </div>
+      <div style="display:flex; flex-wrap:wrap; gap:5px;">
+        ${NIGERIAN_SLANG_DICTIONARY.map((item) => `
+          <button type="button" class="btn-xs btn-flex-slang" data-term="${item.term}" data-meaning="${item.meaning}" title="${item.meaning}" style="background:rgba(15,23,42,0.9); border-color:rgba(148,163,184,0.3);">
+            🔥 ${item.term}
+          </button>
+        `).join('')}
+      </div>
+    `;
+
+    box.querySelector('#btn-hub-customize-char')?.addEventListener('click', () => {
+      this._openNewCharModal();
+    });
+
+    box.querySelector('#btn-hub-age-up')?.addEventListener('click', () => {
+      if (!s.meta.age) s.meta.age = 22;
+      if (s.meta.age < 18) {
+        s.meta.age = 18;
+        s.meta.lifeStage = 'young_adult';
+        this.game.earn(75000, { bank: true });
+        this.game.stat('clout', 5);
+        this.game.log('🎓 Graduated to 18 Years Old (Young Adult)! Received ₦75,000 family graduation alert!', 'good', '🎂');
+        this.showToast('🎓 You are now 18 (Young Adult)! +₦75,000 graduation gift & full Abuja access!');
+      } else {
+        s.meta.age += 1;
+        s.meta.lifeStage = s.meta.age <= 25 ? 'young_adult' : s.meta.age <= 44 ? 'adult' : 'elder';
+        this.game.stat('clout', 2);
+        s.social.composure = Math.min(100, (s.social.composure || 80) + 3);
+        this.game.log(`🎂 Celebrated your ${s.meta.age}th birthday in Abuja! (+2 Clout, +3% Composure)`, 'good', '🎂');
+        this.showToast(`🎂 Happy ${s.meta.age}th Birthday! +2 Clout & +3% Composure!`);
+      }
+      this._renderAll();
+      this._saveGame();
+    });
+
+    box.querySelector('#btn-slang-aza')?.addEventListener('click', () => {
+      const todayNum = this.game.day;
+      if (s.flags.lastHubBillingDay === todayNum) {
+        this.showToast('⏳ You already dropped your Aza for billing today! Maintain composure till tomorrow.');
+        return;
+      }
+      s.flags.lastHubBillingDay = todayNum;
+      const mult = s.meta.lifestyle === 'os_baddie' ? 2.8 : s.meta.lifestyle === 'nepo_baby' ? 2.4 : s.meta.lifestyle === 'alhaji' ? 2.2 : 1.0;
+      const payout = Math.round((15000 + Math.random() * 35000) * mult);
+      this.game.earn(payout, { bank: true });
+      this.game.stat('sanity', 10);
+      this._recordDailyProgress('social');
+      this.game.log(`"Send your Aza!" Received ${formatNairaFull(payout)} soft-life alert from your Abuja sponsor!`, 'good', '💸');
+      if (this.world3d) this.world3d.spawnNairaRain(28);
+      this.showToast(`💸 Aza Alert! +${formatNairaFull(payout)} credited!`);
+      this._renderAll();
+    });
+
+    box.querySelector('#btn-slang-oblee')?.addEventListener('click', () => {
+      const cost = 15000;
+      if (!this.game.canAfford(cost)) {
+        this.showToast('⚠️ Need ₦15,000 for Oblee Detty Rave!');
+        return;
+      }
+      this.game.pay(cost);
+      s.social.steeze = Math.min(100, (s.social.steeze || 80) + 8);
+      this.game.stat('sanity', 25);
+      this.game.stat('clout', 4);
+      this._recordDailyProgress('social');
+      this.game.log('🕺🏾 OBLEE! Partied till 5 AM in Wuse 2 with maximum Steeze & Composure (+8% Steeze, +25 Sanity, +4 Clout)!', 'good', '🕺🏾');
+      if (this.world3d) this.world3d.spawnNairaRain(30);
+      this.showToast('🕺🏾 OBLEE MODE! +8% Steeze, +25 Sanity, +4 Clout!');
+      this._renderAll();
+    });
+
+    box.querySelector('#btn-slang-dorime')?.addEventListener('click', () => {
+      const cost = 80000;
+      if (!this.game.canAfford(cost)) {
+        this.showToast('⚠️ Need ₦80,000 to sound the DORIME club alarm!');
+        return;
+      }
+      this.game.pay(cost);
+      s.social.steeze = Math.min(100, (s.social.steeze || 80) + 12);
+      s.social.composure = Math.min(100, (s.social.composure || 80) + 8);
+      this.game.stat('clout', 12);
+      this.game.stat('sanity', 30);
+      this._recordDailyProgress('social');
+      this.game.log('🚨 DORIME INTERIMO ADAPARE! Shut down Wuse 2 VIP with Azul & police sirens! (+12 Clout, +12% Steeze)', 'good', '🚨');
+      if (this.world3d) this.world3d.spawnNairaRain(50);
+      fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          senderId: this.playerId,
+          sender: s.meta.name,
+          district: s.loc.district,
+          channel: 'global',
+          text: `🚨 DORIME! ${s.meta.name} (${ls.name.split(' (')[0]}) just shut down Wuse 2 VIP with Azul & sparklers! Steeze 100%! 🍾💸`
+        })
+      }).catch(() => {});
+      this.showToast('🚨 DORIME! Sirens & Naira rain in 3D! +12 Clout, +12% Steeze!');
+      this._renderAll();
+    });
+
+    box.querySelector('#btn-slang-japa')?.addEventListener('click', () => {
+      const cost = 45000;
+      if (!this.game.canAfford(cost)) {
+        this.showToast('⚠️ Need ₦45,000 for priority UK/US Embassy Visa biometrics!');
+        return;
+      }
+      this.game.pay(cost);
+      s.social.steeze = Math.min(100, (s.social.steeze || 80) + 10);
+      s.social.composure = Math.min(100, (s.social.composure || 80) + 10);
+      this.game.stat('clout', 10);
+      this.game.log('🛂 Stamped 5-Year Multiple Entry Visa at the Diplomatic Drive Embassy! International flex unlocked.', 'good', '🛂');
+      this.showToast('🛂 5-Year Visa Stamped! +10 Clout, +10% Steeze & Composure!');
+      this._renderAll();
+    });
+
+    box.querySelectorAll('.btn-flex-slang').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const term = btn.dataset.term;
+        const meaning = btn.dataset.meaning;
+        s.social.steeze = Math.min(100, (s.social.steeze || 80) + 1);
+        this.showToast(`🔥 ${term}: ${meaning}`);
+        fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            senderId: this.playerId,
+            sender: s.meta.name,
+            district: s.loc.district,
+            channel: 'global',
+            text: `🔥 "${term}!" — ${meaning} (Caliber: ${ls.name.split(' (')[0]})`
+          })
+        }).catch(() => {});
+        this._renderHUD();
+      });
+    });
   }
 
   _renderGarageAndLifestyle() {
@@ -3452,30 +3703,63 @@ class AbujaClientApp {
         });
     });
 
-    // New Character Modal
+    // New Character & Nigerian Lifestyle Caliber Modal
     document.getElementById('btn-new-char')?.addEventListener('click', () => {
       this._openNewCharModal();
     });
+    document.getElementById('btn-hud-profile')?.addEventListener('click', () => {
+      this._openNewCharModal();
+    });
     document.getElementById('btn-cancel-new-char')?.addEventListener('click', () => {
+      this.game.s.meta.originConfigured = true;
+      this._saveGame();
       document.getElementById('new-char-modal').hidden = true;
     });
     document.getElementById('new-char-form')?.addEventListener('submit', (e) => {
       e.preventDefault();
-      const name = document.getElementById('char-name-input').value.trim() || 'Citizen';
-      const trackId = TRACKS[this.selectedStarterTrack] ? this.selectedStarterTrack : 'civil';
+      const name = document.getElementById('char-name-input').value.trim() || 'Alhaji Musa';
+      const trackId = TRACKS[this.selectedStarterTrack] ? this.selectedStarterTrack : 'contractor';
+      const ageVal = Number(document.getElementById('char-age-input')?.value) || this.selectedAge || 26;
+      const propMode = document.getElementById('char-prev-prop-select')?.value || this.selectedPrevProp || 'default';
 
-      this.game = Game.create({ name, track: trackId }, {
+      this.game = Game.create({
+        name,
+        track: trackId,
+        gender: this.selectedGender || 'male',
+        age: ageVal,
+        lifeStage: ageVal < 18 ? 'child' : ageVal <= 25 ? 'young_adult' : ageVal <= 44 ? 'adult' : 'elder',
+        lifestyle: this.selectedLifestyle || 'alhaji',
+        prevProperty: propMode
+      }, {
         decide: (decision) => this._promptDecisionModal(decision)
       });
+
+      this.game.s.meta.originConfigured = true;
       this._ensureExtendedPlayerState();
       this._initGameListenersAfterReset();
       this.lastFunds = this.game.funds();
       document.getElementById('new-char-modal').hidden = true;
-      if (this.world3d) this.world3d.flyToDistrict(this.game.s.loc.district);
+
+      if (this.world3d) {
+        this.world3d.flyToDistrict(this.game.s.loc.district);
+        this.world3d.syncPlayerHouses(Object.values(this.game.s.social.plots || {}));
+        if (this.game.s.social.car && typeof this.world3d.setVehicleSkin === 'function') {
+          this.world3d.setVehicleSkin(this.game.s.social.car);
+        }
+        this.world3d.spawnNairaRain(35);
+      }
+
+      const ls = NIGERIAN_LIFESTYLES[this.selectedLifestyle] || NIGERIAN_LIFESTYLES.alhaji;
+      this.game.log(
+        `Started Abuja Life as ${name} (${GENDERS[this.selectedGender]?.short || 'Citizen'}, ${ageVal} yrs) • Caliber: ${ls.name} (${ls.caliber})!`,
+        'good',
+        '🇳🇬'
+      );
+
       this._renderAll();
       this._saveGame();
       this._sendHeartbeat();
-      this.showToast(`🇳🇬 Welcome to 3D Abuja, ${name}!`);
+      this.showToast(`🇳🇬 Welcome to 3D Abuja, ${name}! Caliber: ${ls.name.split(' (')[0]} (${formatNairaFull(netWorth(this.game.s))} Worth)`);
     });
   }
 
@@ -3555,26 +3839,147 @@ class AbujaClientApp {
 
   _openNewCharModal() {
     const modal = document.getElementById('new-char-modal');
-    const grid = document.getElementById('starter-track-options');
-    if (!modal || !grid) return;
+    const trackGrid = document.getElementById('starter-track-options');
+    const genderGrid = document.getElementById('char-gender-options');
+    const stageGrid = document.getElementById('char-lifestage-options');
+    const lifestyleGrid = document.getElementById('starter-lifestyle-options');
+    const propSelect = document.getElementById('char-prev-prop-select');
+    const ageInput = document.getElementById('char-age-input');
+    const ageDisplay = document.getElementById('char-age-display');
+    const stageDesc = document.getElementById('char-lifestage-desc');
+    const propDesc = document.getElementById('char-prev-prop-desc');
+    if (!modal || !trackGrid) return;
 
-    document.getElementById('char-name-input').value = this.game.s.meta.name;
-    grid.innerHTML = Object.values(TRACKS).map((tr) => {
-      const preset = START_PRESETS[tr.id];
-      const startTotal = (preset?.cash || 0) + (preset?.bank || 0);
-      return `
-        <div class="track-option-card ${tr.id === this.selectedStarterTrack ? 'selected' : ''}" data-track="${tr.id}">
-          <strong>${tr.icon} ${tr.name}</strong>
-          <span style="font-size:11px; color:#94a3b8;">${tr.tagline}</span>
-          <span style="font-family:var(--font-mono); font-size:10.5px; color:#4ade80;">Start Funds: ${formatNairaFull(startTotal)} (${DISTRICT_BY_ID[preset.district]?.short})</span>
+    this.selectedGender = this.game.s.meta.gender || this.selectedGender || 'male';
+    this.selectedAge = this.game.s.meta.age || this.selectedAge || 26;
+    this.selectedLifeStage = this.game.s.meta.lifeStage || (this.selectedAge < 18 ? 'child' : 'adult');
+    this.selectedLifestyle = this.game.s.meta.lifestyle && NIGERIAN_LIFESTYLES[this.game.s.meta.lifestyle]
+      ? this.game.s.meta.lifestyle
+      : (this.selectedLifestyle || 'alhaji');
+    this.selectedStarterTrack = this.game.s.career.track || this.selectedStarterTrack || 'contractor';
+
+    const nameInp = document.getElementById('char-name-input');
+    if (nameInp) nameInp.value = this.game.s.meta.name || 'Alhaji Musa';
+
+    // 1. Render Gender Selector
+    if (genderGrid) {
+      genderGrid.innerHTML = Object.values(GENDERS).map((g) => `
+        <div class="track-option-card ${g.id === this.selectedGender ? 'selected' : ''}" data-gender="${g.id}" style="padding:8px;">
+          <strong>${g.label}</strong>
         </div>
-      `;
-    }).join('');
+      `).join('');
+      genderGrid.querySelectorAll('.track-option-card').forEach((card) => {
+        card.addEventListener('click', () => {
+          this.selectedGender = card.dataset.gender;
+          genderGrid.querySelectorAll('.track-option-card').forEach((c) => c.classList.remove('selected'));
+          card.classList.add('selected');
+          // Suggest an authentic Nigerian name if still default
+          if (nameInp && ['Tunde', 'Citizen', 'Alhaji Musa', 'Baddie Zaynab'].includes(nameInp.value.trim())) {
+            nameInp.value = this.selectedGender === 'female' ? 'Baddie Zaynab' : 'Alhaji Musa';
+          }
+        });
+      });
+    }
 
-    grid.querySelectorAll('.track-option-card').forEach((card) => {
+    // 2. Render Life Stage (Child/Teen vs Gen-Z vs Adult vs Elder) & Age Slider
+    const updateAgeUI = (ageNum) => {
+      this.selectedAge = ageNum;
+      if (ageInput) ageInput.value = ageNum;
+      let stKey = 'adult';
+      if (ageNum < 18) stKey = 'child';
+      else if (ageNum <= 25) stKey = 'young_adult';
+      else if (ageNum <= 44) stKey = 'adult';
+      else stKey = 'elder';
+      this.selectedLifeStage = stKey;
+      const stObj = LIFE_STAGES[stKey];
+      if (ageDisplay) {
+        ageDisplay.textContent = `${ageNum} Years Old (${ageNum < 18 ? '🧒🏾 Child / Teen' : ageNum <= 25 ? '🧑🏾‍🎓 Gen-Z Youth' : ageNum <= 44 ? '👔 Prime Adult' : '👑 Elder VIP'})`;
+      }
+      if (stageDesc && stObj) stageDesc.textContent = stObj.desc;
+      if (stageGrid) {
+        stageGrid.querySelectorAll('.track-option-card').forEach((c) => {
+          c.classList.toggle('selected', c.dataset.stage === stKey);
+        });
+      }
+    };
+
+    if (stageGrid) {
+      stageGrid.innerHTML = Object.values(LIFE_STAGES).map((st) => `
+        <div class="track-option-card ${st.id === this.selectedLifeStage ? 'selected' : ''}" data-stage="${st.id}" style="padding:7px;">
+          <strong style="font-size:11.5px;">${st.label}</strong>
+        </div>
+      `).join('');
+      stageGrid.querySelectorAll('.track-option-card').forEach((card) => {
+        card.addEventListener('click', () => {
+          const st = LIFE_STAGES[card.dataset.stage];
+          if (st) updateAgeUI(st.defaultAge);
+        });
+      });
+    }
+
+    if (ageInput) {
+      ageInput.oninput = (e) => updateAgeUI(Number(e.target.value));
+    }
+    updateAgeUI(this.selectedAge);
+
+    // 3. Render Nigerian Lifestyle Caliber Options (Alhaji, OS Baddie, Odogwu, Nepo Baby, Tech Bro, Corper, Sapa)
+    if (lifestyleGrid) {
+      lifestyleGrid.innerHTML = Object.values(NIGERIAN_LIFESTYLES).map((ls) => `
+        <div class="track-option-card ${ls.id === this.selectedLifestyle ? 'selected' : ''}" data-lifestyle="${ls.id}" style="padding:9px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <strong style="color:#fff; font-size:12px;">${ls.name}</strong>
+          </div>
+          <span style="font-size:10px; color:#facc15; font-weight:700;">${ls.caliber} • ${ls.worthLabel}</span>
+          <span style="font-size:10.5px; color:#38bdf8;">"${ls.slangTag}"</span>
+          <span style="font-size:10.5px; color:#cbd5e1; line-height:1.35;">${ls.desc}</span>
+          <span style="font-family:var(--font-mono); font-size:10px; color:#4ade80;">
+            Liquid: ${formatNairaFull(ls.cash + ls.bank)} • Steeze ${ls.steeze}% • Composure ${ls.composure}%
+          </span>
+        </div>
+      `).join('');
+
+      lifestyleGrid.querySelectorAll('.track-option-card').forEach((card) => {
+        card.addEventListener('click', () => {
+          this.selectedLifestyle = card.dataset.lifestyle;
+          lifestyleGrid.querySelectorAll('.track-option-card').forEach((c) => c.classList.remove('selected'));
+          card.classList.add('selected');
+          const lsObj = NIGERIAN_LIFESTYLES[this.selectedLifestyle];
+          if (lsObj && lsObj.recommendedTrack) {
+            this.selectedStarterTrack = lsObj.recommendedTrack;
+            trackGrid.querySelectorAll('.track-option-card').forEach((tc) => {
+              tc.classList.toggle('selected', tc.dataset.track === this.selectedStarterTrack);
+            });
+          }
+        });
+      });
+    }
+
+    // 4. Render Previous Properties & Garage Selector
+    if (propSelect) {
+      propSelect.innerHTML = Object.values(PREVIOUS_PROPERTY_OPTIONS).map((opt) => `
+        <option value="${opt.id}" ${opt.id === this.selectedPrevProp ? 'selected' : ''}>${opt.label}</option>
+      `).join('');
+      const updatePropDesc = () => {
+        const opt = PREVIOUS_PROPERTY_OPTIONS[propSelect.value] || PREVIOUS_PROPERTY_OPTIONS.default;
+        this.selectedPrevProp = opt.id;
+        if (propDesc) propDesc.textContent = opt.desc;
+      };
+      propSelect.onchange = updatePropDesc;
+      updatePropDesc();
+    }
+
+    // 5. Render Career Tracks
+    trackGrid.innerHTML = Object.values(TRACKS).map((tr) => `
+      <div class="track-option-card ${tr.id === this.selectedStarterTrack ? 'selected' : ''}" data-track="${tr.id}" style="padding:8px;">
+        <strong style="font-size:11.5px;">${tr.icon} ${tr.name}</strong>
+        <span style="font-size:10.5px; color:#94a3b8;">${tr.tagline}</span>
+      </div>
+    `).join('');
+
+    trackGrid.querySelectorAll('.track-option-card').forEach((card) => {
       card.addEventListener('click', () => {
         this.selectedStarterTrack = card.dataset.track;
-        grid.querySelectorAll('.track-option-card').forEach((c) => c.classList.remove('selected'));
+        trackGrid.querySelectorAll('.track-option-card').forEach((c) => c.classList.remove('selected'));
         card.classList.add('selected');
       });
     });
