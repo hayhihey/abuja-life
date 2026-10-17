@@ -108,10 +108,8 @@ class AbujaClientApp {
     this._startRadarLoop();
     this.startRealTime(1);
 
-    // Open the Nigerian Character, Gender, Age & Lifestyle Caliber Creator at start if not yet configured
-    if (!this.game.s.meta.originConfigured) {
-      setTimeout(() => this._openNewCharModal(), 250);
-    }
+    // Always start from the Nigerian Citizen Sign-Up & Lifestyle Caliber Creator screen on load
+    this._openNewCharModal();
   }
 
   _ensureExtendedPlayerState() {
@@ -4354,6 +4352,13 @@ class AbujaClientApp {
         card.classList.add('selected');
       });
     });
+
+    const cancelBtn = document.getElementById('btn-cancel-new-char');
+    if (cancelBtn) {
+      cancelBtn.textContent = this.game.s.meta.originConfigured
+        ? `▶️ Continue as ${this.game.s.meta.name}`
+        : '⚡ Quick Start Default Citizen';
+    }
 
     modal.hidden = false;
   }

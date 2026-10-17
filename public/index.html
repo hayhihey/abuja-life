@@ -621,59 +621,64 @@
     </div>
 
     <!-- ================================================================== -->
-    <!-- MODAL 3: NIGERIAN CHARACTER CREATOR (GENDER, CHILD/ADULT, LIFESTYLE & ASSETS) -->
+    <!-- MODAL 3: NIGERIAN CITIZEN SIGN UP & LIFESTYLE CALIBER CREATOR       -->
     <!-- ================================================================== -->
-    <div id="new-char-modal" class="modal-backdrop" hidden>
-      <div class="modal-card" style="max-width: 760px; max-height: 90vh; overflow-y: auto;">
-        <div class="modal-badge">🇳🇬 ABUJA LIFE • CHARACTER &amp; CALIBER CREATOR</div>
-        <h2>Customize Your Nigerian Identity, Age &amp; Lifestyle Caliber</h2>
+    <div id="new-char-modal" class="modal-backdrop">
+      <div class="modal-card" style="max-width: 780px; max-height: 92vh; overflow-y: auto;">
+        <div class="modal-badge">🇳🇬 ABUJA LIFE • CITIZEN SIGN UP &amp; CALIBER REGISTRATION</div>
+        <h2>Sign Up &amp; Configure Your Nigerian Identity, Age &amp; Lifestyle Caliber</h2>
         <p style="font-size:12px; color:#94a3b8; margin-bottom:10px;">
-          Choose your gender, start as a <strong>Child/Teen (8–17 yrs)</strong> or <strong>Adult (18–70 yrs)</strong>, pick your <strong>Nigerian Slang Lifestyle Caliber</strong> (<em>Alhaji, OS Soft-Life Baddie, Odogwu Dorime, Nepo Baby, Corper, or Sapa Trenches</em>), and select your <strong>Previous Properties &amp; Garage</strong>!
+          Register your citizen profile, choose your gender, start as a <strong>Child/Teen (8–17 yrs)</strong> or <strong>Adult (18–70 yrs)</strong>, pick your <strong>Nigerian Slang Lifestyle Caliber</strong> (<em>Alhaji, OS Soft-Life Baddie, Baba Alaye, Agbero, Eko Island Mogul, Odogwu, Nepo Baby, Corper, or Sapa Trenches</em>), and select your <strong>Previous Properties &amp; Garage</strong>!
         </p>
         <form id="new-char-form">
           <div class="form-row-2col">
             <div class="form-group">
-              <label for="char-name-input">1. Your Name / Abuja Alias</label>
-              <input id="char-name-input" type="text" placeholder="e.g. Alhaji Musa, Baddie Zaynab, Odogwu Chidi" maxlength="26" required />
+              <label for="char-name-input">1. Citizen Username / Abuja Alias</label>
+              <input id="char-name-input" type="text" placeholder="e.g. Alhaji Musa, Baddie Zaynab, Odogwu Chidi" value="Alhaji Musa" maxlength="26" required />
             </div>
             <div class="form-group">
-              <label>2. Select Gender</label>
-              <div id="char-gender-options" style="display:grid; grid-template-columns:1fr 1fr; gap:8px;"></div>
+              <label for="char-email-input">2. Email / Phone or Social Handle (Sign-Up ID)</label>
+              <input id="char-email-input" type="text" placeholder="e.g. citizen@abujalife.ng or @chief_aso" maxlength="50" />
             </div>
           </div>
 
           <div class="form-row-2col" style="margin-top:4px;">
             <div class="form-group">
-              <label>3. Life Stage (Start as Child/Teen or Adult)</label>
-              <div id="char-lifestage-options" style="display:grid; grid-template-columns:1fr 1fr; gap:6px;"></div>
+              <label>3. Select Gender</label>
+              <div id="char-gender-options" style="display:grid; grid-template-columns:1fr 1fr; gap:8px;"></div>
             </div>
             <div class="form-group">
-              <label for="char-age-input">4. Exact Starting Age: <strong id="char-age-display" style="color:#4ade80;">26 Years Old</strong></label>
-              <input id="char-age-input" type="range" min="8" max="70" value="26" style="width:100%; accent-color:#10b981; margin-top:8px;" />
-              <div id="char-lifestage-desc" style="font-size:11px; color:#94a3b8; margin-top:4px;"></div>
+              <label>4. Life Stage (Start as Child/Teen or Adult)</label>
+              <div id="char-lifestage-options" style="display:grid; grid-template-columns:1fr 1fr; gap:6px;"></div>
             </div>
           </div>
 
+          <div class="form-group" style="margin-top:4px;">
+            <label for="char-age-input">5. Exact Starting Age: <strong id="char-age-display" style="color:#4ade80;">26 Years Old</strong></label>
+            <input id="char-age-input" type="range" min="8" max="70" value="26" style="width:100%; accent-color:#10b981; margin-top:6px;" />
+            <div id="char-lifestage-desc" style="font-size:11px; color:#94a3b8; margin-top:4px;"></div>
+          </div>
+
           <div class="form-group" style="margin-top:6px;">
-            <label>5. Select Nigerian Lifestyle Slang, Caliber &amp; Starting Worth</label>
+            <label>6. Select Nigerian Lifestyle Slang, Caliber &amp; Starting Worth</label>
             <div id="starter-lifestyle-options" class="starter-track-grid" style="grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); max-height: 220px; overflow-y: auto; padding-right: 4px;"></div>
           </div>
 
           <div class="form-row-2col" style="margin-top:6px;">
             <div class="form-group">
-              <label for="char-prev-prop-select">6. Previous Properties &amp; Starting Garage</label>
+              <label for="char-prev-prop-select">7. Previous Properties &amp; Starting Garage</label>
               <select id="char-prev-prop-select" style="width:100%; background:#090d16; color:#fff; border:1px solid var(--border-subtle); border-radius:6px; padding:8px; font-size:12px;"></select>
               <div id="char-prev-prop-desc" style="font-size:10.5px; color:#a7f3d0; margin-top:4px;"></div>
             </div>
             <div class="form-group">
-              <label>7. Primary Abuja Career Track</label>
+              <label>8. Primary Abuja Career Track</label>
               <div id="starter-track-options" class="starter-track-grid" style="grid-template-columns: 1fr 1fr;"></div>
             </div>
           </div>
 
           <div class="modal-actions" style="margin-top:10px;">
-            <button type="button" id="btn-cancel-new-char" class="btn-secondary">Keep Current Character</button>
-            <button type="submit" class="btn-primary">🚀 Launch Abuja Life with This Caliber</button>
+            <button type="button" id="btn-cancel-new-char" class="btn-secondary">▶️ Continue Saved Citizen</button>
+            <button type="submit" class="btn-primary">🚀 Complete Sign Up &amp; Launch Abuja Life</button>
           </div>
         </form>
       </div>

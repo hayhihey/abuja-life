@@ -377,6 +377,16 @@ const MIME_TYPES = {
 };
 
 function readBody(req) {
+  if (req.body && typeof req.body === 'object') {
+    return Promise.resolve(req.body);
+  }
+  if (typeof req.body === 'string' && req.body.length > 0) {
+    try {
+      return Promise.resolve(JSON.parse(req.body));
+    } catch (_) {
+      return Promise.resolve({});
+    }
+  }
   return new Promise((resolve, reject) => {
     let body = '';
     req.on('data', (chunk) => {
@@ -397,8 +407,8 @@ function readBody(req) {
   });
 }
 
-const server = http.createServer(async (req, res) => {
-  const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
+export async function requestHandler(req, res) {
+  const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = parsedUrl.pathname;
 
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -1079,8 +1089,9 @@ const server = http.createServer(async (req, res) => {
   }
 
   // --- 11. Vendor Three.js Serve ---
-  if (pathname === '/vendor/three.module.js') {
-    const threePath = path.join(__dirname, 'node_modules', 'three', 'build', 'three.module.js');
+  if (pathname === '/vendor/three.module.js' || pathname === '/vendor/three.core.js') {
+    const fileName = path.basename(pathname);
+    const threePath = path.join(__dirname, 'node_modules', 'three', 'build', fileName);
     if (fs.existsSync(threePath)) {
       res.writeHead(200, { 'Content-Type': 'application/javascript; charset=utf-8' });
       fs.createReadStream(threePath).pipe(res);
@@ -1118,12 +1129,17 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(200, { 'Content-Type': contentType });
     fs.createReadStream(normalizedPath).pipe(res);
   });
-});
+}
 
-server.listen(PORT, () => {
-  console.log(`====================================================`);
-  console.log(`   ABUJA LIFE: GTA 3D EDITION RUNNING ON PORT ${PORT}`);
-  console.log(`   URL: http://localhost:${PORT}`);
-  console.log(`   Real-Time Multiplayer SSE & 3D FCT World Active`);
-  console.log(`====================================================`);
-});
+export default requestHandler;
+
+if (!process.env.VERCEL) {
+  const server = http.createServer(requestHandler);
+  server.listen(PORT, () => {
+    console.log(`====================================================`);
+    console.log(`   ABUJA LIFE: GTA 3D EDITION RUNNING ON PORT ${PORT}`);
+    console.log(`   URL: http://localhost:${PORT}`);
+    console.log(`   Real-Time Multiplayer SSE & 3D FCT World Active`);
+    console.log(`====================================================`);
+  });
+}
