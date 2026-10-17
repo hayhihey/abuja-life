@@ -2199,6 +2199,12 @@ export class AbujaWorld3D {
       if (k === 'shift') this.keys.shift = true;
       if (k === 'f') this.toggleVehicleMode();
       if (k === 'v') this.cycleCameraMode();
+      if (k === 'c') {
+        this.cameraMode = 'dollhouse';
+        this.cameraDistance = 46;
+        this.cameraPitch = 0.62;
+        this.cameraYaw = Math.PI / 4;
+      }
       if (k === ' ' || k === 'e') {
         e.preventDefault();
         this.triggerStreetPunch();
@@ -2285,9 +2291,20 @@ export class AbujaWorld3D {
   }
 
   cycleCameraMode() {
-    this.cameraMode = this.cameraMode === 'chase' ? 'helicopter' : 'chase';
-    this.cameraDistance = this.cameraMode === 'helicopter' ? 195 : (this.inVehicle ? 26 : 15.5);
-    this.cameraPitch = this.cameraMode === 'helicopter' ? 0.78 : (this.inVehicle ? 0.24 : 0.20);
+    if (this.cameraMode === 'chase') {
+      this.cameraMode = 'dollhouse';
+      this.cameraDistance = 46;
+      this.cameraPitch = 0.62; // 45° classic Sims isometric angle
+      this.cameraYaw = Math.PI / 4;
+    } else if (this.cameraMode === 'dollhouse') {
+      this.cameraMode = 'helicopter';
+      this.cameraDistance = 195;
+      this.cameraPitch = 0.78;
+    } else {
+      this.cameraMode = 'chase';
+      this.cameraDistance = this.inVehicle ? 26 : 15.5;
+      this.cameraPitch = this.inVehicle ? 0.24 : 0.20;
+    }
     return this.cameraMode;
   }
 

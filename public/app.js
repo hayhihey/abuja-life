@@ -34,6 +34,16 @@ import {
   renderCharacterAvatarSVG
 } from '/visuals.js';
 import { AbujaWorld3D } from '/world3d.js';
+import {
+  MOTIVE_CONFIG,
+  BUILD_BUY_CATALOG,
+  CATALOG_BY_ID,
+  SMART_OBJECT_INTERACTIONS,
+  evaluateAutonomousActions,
+  runSmartObjectAction,
+  buyCatalogItem,
+  payEstateLevy
+} from '/src/core/sims.js';
 
 const STORAGE_KEY = 'abuja_life_save_v3';
 const PLAYER_ID_KEY = 'abuja_life_player_id';
@@ -646,6 +656,7 @@ class AbujaClientApp {
     this._renderShopAndTourismTab();
     this._renderCareerTab();
     this._renderHousingTab();
+    this._renderSimsTab();
     this._renderNetworkTab();
     this._renderLifestyleTab();
     this._renderCourtTab();
@@ -1462,6 +1473,264 @@ class AbujaClientApp {
         if (this.world3d) this.world3d.spawnNairaRain(32);
         this.showToast(`💰 Tenant paid 2-year upfront rent: +${formatNairaFull(rentAmount)}!`);
         this._renderAll();
+      });
+    });
+  }
+
+  // --------------------------------------------------------------------------
+  // THE SIMS: DOMESTIC SIMULATION, MOTIVES, SMART OBJECTS & BUILD/BUY
+  // --------------------------------------------------------------------------
+  _renderSimsTab() {
+    const motivesGrid = document.getElementById('sims-motives-grid');
+    const utilitiesRow = document.getElementById('sims-utilities-row');
+    const smartObjectsList = document.getElementById('sims-smart-objects-list');
+    const catalogGrid = document.getElementById('sims-catalog-grid');
+    const estateContent = document.getElementById('sims-estate-content');
+    if (!motivesGrid) return;
+
+    if (!this.game.s.sims) {
+      this.game.s.sims = {
+        motives: { hunger: 85, energy: 90, comfort: 80, fun: 75, hygiene: 88, social: 70, bladder: 85, environment: 80 },
+        skills: { cooking: 1, mechanical: 1, charisma: 1, logic: 1, xp: { cooking: 0, mechanical: 0, charisma: 0, logic: 0 } },
+        utilities: { gridAvailable: true, generatorRunning: false, genFuelLiters: 12, genFuelCapacity: 30, tankWaterLiters: 1200, tankCapacity: 2000, boreholeWorking: true, waterFilterInstalled: false, solarBatteryCharge: 100, solarInstalled: false, atsInstalled: false, dustLevel: 10 },
+        estate: { name: `${this.game.district?.name || 'Abuja'} Residents Association`, monthlyDues: 45000, duesPaidUntilDay: 30, visitorAccessCode: 'ABJ-8841', accessPermitted: true, chairmanStanding: 50, curfewHour: 23, dieselPoolHours: 6, activeNotices: [] },
+        installedObjects: ['bed_orthopedic', 'gas_cooker', 'toilet_ceramic', 'shower_cubicle', 'turkish_velvet_sofa', 'gen_tiger', 'overhead_tank_2000l']
+      };
+    }
+
+    const sims = this.game.s.sims;
+    const weather = this.game.s.market?.today?.weather || 'sunny';
+    const isHarmattan = weather === 'harmattan';
+    const harmattanBadge = document.getElementById('sims-harmattan-badge');
+    if (harmattanBadge) {
+      harmattanBadge.textContent = isHarmattan
+        ? `🌫️ Harmattan Dust: ${Math.round(sims.utilities.dustLevel || 10)}% (Wipe sofa!)`
+        : `☀️ Weather: ${weather.toUpperCase()}`;
+    }
+
+    // 1. Render 8 Motives
+    motivesGrid.innerHTML = Object.entries(MOTIVE_CONFIG).map(([key, cfg]) => {
+      const val = Math.round(sims.motives[key] ?? 50);
+      const barClass = val >= 60 ? 'motive-good' : val >= 30 ? 'motive-mid' : 'motive-low';
+      return `
+        <div class="sims-motive-card" title="${cfg.lowWarning}">
+          <div class="sims-motive-header">
+            <span>${cfg.icon} ${cfg.label}</span>
+            <span style="color:${val < 30 ? '#ef4444' : '#94a3b8'};">${val}%</span>
+          </div>
+          <div class="sims-motive-bar-outer">
+            <div class="sims-motive-bar-fill ${barClass}" style="width:${val}%"></div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // 2. Render Domestic Utilities (Power, Water, Estate)
+    const isPowerOut = this.game.isPowerOut(this.game.s.loc.district);
+    const hasGen = sims.installedObjects.includes('gen_tiger') || sims.installedObjects.includes('gen_soundproof');
+    const isGenOn = sims.utilities.generatorRunning;
+    const isSolar = sims.utilities.solarInstalled;
+    const tankLiters = Math.round(sims.utilities.tankWaterLiters || 0);
+
+    utilitiesRow.innerHTML = `
+      <div class="sims-util-box">
+        <span class="sims-util-label">⚡ Grid Electricity (AEDC)</span>
+        <div class="sims-util-val" style="color:${isPowerOut ? '#f87171' : '#34d399'};">
+          ${isPowerOut ? '❌ NEPA Blackout' : '✅ Grid Light Connected'}
+        </div>
+        <div style="font-size:11px; color:#94a3b8; margin-top:2px;">
+          ${isSolar ? '☀️ 5kVA Solar Inverter Active (24/7)' : isGenOn ? `🔌 Generator Running (${sims.utilities.genFuelLiters.toFixed(1)}L Fuel)` : 'Standby'}
+        </div>
+        <div style="display:flex; gap:6px; margin-top:6px; flex-wrap:wrap;">
+          ${hasGen ? `
+            <button type="button" class="btn-xs btn-toggle-gen" style="background:${isGenOn ? '#ef4444' : '#10b981'}; color:#fff;">
+              ${isGenOn ? '🛑 Turn Off Gen' : '🔌 Start Generator'}
+            </button>
+            <button type="button" class="btn-xs btn-refuel-gen" style="background:rgba(245,158,11,0.2); border:1px solid #f59e0b; color:#fbbf24;">
+              ⛽ Add 10L Fuel (₦9k)
+            </button>
+          ` : `
+            <span style="font-size:10px; color:#f87171;">No generator installed</span>
+          `}
+        </div>
+      </div>
+
+      <div class="sims-util-box">
+        <span class="sims-util-label">🚰 Water Supply (Borehole & Geepee)</span>
+        <div class="sims-util-val" style="color:${tankLiters < 100 ? '#ef4444' : '#38bdf8'};">
+          ${tankLiters} L / ${sims.utilities.tankCapacity} L
+        </div>
+        <div style="font-size:11px; color:#94a3b8; margin-top:2px;">
+          ${sims.utilities.waterFilterInstalled ? '🧼 Industrial Filter: Crystal Pure' : '⚠️ Raw Borehole Water'}
+        </div>
+        <div style="margin-top:6px;">
+          <button type="button" class="btn-xs btn-pump-water" style="background:#0284c7; color:#fff;">
+            🚰 Run Borehole Pump (+1,000L)
+          </button>
+        </div>
+      </div>
+
+      <div class="sims-util-box">
+        <span class="sims-util-label">🎟️ Estate Access & Curfew</span>
+        <div class="sims-util-val" style="color:${sims.estate.accessPermitted ? '#34d399' : '#ef4444'};">
+          ${sims.estate.accessPermitted ? `✅ Gate Code: ${sims.estate.visitorAccessCode}` : '🚫 Defaulted / Gate Barred'}
+        </div>
+        <div style="font-size:11px; color:#94a3b8; margin-top:2px;">
+          Levy Paid Until: Day ${sims.estate.duesPaidUntilDay} (Curfew: ${sims.estate.curfewHour}:00)
+        </div>
+        <div style="margin-top:6px;">
+          <button type="button" class="btn-xs btn-pay-estate-levy" style="background:#f59e0b; color:#000; font-weight:700;">
+            💳 Pay Monthly Dues (${formatNairaFull(sims.estate.monthlyDues)})
+          </button>
+        </div>
+      </div>
+    `;
+
+    // Event listeners for utilities buttons
+    utilitiesRow.querySelector('.btn-toggle-gen')?.addEventListener('click', () => {
+      const genObj = sims.installedObjects.includes('gen_soundproof') ? 'gen_soundproof' : 'gen_tiger';
+      const actionId = genObj === 'gen_soundproof' ? 'toggle_diesel_gen' : 'start_tiger_gen';
+      const res = runSmartObjectAction(this.game, genObj, actionId);
+      this.showToast(res.ok ? (sims.utilities.generatorRunning ? '🔌 Generator humming!' : 'Generator stopped.') : `⚠️ ${res.reason}`);
+      this._renderAll();
+    });
+
+    utilitiesRow.querySelector('.btn-refuel-gen')?.addEventListener('click', () => {
+      const res = runSmartObjectAction(this.game, 'gen_tiger', 'refuel_gen');
+      this.showToast(res.ok ? '⛽ Added 10L Petrol to Gen!' : `⚠️ ${res.reason}`);
+      this._renderAll();
+    });
+
+    utilitiesRow.querySelector('.btn-pump-water')?.addEventListener('click', () => {
+      const res = runSmartObjectAction(this.game, 'overhead_tank_2000l', 'pump_borehole_water');
+      this.showToast(res.ok ? '🚰 Borehole pumped 1,000L into overhead Geepee tank!' : `⚠️ ${res.reason}`);
+      this._renderAll();
+    });
+
+    utilitiesRow.querySelector('.btn-pay-estate-levy')?.addEventListener('click', () => {
+      const res = payEstateLevy(this.game);
+      this.showToast(res.ok ? `🎟️ Paid Estate Levy! New Access Code: ${sims.estate.visitorAccessCode}` : `⚠️ ${res.reason}`);
+      this._renderAll();
+    });
+
+    // 3. Render Smart Objects & Utility AI Recommendations
+    const aiCandidates = evaluateAutonomousActions(this.game);
+    if (!aiCandidates.length) {
+      smartObjectsList.innerHTML = `<div class="game-card"><p class="card-desc">No smart object interactions currently available. Check power or water supply.</p></div>`;
+    } else {
+      smartObjectsList.innerHTML = aiCandidates.slice(0, 8).map((cand, idx) => {
+        const act = cand.interaction;
+        const benefits = act.needDeltas ? Object.entries(act.needDeltas).map(([m, d]) => `${d > 0 ? '+' : ''}${d} ${m}`).join(', ') : '';
+        const costStr = act.costNgn ? `Cost: ${formatNairaFull(act.costNgn)}` : act.rewardNgn ? `Earn: +${formatNairaFull(act.rewardNgn)}` : '';
+        return `
+          <div class="smart-action-item">
+            <div class="smart-action-meta">
+              <h4>${idx === 0 ? '⭐ ' : ''}${act.label}</h4>
+              <p>${act.desc}</p>
+              <div class="smart-action-badges">
+                ${benefits ? `<span class="smart-badge badge-benefit">${benefits}</span>` : ''}
+                ${costStr ? `<span class="smart-badge badge-cost">${costStr}</span>` : ''}
+                <span class="smart-badge badge-score">Utility Score: ${cand.score}</span>
+              </div>
+            </div>
+            <button type="button" class="btn-xs btn-primary btn-run-smart-action" data-obj="${cand.objectId}" data-act="${act.id}">
+              ▶️ Run (${act.durationMin || 30}m)
+            </button>
+          </div>
+        `;
+      }).join('');
+
+      smartObjectsList.querySelectorAll('.btn-run-smart-action').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const objId = btn.dataset.obj;
+          const actId = btn.dataset.act;
+          const res = runSmartObjectAction(this.game, objId, actId);
+          this.showToast(res.ok ? `✅ ${res.action.label} completed!` : `⚠️ ${res.reason}`);
+          this._renderAll();
+        });
+      });
+    }
+
+    // 4. Render Build & Buy Catalog
+    const currentCatFilter = this.simsCatalogFilter || 'all';
+    const filteredCatalog = currentCatFilter === 'all'
+      ? BUILD_BUY_CATALOG
+      : BUILD_BUY_CATALOG.filter(c => c.category === currentCatFilter);
+
+    catalogGrid.innerHTML = filteredCatalog.map((item) => {
+      const isInstalled = sims.installedObjects.includes(item.id);
+      return `
+        <div class="catalog-card">
+          <div class="catalog-header">
+            <div class="catalog-icon">${item.icon || '📦'}</div>
+            <div class="catalog-info">
+              <h4>${item.name}</h4>
+              <span class="cat-price">${formatNairaFull(item.cost)}</span>
+            </div>
+          </div>
+          <p class="catalog-desc">${item.desc}</p>
+          <div>
+            ${isInstalled ? `
+              <span class="badge-xs" style="background:#10b981; color:#fff; display:block; text-align:center; padding:6px; border-radius:6px; font-weight:700;">
+                ✓ Installed in Compound
+              </span>
+            ` : `
+              <button type="button" class="btn-xs btn-primary btn-buy-catalog-item" data-id="${item.id}" style="width:100%;">
+                🛒 Buy &amp; Install (${formatNairaFull(item.cost)})
+              </button>
+            `}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    catalogGrid.querySelectorAll('.btn-buy-catalog-item').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const itemId = btn.dataset.id;
+        const res = buyCatalogItem(this.game, itemId);
+        this.showToast(res.ok ? `📦 Installed ${res.item.name} in your compound!` : `⚠️ ${res.reason}`);
+        this._renderAll();
+      });
+    });
+
+    // Catalog category filters
+    document.querySelectorAll('#sims-catalog-filter-bar .filter-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#sims-catalog-filter-bar .filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.simsCatalogFilter = btn.dataset.cat;
+        this._renderSimsTab();
+      });
+    });
+
+    // 5. Render Estate HOA & Community Politics
+    estateContent.innerHTML = `
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <div style="font-size:12px; color:#cbd5e1; line-height:1.4;">
+          <strong>${sims.estate.name}</strong> • Monthly Resident Association Agenda:
+        </div>
+        <div class="form-row-2col">
+          <div style="background:rgba(30,41,59,0.7); padding:8px 10px; border-radius:8px;">
+            <div style="font-size:11px; font-weight:700; color:#fde047;">🗳️ Agenda 1: Estate Central Gen Hours</div>
+            <p style="font-size:11px; color:#94a3b8; margin:2px 0 6px;">Increase central diesel pool run time from 4 hrs to 6 hrs daily?</p>
+            <button type="button" class="btn-xs btn-hoa-vote" data-vote="gen_hours" style="background:#10b981; color:#fff;">Vote YES (Support)</button>
+          </div>
+          <div style="background:rgba(30,41,59,0.7); padding:8px 10px; border-radius:8px;">
+            <div style="font-size:11px; font-weight:700; color:#fde047;">🗳️ Agenda 2: Dispatch Bike Curfew</div>
+            <p style="font-size:11px; color:#94a3b8; margin:2px 0 6px;">Bar dispatch riders and kekes from inner closes after 9:00 PM?</p>
+            <button type="button" class="btn-xs btn-hoa-vote" data-vote="curfew" style="background:#3b82f6; color:#fff;">Vote YES (Security)</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    estateContent.querySelectorAll('.btn-hoa-vote').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        sims.estate.chairmanStanding = Math.min(100, (sims.estate.chairmanStanding || 50) + 8);
+        this.game.stat('clout', 2);
+        this.showToast('🗳️ Vote recorded at Estate General Meeting! +8 HOA Standing, +2 Clout');
+        btn.disabled = true;
+        btn.textContent = '✓ Voted';
       });
     });
   }
@@ -3965,7 +4234,22 @@ class AbujaClientApp {
     document.getElementById('btn-toggle-cam')?.addEventListener('click', (e) => {
       if (!this.world3d) return;
       const mode = this.world3d.cycleCameraMode();
-      e.currentTarget.textContent = mode === 'helicopter' ? '🚁 Chopper Cam (V)' : '🎥 3rd-Person (V)';
+      e.currentTarget.textContent = mode === 'helicopter' ? '🚁 Chopper Cam (V)' : (mode === 'dollhouse' ? '🏠 Dollhouse (V)' : '🎥 3rd-Person (V)');
+    });
+
+    document.getElementById('btn-toggle-dollhouse')?.addEventListener('click', () => {
+      if (!this.world3d) return;
+      this.world3d.cameraMode = 'dollhouse';
+      this.world3d.cameraDistance = 46;
+      this.world3d.cameraPitch = 0.62;
+      this.world3d.cameraYaw = Math.PI / 4;
+      this.showToast('🏠 The Sims 45° Isometric Dollhouse Camera Active! (Press C or V to cycle)');
+      const camBtn = document.getElementById('btn-toggle-cam');
+      if (camBtn) camBtn.textContent = '🏠 Dollhouse (V)';
+    });
+
+    document.getElementById('btn-open-sims-deck')?.addEventListener('click', () => {
+      this.openDeckTab('sims');
     });
 
     document.getElementById('btn-toggle-2dmap')?.addEventListener('click', (e) => {

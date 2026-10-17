@@ -6,6 +6,7 @@ import { renew, renewalQuote } from '../src/core/housing.js';
 import { callFavour, checkIn, favoursFor } from '../src/core/contacts.js';
 import { promotionReqs, promote } from '../src/core/careers.js';
 import { netWorth, abujaScore, rankOf } from '../src/core/state.js';
+import { evaluateAutonomousActions, runSmartObjectAction, buyCatalogItem, payEstateLevy } from '../src/core/sims.js';
 
 console.log('--- ABUJA LIFE: HEADLESS ENGINE VALIDATION ---');
 
@@ -100,6 +101,33 @@ async function runTests() {
   const loadedGame = Game.load(savedJson, g.hooks);
   assert(loadedGame.s.meta.name === g.s.meta.name, `Loaded game maintains player name`);
   assert(loadedGame.s.t === g.s.t, `Loaded game maintains clock position`);
+
+  // Test 11: The Sims Motives, Utilities & Estate Loop
+  assert(g.s.sims && typeof g.s.sims.motives === 'object', `Sims 8-Motive engine initialized`);
+  assert(typeof g.s.sims.motives.hunger === 'number', `Hunger motive active: ${Math.round(g.s.sims.motives.hunger)}%`);
+  assert(typeof g.s.sims.motives.energy === 'number', `Energy motive active: ${Math.round(g.s.sims.motives.energy)}%`);
+  assert(typeof g.s.sims.motives.bladder === 'number', `Bladder motive active: ${Math.round(g.s.sims.motives.bladder)}%`);
+  assert(typeof g.s.sims.utilities.tankWaterLiters === 'number', `Overhead Geepee tank level: ${g.s.sims.utilities.tankWaterLiters}L`);
+
+  // Test 12: Smart Autonomous Objects & Utility AI
+  const aiActions = evaluateAutonomousActions(g);
+  assert(Array.isArray(aiActions) && aiActions.length > 0, `Utility AI broadcasted ${aiActions.length} smart object interactions`);
+  const topAction = aiActions[0];
+  assert(topAction && topAction.score >= 0, `Top smart object prioritized: ${topAction.interaction.label} (Score: ${topAction.score})`);
+
+  // Test 13: Execute Smart Object Interaction
+  const eatRes = runSmartObjectAction(g, 'gas_cooker', 'quick_indomie');
+  assert(eatRes.ok, `Executed smart object action: ${eatRes.action?.label}`);
+
+  // Test 14: Build & Buy Catalog
+  const buyRes = buyCatalogItem(g, 'suya_grill_outdoor');
+  assert(buyRes.ok, `Build & Buy purchased: ${buyRes.item?.name}`);
+  assert(g.s.sims.installedObjects.includes('suya_grill_outdoor'), `Outdoor Suya Grill installed in compound`);
+
+  // Test 15: Estate HOA Levy Payment
+  const levyRes = payEstateLevy(g);
+  assert(levyRes.ok, `Paid Estate Monthly Levy, access code: ${g.s.sims.estate.visitorAccessCode}`);
+  assert(g.s.sims.estate.accessPermitted === true, `Estate gate security access active`);
 
   console.log(`\nResults: ${passed} passed, ${failed} failed.`);
   if (failed > 0) process.exit(1);

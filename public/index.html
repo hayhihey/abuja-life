@@ -186,6 +186,10 @@
             <span class="gdi-ico">🏗️</span>
             <span class="gdi-lbl">House</span>
           </button>
+          <button type="button" class="gta-dock-icon" data-dock-tab="sims" title="🏠 The Sims Motives, Smart Home &amp; Build Catalog">
+            <span class="gdi-ico">🏠</span>
+            <span class="gdi-lbl">Sims/Home</span>
+          </button>
           <button type="button" class="gta-dock-icon" data-dock-tab="network" title="📋 Paid Tasks &amp; Links">
             <span class="gdi-ico">📋</span>
             <span class="gdi-lbl">Tasks</span>
@@ -229,6 +233,12 @@
             </button>
             <button id="btn-toggle-cam" class="w3d-ctrl-btn" title="Switch 3rd-Person vs Helicopter Camera (Shortcut: V)">
               🎥 3rd-Person (V)
+            </button>
+            <button id="btn-toggle-dollhouse" class="w3d-ctrl-btn" style="border-color:#38bdf8; color:#7dd3fc;" title="Switch to The Sims Isometric 45° Dollhouse View (Shortcut: C)">
+              🏠 Dollhouse (C)
+            </button>
+            <button id="btn-open-sims-deck" class="w3d-ctrl-btn" style="border-color:#facc15; color:#fde047;" title="Open Sims 8 Motives, Smart Home & Build Catalog">
+              🍗 Sims Needs
             </button>
             <button id="btn-spray-naira" class="w3d-ctrl-btn" style="border-color:#facc15; color:#fde047;" title="Spray Naira notes in 3D (+Clout)">
               💸 Spray ₦5k
@@ -344,6 +354,7 @@
           <button class="tab-btn" data-tab="shop" style="color:#c4b5fd;">🛍️ Shop/Tour</button>
           <button class="tab-btn" data-tab="career">💼 Career</button>
           <button class="tab-btn" data-tab="housing">🏗️ House/Land</button>
+          <button class="tab-btn" data-tab="sims" style="color:#fde047; font-weight:700;">🏠 Sims &amp; Home</button>
           <button class="tab-btn" data-tab="network">📋 Tasks/Links</button>
           <button class="tab-btn" data-tab="games">🎲 Lifestyle</button>
           <button class="tab-btn" data-tab="court">⚖️ Court</button>
@@ -404,6 +415,70 @@
             <p class="pane-subtitle">Or rent in Satellite Belts (Zone 2) vs. Maitama/Asokoro (Zone 1) while building your own estate.</p>
           </div>
           <div id="housing-list" class="cards-list"></div>
+        </div>
+
+        <!-- TAB: THE SIMS ABUJA LIFE DOMESTIC SIMULATION & BUILD/BUY -->
+        <div id="tab-sims" class="tab-pane">
+          <div class="pane-header">
+            <h3>🏠 The Sims: Abuja Domestic Simulation &amp; Build Mode</h3>
+            <p class="pane-subtitle">Manage your 8 physiological &amp; emotional needs, smart autonomous domestic appliances, borehole water, generator fuel, and Estate Association dues.</p>
+          </div>
+
+          <div class="sims-dashboard">
+            <!-- 1. The 8 Classic Sims Motive Bars -->
+            <div class="sims-motives-panel">
+              <div class="sims-panel-title">
+                <span>🍗 8 PHYSIOLOGICAL &amp; EMOTIONAL MOTIVES</span>
+                <span id="sims-autonomous-indicator" style="font-size:11px; color:#34d399;">● Autonomous Mode Active</span>
+              </div>
+              <div class="sims-motives-grid" id="sims-motives-grid"></div>
+            </div>
+
+            <!-- 2. Domestic Infrastructure: Power & Water Loop -->
+            <div class="sims-motives-panel" style="border-color: rgba(245, 158, 11, 0.35);">
+              <div class="sims-panel-title">
+                <span>⚡ DOMESTIC UTILITIES (AEDC GRID / GEN / BOREHOLE)</span>
+                <span id="sims-harmattan-badge" style="font-size:11px; color:#94a3b8;">Harmattan Dust: 10%</span>
+              </div>
+              <div class="sims-utilities-row" id="sims-utilities-row"></div>
+            </div>
+
+            <!-- 3. Smart Autonomous Objects & Utility AI Recommendations -->
+            <div class="sims-motives-panel" style="border-color: rgba(16, 185, 129, 0.35);">
+              <div class="sims-panel-title">
+                <span>🤖 SMART OBJECTS (UTILITY AI BROADCASTS)</span>
+                <span style="font-size:11px; color:#38bdf8;">Goal-Oriented Action Planning</span>
+              </div>
+              <div class="smart-objects-section" id="sims-smart-objects-list"></div>
+            </div>
+
+            <!-- 4. Build & Buy Catalog: Abuja Domestic Architecture -->
+            <div class="sims-motives-panel" style="border-color: rgba(236, 72, 153, 0.35);">
+              <div class="sims-panel-title">
+                <span>🛒 BUILD &amp; BUY CATALOG (DOMESTIC UPGRADES)</span>
+                <span style="font-size:11px; color:#f472b6;">Self-Contained Utility &amp; Security</span>
+              </div>
+              <div class="catalog-filter-bar" id="sims-catalog-filter-bar">
+                <button type="button" class="btn-xs filter-btn active" data-cat="all">All Items</button>
+                <button type="button" class="btn-xs filter-btn" data-cat="power">⚡ Power</button>
+                <button type="button" class="btn-xs filter-btn" data-cat="water">🚰 Water</button>
+                <button type="button" class="btn-xs filter-btn" data-cat="security">🛡️ Security</button>
+                <button type="button" class="btn-xs filter-btn" data-cat="comfort">🛋️ Comfort</button>
+                <button type="button" class="btn-xs filter-btn" data-cat="kitchen">🍳 Kitchen</button>
+                <button type="button" class="btn-xs filter-btn" data-cat="study">💻 Study</button>
+              </div>
+              <div class="catalog-grid" id="sims-catalog-grid" style="margin-top:10px;"></div>
+            </div>
+
+            <!-- 5. Estate HOA & Community Politics -->
+            <div class="sims-motives-panel estate-hoa-card">
+              <div class="sims-panel-title">
+                <span>🏛️ ESTATE RESIDENTS ASSOCIATION (HOA)</span>
+                <span id="hoa-status-pill" class="sector-pill zone-1">Access Granted</span>
+              </div>
+              <div id="sims-estate-content"></div>
+            </div>
+          </div>
         </div>
 
         <!-- TAB 5: P2P PAID TASK MARKETPLACE & NETWORK ROLODEX -->
