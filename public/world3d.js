@@ -765,6 +765,58 @@ export class AbujaWorld3D {
       }
       this.scene.add(bridgeGroup);
     }
+
+    // 13. MARKETWISHES.COM SMART SHOPPING CENTER & LOGISTICS MALL (Jabi Hub)
+    if (jabiD) {
+      const jabiPos = map2DTo3D(jabiD.x, jabiD.y);
+      const mwGroup = new THREE.Group();
+      mwGroup.position.set(jabiPos.x + 28, 0, jabiPos.z - 22);
+
+      // Indigo-Violet Modern Glass Mall Atrium (MarketWishes brand colors #1e3a8a -> #7c3aed)
+      const mallBase = new THREE.Mesh(
+        new THREE.BoxGeometry(28, 16, 20),
+        new THREE.MeshStandardMaterial({
+          color: 0x3b82f6,
+          emissive: 0x7c3aed,
+          emissiveIntensity: 0.45,
+          metalness: 0.85,
+          roughness: 0.2
+        })
+      );
+      mallBase.position.set(0, 8, 0);
+      mwGroup.add(mallBase);
+
+      // Golden Rotating MarketWishes Crown Sign on Rooftop
+      const mwCrown = new THREE.Mesh(
+        new THREE.OctahedronGeometry(4.5, 0),
+        goldMat
+      );
+      mwCrown.position.set(0, 21, 0);
+      this.spinningMeshes.push(mwCrown);
+      mwGroup.add(mwCrown);
+
+      this.scene.add(mwGroup);
+    }
+
+    // 14. IBB INTERNATIONAL GOLF COURSE & ASO ROCK PARK GREEN (Maitama Tourist Attraction)
+    if (maitamaD) {
+      const ibbGroup = new THREE.Group();
+      ibbGroup.position.set(maitamaPos.x + 32, 0, maitamaPos.z - 26);
+      const fairway = new THREE.Mesh(
+        new THREE.CylinderGeometry(20, 22, 0.9, 24),
+        new THREE.MeshStandardMaterial({ color: 0x16a34a, roughness: 0.75 })
+      );
+      fairway.position.y = 0.45;
+      const sandBunker = new THREE.Mesh(
+        new THREE.CylinderGeometry(5.5, 6, 1.0, 16),
+        new THREE.MeshStandardMaterial({ color: 0xfde047, roughness: 0.9 })
+      );
+      sandBunker.position.set(8, 0.5, 5);
+      const flagPin = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 12, 8), whiteMarble);
+      flagPin.position.set(-4, 6, -3);
+      ibbGroup.add(fairway, sandBunker, flagPin);
+      this.scene.add(ibbGroup);
+    }
   }
 
   _buildTrafficSwarm() {

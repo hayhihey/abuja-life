@@ -20,6 +20,13 @@ import {
   NIGERIAN_SLANG_DICTIONARY
 } from '/src/data/lifestyles.js';
 import {
+  NIGERIA_ENCYCLOPEDIA_INFO,
+  MARKETWISHES_INFO,
+  MARKETWISHES_CATEGORIES,
+  MARKETWISHES_CATALOG,
+  NIGERIA_TOURIST_ATTRACTIONS
+} from '/src/data/tourism_and_shopping.js';
+import {
   formatNairaFull,
   breakdownNairaNotes,
   renderNairaNoteSVG,
@@ -83,6 +90,9 @@ class AbujaClientApp {
     this.selectedLifestyle = 'alhaji';
     this.selectedPrevProp = 'default';
     this.selectedCommuteDest = 'cbd';
+    this.selectedMwCategory = 'all';
+    this.selectedTourismZone = 'all';
+    this.showNigeriaAlmanac = false;
     this.realTimeTimer = null;
     this.simSpeed = 1;
     this.whotState = null;
@@ -123,6 +133,11 @@ class AbujaClientApp {
         car: 'along',
         ownedCars: ['along'],
         solarInstalled: false,
+        mwInventory: [],
+        mwPoints: 200,
+        mwVendor: false,
+        lastMwVendorDay: 0,
+        visitedAttractions: [],
         dailyHustle: {
           day: this.game.day,
           streak: 1,
@@ -138,6 +153,11 @@ class AbujaClientApp {
     if (!s.social.plots) s.social.plots = {};
     if (!s.social.car) s.social.car = 'along';
     if (!Array.isArray(s.social.ownedCars)) s.social.ownedCars = ['along'];
+    if (!Array.isArray(s.social.mwInventory)) s.social.mwInventory = [];
+    if (typeof s.social.mwPoints !== 'number') s.social.mwPoints = 200;
+    if (typeof s.social.mwVendor !== 'boolean') s.social.mwVendor = false;
+    if (typeof s.social.lastMwVendorDay !== 'number') s.social.lastMwVendorDay = 0;
+    if (!Array.isArray(s.social.visitedAttractions)) s.social.visitedAttractions = [];
     if (!s.social.dailyHustle || s.social.dailyHustle.day !== this.game.day) {
       const prevStreak = s.social?.dailyHustle?.rewarded ? (s.social.dailyHustle.streak || 1) + 1 : (s.social?.dailyHustle?.streak || 1);
       s.social.dailyHustle = {
@@ -481,6 +501,7 @@ class AbujaClientApp {
     this._renderDailyHustleBox();
     this._renderActionsTab();
     this._renderCommuteTab();
+    this._renderShopAndTourismTab();
     this._renderCareerTab();
     this._renderHousingTab();
     this._renderNetworkTab();
@@ -2617,6 +2638,348 @@ class AbujaClientApp {
         }).catch(() => {});
         this.showToast('🗳️ Policy vote cast! (+1 Protocol Clout)');
         this._renderHUD();
+      });
+    });
+  }
+
+  // --------------------------------------------------------------------------
+  // TAB 8B: MARKETWISHES.COM SHOPPING CENTER & NIGERIAN TOURIST ATTRACTIONS
+  // --------------------------------------------------------------------------
+  _renderShopAndTourismTab() {
+    this._renderMarketWishesHub();
+    this._renderNigeriaTourismHub();
+  }
+
+  _renderMarketWishesHub() {
+    const box = document.getElementById('marketwishes-hub-box');
+    if (!box) return;
+    this._ensureExtendedPlayerState();
+    const s = this.game.s;
+    const ownedSet = new Set(s.social.mwInventory || []);
+    const mwPoints = Math.round(s.social.mwPoints || 0);
+    const cashbackValue = mwPoints * 50; // 1 MW Point = ₦50 cashback
+    const isVendor = Boolean(s.social.mwVendor);
+    const canCollectVendor = isVendor && s.social.lastMwVendorDay !== this.game.day;
+
+    const filteredItems = this.selectedMwCategory === 'all'
+      ? MARKETWISHES_CATALOG
+      : MARKETWISHES_CATALOG.filter((item) => item.category === this.selectedMwCategory);
+
+    box.innerHTML = `
+      <div class="career-summary-box" style="background:linear-gradient(135deg, rgba(30,58,138,0.85) 0%, rgba(124,58,237,0.75) 100%); border:1px solid rgba(167,139,250,0.65); margin-bottom:10px;">
+        <div class="card-top" style="flex-wrap:wrap; gap:8px;">
+          <div>
+            <span class="card-badge" style="background:#facc15; color:#090d16; font-weight:800;">🛍️ OFFICIAL SHOPPING CENTER • JABI ABUJA HQ</span>
+            <h3 class="card-title" style="margin-top:4px; font-size:16px;">${MARKETWISHES_INFO.name} (marketwishes.com)</h3>
+            <p class="card-desc" style="color:#e2e8f0; margin-top:2px;">${MARKETWISHES_INFO.tagline}</p>
+          </div>
+          <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+            <a href="https://marketwishes.com" target="_blank" rel="noopener noreferrer" class="btn-secondary" style="text-decoration:none; border-color:#facc15; color:#fde047; font-size:11.5px; padding:6px 10px;">
+              🌐 Visit MarketWishes.com Live ↗
+            </a>
+            <button type="button" id="btn-mw-fly-jabi" class="btn-secondary" style="font-size:11.5px; padding:6px 10px;">
+              📍 Go to Jabi Mall Spot
+            </button>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:8px; margin-top:8px;">
+          <div style="background:rgba(9,13,22,0.65); border:1px solid rgba(250,204,21,0.4); border-radius:8px; padding:8px 10px; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="font-size:10px; color:#fde047; font-weight:700;">🎁 MW LOYALTY POINTS</div>
+              <div style="font-size:13px; font-weight:800; color:#fff;">${mwPoints.toLocaleString()} pts (${formatNairaFull(cashbackValue)})</div>
+            </div>
+            <button type="button" id="btn-redeem-mw-points" class="btn-primary" style="font-size:11px; padding:5px 9px;" ${mwPoints >= 100 ? '' : 'disabled'}>
+              💸 Redeem ₦
+            </button>
+          </div>
+
+          <div style="background:rgba(9,13,22,0.65); border:1px solid rgba(52,211,153,0.45); border-radius:8px; padding:8px 10px; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="font-size:10px; color:#6ee7b7; font-weight:700;">🏪 VENDOR STOREFRONT</div>
+              <div style="font-size:12px; font-weight:700; color:#fff;">${isVendor ? '✅ Active Nationwide Seller' : '🔒 Buy License Below (₦65k)'}</div>
+            </div>
+            ${isVendor ? `
+              <button type="button" id="btn-collect-mw-vendor" class="btn-primary" style="font-size:11px; padding:5px 9px;" ${canCollectVendor ? '' : 'disabled'}>
+                ${canCollectVendor ? '💰 Collect Daily Sales' : '✅ Paid Today'}
+              </button>
+            ` : ''}
+          </div>
+        </div>
+
+        <!-- Category Filter Bar -->
+        <div style="display:flex; gap:5px; flex-wrap:wrap; margin-top:10px;">
+          ${MARKETWISHES_CATEGORIES.map((cat) => `
+            <button type="button" class="btn-xs btn-mw-cat" data-cat="${cat.id}" style="${this.selectedMwCategory === cat.id ? 'background:#facc15; color:#090d16; font-weight:800; border-color:#facc15;' : 'background:rgba(15,23,42,0.8); color:#e2e8f0;'}">
+              ${cat.label}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+
+      <div class="cards-list">
+        ${filteredItems.map((item) => {
+          const alreadyOwned = !item.repeatable && ownedSet.has(item.id);
+          const effPills = [];
+          if (item.effects.energy) effPills.push(`<span class="meta-pill ${item.effects.energy > 0 ? 'pos' : 'neg'}">${item.effects.energy > 0 ? '+' : ''}${item.effects.energy}⚡ Energy</span>`);
+          if (item.effects.sanity) effPills.push(`<span class="meta-pill pos">+${item.effects.sanity}🧠 Sanity</span>`);
+          if (item.effects.clout) effPills.push(`<span class="meta-pill pos">+${item.effects.clout}🏛️ Clout</span>`);
+          if (item.effects.steeze) effPills.push(`<span class="meta-pill pos">+${item.effects.steeze}% ✨ Steeze</span>`);
+          if (item.effects.composure) effPills.push(`<span class="meta-pill pos">+${item.effects.composure}% 🧘🏾 Composure</span>`);
+          if (item.effects.heat) effPills.push(`<span class="meta-pill pos">${item.effects.heat}🚨 Heat</span>`);
+
+          return `
+            <div class="game-card" style="border-left:3px solid ${alreadyOwned ? '#4ade80' : '#a78bfa'};">
+              <div class="card-top">
+                <span class="card-title">🛍️ ${item.name}</span>
+                <span class="card-badge" style="background:${alreadyOwned ? '#065f46' : 'rgba(124,58,237,0.3)'}; color:#fff;">
+                  ${alreadyOwned ? '✅ Owned in Inventory' : `${item.badge} • ${formatNairaFull(item.price)}`}
+                </span>
+              </div>
+              <p class="card-desc">${item.desc}</p>
+              <div class="card-meta-row" style="flex-wrap:wrap; gap:6px;">
+                <div class="meta-pills">
+                  ${effPills.join('')}
+                </div>
+                <button type="button" class="btn-primary btn-buy-mw-item" data-id="${item.id}" ${alreadyOwned ? 'disabled' : ''} style="background:linear-gradient(135deg,#7c3aed,#2563eb);">
+                  ${alreadyOwned ? '✅ Purchased' : `🛒 Buy on MarketWishes (${formatNairaFull(item.price)})`}
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+
+    // Category filter click
+    box.querySelectorAll('.btn-mw-cat').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        this.selectedMwCategory = btn.dataset.cat || 'all';
+        this._renderMarketWishesHub();
+      });
+    });
+
+    // Fly / Jump to Jabi MarketWishes Mall spot
+    box.querySelector('#btn-mw-fly-jabi')?.addEventListener('click', () => {
+      this.game.s.loc.district = 'jabi';
+      this.game.s.loc.spot = 'marketwishes_hq';
+      if (this.world3d) this.world3d.flyToDistrict('jabi', false);
+      this.showToast('🛍️ Arrived at MarketWishes.com Smart Shopping Center in Jabi!');
+      this._renderAll();
+    });
+
+    // Redeem MW Loyalty Points
+    box.querySelector('#btn-redeem-mw-points')?.addEventListener('click', () => {
+      const pts = Math.round(s.social.mwPoints || 0);
+      if (pts < 100) {
+        this.showToast('⚠️ Need at least 100 MW Points to redeem cashback!');
+        return;
+      }
+      const rewardNgn = pts * 50;
+      s.social.mwPoints = 0;
+      this.game.earn(rewardNgn, { cash: true });
+      this.game.log(`🎁 Redeemed ${pts} MarketWishes Loyalty Points for ${formatNairaFull(rewardNgn)} instant Naira cashback!`, 'good', '🛍️');
+      if (this.world3d) this.world3d.spawnNairaRain(24);
+      this.showToast(`💸 Redeemed ${pts} MW Points for ${formatNairaFull(rewardNgn)} cashback!`);
+      this._renderAll();
+      this._saveGame();
+    });
+
+    // Collect daily MarketWishes Vendor Store payout
+    box.querySelector('#btn-collect-mw-vendor')?.addEventListener('click', () => {
+      if (!s.social.mwVendor || s.social.lastMwVendorDay === this.game.day) return;
+      s.social.lastMwVendorDay = this.game.day;
+      const payout = 45000 + Math.floor(Math.random() * 45000);
+      this.game.earn(payout, { bank: true });
+      this.game.stat('clout', 2);
+      s.social.mwPoints = (s.social.mwPoints || 0) + 180;
+      this.game.log(`🏪 MarketWishes.com Vendor Payout: Nationwide customer orders delivered! Earned ${formatNairaFull(payout)} (+180 MW Points).`, 'good', '🛍️');
+      if (this.world3d) this.world3d.spawnNairaRain(28);
+      this.showToast(`🏪 MarketWishes Vendor Sales: +${formatNairaFull(payout)} wired to bank!`);
+      this._renderAll();
+      this._saveGame();
+    });
+
+    // Buy MarketWishes item
+    box.querySelectorAll('.btn-buy-mw-item').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const itemId = btn.dataset.id;
+        const item = MARKETWISHES_CATALOG.find((x) => x.id === itemId);
+        if (!item) return;
+
+        if (!this.game.canAfford(item.price)) {
+          this.showToast(`⚠️ Insufficient Naira! Need ${formatNairaFull(item.price)} to order ${item.name}.`);
+          return;
+        }
+
+        this.game.pay(item.price);
+        const eff = item.effects || {};
+        if (eff.energy) this.game.stat('energy', eff.energy);
+        if (eff.sanity) this.game.stat('sanity', eff.sanity);
+        if (eff.clout) this.game.stat('clout', eff.clout);
+        if (eff.heat) this.game.stat('heat', eff.heat);
+        if (eff.steeze) s.social.steeze = Math.min(100, Math.max(0, (s.social.steeze || 80) + eff.steeze));
+        if (eff.composure) s.social.composure = Math.min(100, Math.max(0, (s.social.composure || 80) + eff.composure));
+
+        if (!item.repeatable && !s.social.mwInventory.includes(item.id)) {
+          s.social.mwInventory.push(item.id);
+        }
+        if (item.unlocksVendor) {
+          s.social.mwVendor = true;
+        }
+        if (item.installsSolar) {
+          s.social.solarInstalled = true;
+        }
+
+        const earnedPts = Math.max(25, Math.round(item.price / 1000));
+        s.social.mwPoints = (s.social.mwPoints || 0) + earnedPts;
+        this._recordDailyProgress('social');
+
+        this.game.log(`🛍️ Ordered "${item.name}" on MarketWishes.com for ${formatNairaFull(item.price)} (+${earnedPts} MW Loyalty Points)!`, 'good', '🛍️');
+        if (this.world3d) this.world3d.spawnNairaRain(26);
+        this.showToast(`🛍️ MarketWishes Delivery: ${item.name}! (+${earnedPts} MW Points)`);
+        this._renderAll();
+        this._saveGame();
+      });
+    });
+  }
+
+  _renderNigeriaTourismHub() {
+    const box = document.getElementById('nigeria-tourism-hub-box');
+    if (!box) return;
+    this._ensureExtendedPlayerState();
+    const s = this.game.s;
+    const visited = new Set(s.social.visitedAttractions || []);
+
+    const zones = [
+      { id: 'all', label: '🇳🇬 All 36 States & FCT' },
+      { id: 'North Central', label: '🏛️ North Central (FCT/Niger/Plateau)' },
+      { id: 'South West', label: '🦁 South West (Lagos/Ogun/Osun/Oyo)' },
+      { id: 'South South', label: '🌊 South South (Cross River/Rivers/Delta)' },
+      { id: 'South East', label: '🏺 South East (Anambra/Enugu/Abia/Imo)' },
+      { id: 'North West', label: '🐎 North West (Kano/Kaduna/Sokoto/Kebbi)' },
+      { id: 'North East', label: '⛰️ North East (Bauchi/Taraba/Adamawa/Borno)' }
+    ];
+
+    const filteredStates = this.selectedTourismZone === 'all'
+      ? NIGERIA_TOURIST_ATTRACTIONS
+      : NIGERIA_TOURIST_ATTRACTIONS.filter((st) => st.zone === this.selectedTourismZone);
+
+    box.innerHTML = `
+      <div class="career-summary-box" style="border-color:rgba(16,185,129,0.55); margin-bottom:10px;">
+        <div class="card-top" style="flex-wrap:wrap; gap:8px;">
+          <div>
+            <span class="card-badge" style="background:rgba(16,185,129,0.2); color:#6ee7b7;">🗺️ INFORMATION ON NIGERIA: TOURIST ATTRACTIONS</span>
+            <h3 class="card-title" style="margin-top:4px;">Official Nigerian Tourist Centers &amp; Heritage Passport</h3>
+            <p class="card-desc">Stamped Tourist Attractions &amp; States: <strong style="color:#4ade80;">${visited.size} / ${NIGERIA_TOURIST_ATTRACTIONS.length}</strong> • Tour any state's attractions for Sanity, Protocol Clout &amp; Steeze!</p>
+          </div>
+          <button type="button" id="btn-toggle-ng-almanac" class="btn-secondary" style="border-color:#38bdf8; color:#7dd3fc;">
+            📖 ${this.showNigeriaAlmanac ? 'Hide' : 'Read'} "Information About Nigeria" Almanac
+          </button>
+        </div>
+
+        ${this.showNigeriaAlmanac ? `
+          <div style="background:rgba(9,13,22,0.85); border:1px solid rgba(56,189,248,0.35); border-radius:8px; padding:10px 12px; margin-top:8px; font-size:11.5px; line-height:1.45; color:#e2e8f0;">
+            <div style="font-weight:800; color:#fde047; margin-bottom:4px;">🇳🇬 ${NIGERIA_ENCYCLOPEDIA_INFO.title}</div>
+            <div>• <strong>Physical Coordinates:</strong> ${NIGERIA_ENCYCLOPEDIA_INFO.coordinates}</div>
+            <div>• <strong>Borders &amp; Coastline:</strong> ${NIGERIA_ENCYCLOPEDIA_INFO.borders}</div>
+            <div>• <strong>Climate &amp; Seasons:</strong> ${NIGERIA_ENCYCLOPEDIA_INFO.seasons}</div>
+            <div>• <strong>Natural Resources:</strong> ${NIGERIA_ENCYCLOPEDIA_INFO.populationAndResources}</div>
+            <div>• <strong>Ancient Art &amp; Culture:</strong> ${NIGERIA_ENCYCLOPEDIA_INFO.culturalHeritage}</div>
+            <div>• <strong>Political Evolution:</strong> ${NIGERIA_ENCYCLOPEDIA_INFO.politicalStructure}</div>
+            <div>• <strong>Official Currency:</strong> ${NIGERIA_ENCYCLOPEDIA_INFO.currency}</div>
+          </div>
+        ` : ''}
+
+        <!-- Geopolitical Zone Filter Pills -->
+        <div style="display:flex; gap:5px; flex-wrap:wrap; margin-top:10px;">
+          ${zones.map((z) => `
+            <button type="button" class="btn-xs btn-tourism-zone" data-zone="${z.id}" style="${this.selectedTourismZone === z.id ? 'background:#10b981; color:#090d16; font-weight:800; border-color:#10b981;' : ''}">
+              ${z.label}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+
+      <div class="cards-list">
+        ${filteredStates.map((st) => {
+          const isStamped = visited.has(st.state);
+          return `
+            <div class="game-card" style="border-left:3px solid ${isStamped ? '#facc15' : '#10b981'};">
+              <div class="card-top">
+                <div>
+                  <span class="card-title">📍 ${st.state} Tourist Attractions</span>
+                  <span class="card-badge" style="margin-left:6px;">${st.zone} Zone</span>
+                </div>
+                <span class="card-badge" style="background:${isStamped ? '#065f46' : 'rgba(30,41,59,0.9)'}; color:${isStamped ? '#fde047' : '#93c5fd'};">
+                  ${isStamped ? '🛂 Passport Stamped' : `Excursion: ${formatNairaFull(st.cost)}`}
+                </span>
+              </div>
+              <p class="card-desc" style="color:#cbd5e1; margin-bottom:6px;">${st.highlight}</p>
+              <div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:8px;">
+                ${st.attractions.map((attr) => `
+                  <span class="landmark-chip" style="background:rgba(15,23,42,0.9); color:#a7f3d0; border-color:rgba(16,185,129,0.3);">🏛️ ${attr}</span>
+                `).join('')}
+              </div>
+              <div class="card-meta-row" style="flex-wrap:wrap; gap:6px;">
+                <div class="meta-pills">
+                  <span class="meta-pill pos">+${st.sanity}🧠 Sanity</span>
+                  <span class="meta-pill pos">+${st.clout}🏛️ Clout</span>
+                  <span class="meta-pill pos">+${st.steeze}% ✨ Steeze</span>
+                </div>
+                <button type="button" class="btn-primary btn-tour-state" data-state="${st.state}">
+                  ✈️ ${isStamped ? `Tour ${st.state} Again (${formatNairaFull(st.cost)})` : `Book Excursion to ${st.state} (${formatNairaFull(st.cost)})`}
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+
+    box.querySelector('#btn-toggle-ng-almanac')?.addEventListener('click', () => {
+      this.showNigeriaAlmanac = !this.showNigeriaAlmanac;
+      this._renderNigeriaTourismHub();
+    });
+
+    box.querySelectorAll('.btn-tourism-zone').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        this.selectedTourismZone = btn.dataset.zone || 'all';
+        this._renderNigeriaTourismHub();
+      });
+    });
+
+    box.querySelectorAll('.btn-tour-state').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const stateName = btn.dataset.state;
+        const st = NIGERIA_TOURIST_ATTRACTIONS.find((x) => x.state === stateName);
+        if (!st) return;
+
+        if (!this.game.canAfford(st.cost)) {
+          this.showToast(`⚠️ Need ${formatNairaFull(st.cost)} to book an excursion to ${st.state}!`);
+          return;
+        }
+
+        this.game.pay(st.cost);
+        this.game.stat('sanity', st.sanity);
+        this.game.stat('clout', st.clout);
+        s.social.steeze = Math.min(100, Math.max(0, (s.social.steeze || 80) + st.steeze));
+        s.social.composure = Math.min(100, Math.max(0, (s.social.composure || 80) + 5));
+        if (!s.social.visitedAttractions.includes(st.state)) {
+          s.social.visitedAttractions.push(st.state);
+        }
+        if (st.featuredDistrict && DISTRICT_BY_ID[st.featuredDistrict]) {
+          this.game.s.loc.district = st.featuredDistrict;
+          if (this.world3d) this.world3d.flyToDistrict(st.featuredDistrict, false);
+        }
+
+        this._recordDailyProgress('move');
+        const sampleSite = st.attractions[Math.floor(Math.random() * st.attractions.length)];
+        this.game.log(`🗺️ Nigerian Tourism Excursion to ${st.state} (${sampleSite})! +${st.sanity}🧠 Sanity, +${st.clout}🏛️ Clout, +${st.steeze}% Steeze.`, 'good', '🗺️');
+        if (this.world3d) this.world3d.spawnNairaRain(24);
+        this.showToast(`📸 Stamped ${st.state} (${sampleSite}) in your Nigerian Tourism Passport!`);
+        this._renderAll();
+        this._saveGame();
       });
     });
   }

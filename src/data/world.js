@@ -31,14 +31,16 @@ export const DISTRICTS = [
       { id: 'embassy_row', name: 'Embassy Row', kind: 'diplomatic', icon: '🏛️', gate: { clout: 30, label: 'Embassy Row police post' } },
       { id: 'lobby_house', name: 'Lobbyists\u2019 House', kind: 'lobbyists', icon: '🗝️', gate: { clout: 15, label: 'Lobby house gateman' } },
       { id: 'millennium_park', name: 'Millennium Park', kind: 'recreation', icon: '🌳' },
+      { id: 'ibb_golf_club', name: 'IBB Golf Course & Aso Rock Park & Zoo', kind: 'tourist_center', icon: '⛳' },
     ],
   },
   {
     id: 'asokoro', name: 'Asokoro & Aso Drive', short: 'Asokoro', zone: 1, x: 64, y: 58,
     rent: 9_500_000, living: 12000, power: 0.95, isp: 0.92, footfall: 0.8, prestige: 5, housing: true,
-    blurb: 'Aso Drive billionaire mansions, intelligence headquarters, and the road to the Presidential Villa.',
+    blurb: 'Aso Drive billionaire mansions, Aso Rock & Caves tourist site, intelligence headquarters, and the road to the Presidential Villa.',
     landmarks: [
       { id: 'aso_drive', name: 'Aso Drive Billionaire & Villa Boulevard', kind: 'asodrive', icon: '👑', gate: { clout: 20, label: 'Aso Drive Security Post' } },
+      { id: 'aso_rock_caves', name: 'Aso Rock & Caves Asokoro (Tourist Attraction)', kind: 'tourist_center', icon: '🪨' },
       { id: 'protocol_lodge', name: 'Protocol Lodge', kind: 'protocol', icon: '🎫' },
       { id: 'villa_gate', name: 'Aso Rock Villa Gate', kind: 'govt', icon: '🚧', gate: { clout: 40, label: 'Presidential Guard checkpoint' } },
     ],
@@ -54,10 +56,11 @@ export const DISTRICTS = [
   {
     id: 'wuse2', name: 'Wuse 2', short: 'Wuse 2', zone: 1, x: 44, y: 38,
     rent: 6_000_000, living: 10000, power: 0.9, isp: 0.93, footfall: 1.25, prestige: 3, housing: true,
-    blurb: 'Banex Plaza gadgets, Wuse Market, lounges, shawarma, boutiques and the Wuse annex of the Federal Secretariat.',
+    blurb: 'Banex Plaza gadgets, Wuse Market, Abuja Amusement Park Wuse, lounges, shawarma, and boutiques.',
     landmarks: [
       { id: 'banex_plaza', name: 'Banex Plaza (Tech & Gadget Hub)', kind: 'banex', icon: '📱' },
       { id: 'wuse_market', name: 'Wuse Market', kind: 'market', icon: '🛍️' },
+      { id: 'abuja_amusement_wuse', name: 'Abuja Amusement Park, Wuse', kind: 'tourist_center', icon: '🎠' },
       { id: 'lounge_strip', name: 'Adetokunbo Ademola Lounge Strip', kind: 'nightlife', icon: '🍾' },
       { id: 'shawarma_corner', name: 'Yahuza Suya & Shawarma Corner', kind: 'shawarma', icon: '🌯' },
       { id: 'boutique_row', name: 'Boutique Row', kind: 'boutique', icon: '👔' },
@@ -65,11 +68,13 @@ export const DISTRICTS = [
     ],
   },
   {
-    id: 'jabi', name: 'Jabi Lake & Waterfront', short: 'Jabi', zone: 1, x: 28, y: 36,
+    id: 'jabi', name: 'Jabi Lake & MarketWishes Hub', short: 'Jabi', zone: 1, x: 28, y: 36,
     rent: 4_500_000, living: 8500, power: 0.85, isp: 0.9, footfall: 1.1, prestige: 3, housing: true,
-    blurb: 'Jabi Lake Waterfront, Boat Club jet-skis, Jabi Lake Mall, Baze University, tech hub and NCDC.',
+    blurb: 'MarketWishes.com Shopping Center HQ, Jabi River & Dam, Jabi Boat Club jet-skis, Jabi Lake Mall, Baze University, and NCDC.',
     landmarks: [
+      { id: 'marketwishes_hq', name: 'MarketWishes.com Shopping Center & Smart Mall', kind: 'marketwishes', icon: '🛍️' },
       { id: 'jabi_lake', name: 'Jabi Lake Park & Waterfront Promenade', kind: 'recreation', icon: '🛶' },
+      { id: 'jabi_river_dam', name: 'Jabi River & Dam (Tourist Attraction)', kind: 'tourist_center', icon: '🌊' },
       { id: 'jabi_boat_club', name: 'Jabi Boat Club (Jet-Ski & Yacht Cruise)', kind: 'jabi_lake_club', icon: '🛥️' },
       { id: 'jabi_hub', name: 'Jabi Tech Hub (co-working)', kind: 'cowork', icon: '💻' },
       { id: 'jabi_mall', name: 'Jabi Lake Mall Cafe', kind: 'cafe', icon: '☕' },
@@ -90,8 +95,9 @@ export const DISTRICTS = [
   {
     id: 'garki', name: 'Garki', short: 'Garki', zone: 1, x: 50, y: 68,
     rent: 3_000_000, living: 6500, power: 0.8, isp: 0.85, footfall: 1.2, prestige: 2, housing: true,
-    blurb: 'Area 1 Kilishi market, Federal Secretariat blocks, VIO office, car mart and AGIS land registry.',
+    blurb: 'Abuja Zoological Garden Garki, Area 1 Kilishi market, Federal Secretariat blocks, VIO office, car mart and AGIS land registry.',
     landmarks: [
+      { id: 'abuja_zoo_garki', name: 'Abuja Zoological Garden, Garki', kind: 'tourist_center', icon: '🦁' },
       { id: 'area1_kilishi', name: 'Area 1 Kilishi & Suya Market', kind: 'kilishi', icon: '🥩' },
       { id: 'fed_secretariat', name: 'Federal Secretariat (FCDA)', kind: 'govt', icon: '🏛️', gate: { clout: 8, label: 'Secretariat reception' }, employer: 'FCDA' },
       { id: 'vio_office', name: 'VIO Office', kind: 'vio', icon: '🪪' },
@@ -112,11 +118,11 @@ export const DISTRICTS = [
   {
     id: 'kubwa', name: 'Kubwa', short: 'Kubwa', zone: 2, x: 12, y: 18,
     rent: 900_000, living: 3300, power: 0.6, isp: 0.7, footfall: 1.1, prestige: 1, housing: true,
-    blurb: 'NYSC Orientation Camp, Abuja Light Rail train link, Zuma Rock gateway corridor and civil servants\u2019 starter homes.',
+    blurb: 'NYSC Orientation Camp, Abuja Light Rail train link, Zuma Rock & Gurara Waterfalls gateway corridor and starter homes.',
     landmarks: [
       { id: 'kubwa_station', name: 'Kubwa Light Rail Station', kind: 'transport', icon: '🚆' },
       { id: 'nysc_camp', name: 'NYSC Kubwa Orientation Camp', kind: 'nysc', icon: '🪖' },
-      { id: 'zuma_gateway', name: 'Zuma Rock Monolith Viewpoint', kind: 'zuma', icon: '🗿' },
+      { id: 'zuma_gateway', name: 'Zuma Rock & Gurara Waterfalls Gateway', kind: 'zuma', icon: '🗿' },
       { id: 'kubwa_market', name: 'Kubwa Market', kind: 'market', icon: '🛒' },
       { id: 'youth_joint', name: 'Kubwa Youth Joint', kind: 'youthjoint', icon: '🎶' },
     ],
@@ -152,20 +158,25 @@ export const DISTRICTS = [
   {
     id: 'lagos_island', name: 'Lagos Island (Lekki, VI & Ikoyi)', short: 'Lekki / VI', zone: 1, x: 14, y: 84,
     rent: 15_000_000, living: 16000, power: 0.88, isp: 0.96, footfall: 1.45, prestige: 5, housing: true,
-    blurb: 'Eko for Show! Lekki-Ikoyi Link Bridge, Banana Island billionaires, Eko Atlantic towers, and Victoria Island Dorime clubs.',
+    blurb: 'Eko for Show! Lekki Conservation Centre, Tarkwa Bay & Bar Beach, Lekki-Ikoyi Link Bridge, Banana Island, Eko Atlantic & Terra Kulture.',
     landmarks: [
       { id: 'lekki_ikoyi_bridge', name: 'Lekki-Ikoyi Cable Link Bridge', kind: 'lagos_landmark', icon: '🌉' },
+      { id: 'lekki_conservation', name: 'Lekki Conservation Centre & Canopy Walkway', kind: 'tourist_center', icon: '🐒' },
+      { id: 'tarkwa_bar_beach', name: 'Tarkwa Bay, Bar Beach & La Campagne Tropicana', kind: 'tourist_center', icon: '🏖️' },
+      { id: 'terra_onikan_tbs', name: 'Terra Kulture, National Museum Onikan & TBS', kind: 'tourist_center', icon: '🎭' },
       { id: 'eko_atlantic', name: 'Eko Atlantic City & Victoria Island HQ', kind: 'eko_atlantic', icon: '🏙️' },
       { id: 'banana_island_gate', name: 'Banana Island Billionaire Gate (Ikoyi)', kind: 'asodrive', icon: '🏝️', gate: { clout: 30, label: 'Banana Island Private Security' } },
       { id: 'quilox_vi', name: 'Victoria Island VIP Nightlife Strip', kind: 'nightlife', icon: '🍾' },
     ],
   },
   {
-    id: 'lagos_mainland', name: 'Lagos Mainland (Ikeja, Oshodi & Surulere)', short: 'Ikeja / Oshodi', zone: 2, x: 32, y: 88,
+    id: 'lagos_mainland', name: 'Lagos Mainland (Ikeja, Oshodi & Badagry)', short: 'Ikeja / Badagry', zone: 2, x: 32, y: 88,
     rent: 2_800_000, living: 6500, power: 0.72, isp: 0.85, footfall: 1.55, prestige: 2, housing: true,
-    blurb: 'No Gree For Anybody! Oshodi yellow Danfo parks, Baba Alaye & Agbero union headquarters, Computer Village Ikeja & Third Mainland Bridge.',
+    blurb: 'No Gree For Anybody! Oshodi Agbero & Baba Alaye HQ, Computer Village Ikeja, National Theatre Iganmu & Badagry First Storey Building.',
     landmarks: [
       { id: 'oshodi_agbero_park', name: 'Oshodi Transport Interchange (Agbero & Baba Alaye HQ)', kind: 'agbero_park', icon: '🗣️' },
+      { id: 'badagry_heritage', name: 'Badagry First Storey Building, Slave Relics & Whispering Palms', kind: 'tourist_center', icon: '🏛️' },
+      { id: 'national_theatre_iganmu', name: 'The National Theatre, Iganmu & Jhalobia Park', kind: 'tourist_center', icon: '🎭' },
       { id: 'computer_village', name: 'Ikeja Computer Village (Tech & Phone Hustle)', kind: 'banex', icon: '💻' },
       { id: 'afrika_shrine', name: 'New Afrika Shrine (Ikeja Afrobeats Lounge)', kind: 'nightlife', icon: '🎷' },
       { id: 'third_mainland', name: 'Third Mainland Lagoon Bridge', kind: 'lagos_landmark', icon: '🌊' },

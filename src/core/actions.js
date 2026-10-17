@@ -838,6 +838,54 @@ export const ACTIONS = [
       if (g.rng.chance(0.5)) gainContact(g, randomContactType(g.rng, { tech_founder: 3, contractor: 3, promoter: 2 }), 2, 'At a Victoria Island rooftop, you connect with');
     },
   },
+  {
+    id: 'tour_attraction_spot', group: 'Place',
+    name: (g) => `🗺️ Tour ${LANDMARK_INDEX[g.s.loc.spot]?.landmark.name ?? 'Tourist Center'} (₦10k)`,
+    icon: '🗺️',
+    desc: () => 'Explore this official Nigerian Tourist Attraction! Boosts Sanity, Protocol Clout, Steeze & stamps your Tourism Passport.',
+    where: (g) => atKind(g, 'tourist_center'),
+    cost: () => ({ min: 110, energy: 8, ngn: 10000 }),
+    async run(g) {
+      const spotName = LANDMARK_INDEX[g.s.loc.spot]?.landmark.name ?? 'Nigerian Tourist Center';
+      g.stat('sanity', 24);
+      g.stat('clout', 3.5);
+      if (g.s.social) {
+        g.s.social.steeze = clamp((g.s.social.steeze || 75) + 8, 0, 100);
+        g.s.social.composure = clamp((g.s.social.composure || 75) + 6, 0, 100);
+        if (!Array.isArray(g.s.social.visitedAttractions)) g.s.social.visitedAttractions = [];
+        if (!g.s.social.visitedAttractions.includes(spotName)) g.s.social.visitedAttractions.push(spotName);
+      }
+      g.log(`📸 Visited ${spotName}! Unforgettable heritage, scenic views, and fresh Steeze (+24 Sanity, +3.5 Clout).`, 'good', '🗺️');
+      if (g.rng.chance(0.45)) gainContact(g, randomContactType(g.rng, { civil_servant: 2, promoter: 3, contractor: 2 }), 2, `While touring ${spotName}, you connect with`);
+    },
+  },
+  {
+    id: 'shop_marketwishes_mall', group: 'Place',
+    name: (g) => (g.s.social?.mwVendor
+      ? '🛍️ Collect MarketWishes.com Vendor Store Payout & Restock'
+      : '🛍️ Flash Deal Shopping at MarketWishes.com HQ Mall (₦15k)'),
+    icon: '🛍️',
+    desc: () => 'Abuja\u2019s #1 smart e-commerce & shopping center (marketwishes.com) in Jabi. Buy gadgets, fashion & groceries or collect vendor payouts!',
+    where: (g) => atKind(g, 'marketwishes'),
+    cost: (g) => (g.s.social?.mwVendor ? { min: 60, energy: 8 } : { min: 75, energy: 6, ngn: 15000 }),
+    async run(g) {
+      if (!g.s.social) g.s.social = {};
+      if (g.s.social.mwVendor) {
+        const sales = nice(g.rng.int(38000, 82000), 1000);
+        g.earn(sales, { bank: true });
+        g.stat('clout', 2.4);
+        g.s.social.mwPoints = (g.s.social.mwPoints || 0) + 250;
+        g.log(`🛍️ MarketWishes.com Vendor Hub: Nationwide orders across 36 states settled! +${ngn(sales)} wired to bank (+250 MW Points).`, 'good', '🛍️');
+      } else {
+        g.stat('energy', 22);
+        g.stat('sanity', 20);
+        g.stat('clout', 2.5);
+        g.s.social.steeze = clamp((g.s.social.steeze || 75) + 8, 0, 100);
+        g.s.social.mwPoints = (g.s.social.mwPoints || 0) + 150;
+        g.log('🛍️ Picked up a MarketWishes.com Flash Deal bundle at the Jabi Smart Mall! (+22⚡, +20🧠, +8 Steeze, +150 MW Points).', 'good', '🛍️');
+      }
+    },
+  },
 ];
 
 export const ACTIONS_BY_ID = Object.fromEntries(ACTIONS.map((a) => [a.id, a]));

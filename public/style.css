@@ -953,10 +953,10 @@ html, body {
   color: #000;
 }
 
-/* Deck Navigation Tabs (9 Tabs) */
+/* Deck Navigation Tabs (10 Tabs) */
 .deck-tabs {
   display: grid;
-  grid-template-columns: repeat(9, 1fr);
+  grid-template-columns: repeat(10, minmax(max-content, 1fr));
   background: rgba(7, 11, 20, 0.95);
   border-bottom: 1px solid var(--border-subtle);
   overflow-x: auto;
