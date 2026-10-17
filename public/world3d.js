@@ -692,6 +692,8 @@ export class AbujaWorld3D {
     this.scene.add(milParkGroup);
 
     // 10. ASO DRIVE PRESIDENTIAL BOULEVARD & GOLDEN VILLA ARCH (Asokoro / Maitama)
+    const asokoroD = DISTRICT_BY_ID.asokoro;
+    const asokoroPos = asokoroD ? map2DTo3D(asokoroD.x, asokoroD.y) : { x: 200, z: 120 };
     const asoDriveGroup = new THREE.Group();
     asoDriveGroup.position.set(asokoroPos.x - 18, 0, asokoroPos.z - 22);
     const asoPillarL = new THREE.Mesh(new THREE.BoxGeometry(3.2, 22, 3.2), whiteMarble);

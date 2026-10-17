@@ -100,16 +100,19 @@ class AbujaClientApp {
 
     this._initGame();
     this._ensureExtendedPlayerState();
-    this._init3DWorld();
+    try {
+      this._init3DWorld();
+    } catch (err) {
+      console.error('3D World init warning:', err);
+    }
     this._init2DMap();
     this._bindUIEvents();
     this._renderAll();
+    // Always start from the Nigerian Citizen Sign-Up & Lifestyle Caliber Creator screen on load
+    this._openNewCharModal();
     this._initMultiplayerBridge();
     this._startRadarLoop();
     this.startRealTime(1);
-
-    // Always start from the Nigerian Citizen Sign-Up & Lifestyle Caliber Creator screen on load
-    this._openNewCharModal();
   }
 
   _ensureExtendedPlayerState() {
