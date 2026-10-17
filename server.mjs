@@ -373,7 +373,15 @@ const MIME_TYPES = {
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
   '.ico': 'image/x-icon',
+  '.webp': 'image/webp',
+  '.wasm': 'application/wasm',
+  '.glb':  'model/gltf-binary',
+  '.gltf': 'model/gltf+json',
+  '.bin':  'application/octet-stream',
+  '.ktx2': 'image/ktx2',
+  '.basis': 'image/basis',
 };
 
 function readBody(req) {
@@ -1097,6 +1105,29 @@ export async function requestHandler(req, res) {
       fs.createReadStream(threePath).pipe(res);
       return;
     }
+  }
+
+  // --- 11b. Vendor Three.js Addons (JSM) — serves node_modules/three/examples/jsm/ ---
+  if (pathname.startsWith('/vendor/jsm/')) {
+    const relPath = pathname.slice('/vendor/jsm/'.length);
+    const addonPath = path.normalize(path.join(__dirname, 'node_modules', 'three', 'examples', 'jsm', relPath));
+    // Security: must stay inside jsm dir
+    const jsmRoot = path.join(__dirname, 'node_modules', 'three', 'examples', 'jsm');
+    if (!addonPath.startsWith(jsmRoot)) {
+      res.writeHead(403, { 'Content-Type': 'text/plain' });
+      res.end('Access Denied');
+      return;
+    }
+    if (fs.existsSync(addonPath) && fs.statSync(addonPath).isFile()) {
+      const ext = path.extname(addonPath).toLowerCase();
+      const ct = MIME_TYPES[ext] || 'application/javascript; charset=utf-8';
+      res.writeHead(200, { 'Content-Type': ct });
+      fs.createReadStream(addonPath).pipe(res);
+      return;
+    }
+    res.writeHead(404, { 'Content-Type': 'text/plain' });
+    res.end(`JSM addon not found: ${relPath}`);
+    return;
   }
 
   // --- 12. Static Files ---
