@@ -57,6 +57,10 @@ export class AbujaAfrobeatsEngine {
     return this.stations[this.stationIndex];
   }
 
+  getCurrentStation() {
+    return this.currentStation();
+  }
+
   play() {
     this._initContext();
     if (!this.ctx || this.isPlaying) return;

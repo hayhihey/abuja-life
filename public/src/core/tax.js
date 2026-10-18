@@ -26,7 +26,7 @@ export const LUXURY_ASSET_TAX = {
  * @returns {object} Tax audit breakdown
  */
 export function calculateTaxAssessment(s) {
-  const funds = (s.fin?.cash || 0) + (s.fin?.bank || 0);
+  const funds = (s.cash ?? s.fin?.cash ?? 0) + (s.bank ?? s.fin?.bank ?? 0);
   const netIncome = Math.max(0, funds);
   
   // 1. Progressive PAYE
@@ -56,8 +56,9 @@ export function calculateTaxAssessment(s) {
   else if (currentDistrict === 'gwarinpa') luxuryTax += LUXURY_ASSET_TAX.duplex_gwarinpa;
 
   if (s.social?.car) {
-    if (s.social.car.type === 'vip_suv') luxuryTax += LUXURY_ASSET_TAX.car_luxury_suv;
-    if (s.social.car.type === 'sports_coupe') luxuryTax += LUXURY_ASSET_TAX.car_sports_coupe;
+    const carKey = String(typeof s.social.car === 'string' ? s.social.car : (s.social.car.type || s.social.car.id || '')).toLowerCase();
+    if (/suv|prado|land|lexus|benz/.test(carKey)) luxuryTax += LUXURY_ASSET_TAX.car_luxury_suv;
+    if (/sport|coupe|supra|mustang|corvette|lambo|ferrari|porsche/.test(carKey)) luxuryTax += LUXURY_ASSET_TAX.car_sports_coupe;
   }
 
   const totalDue = cyclePaye + luxuryTax;

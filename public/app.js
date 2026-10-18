@@ -45,6 +45,7 @@ import {
   payEstateLevy
 } from '/src/core/sims.js';
 import { AbujaAfrobeatsEngine } from '/music.js';
+import { initUIExtras } from '/ui-extras.js';
 import { ABUJA_INSTITUTIONS, COURSE_BY_ID } from '/src/data/education.js';
 import { enrollInCourse, attendLecture } from '/src/core/education.js';
 import { calculateTaxAssessment, payTaxesAndIssueTCC } from '/src/core/tax.js';
@@ -4822,7 +4823,7 @@ class AbujaClientApp {
 
       const elStatus = document.getElementById('election-music-status');
       if (elStatus) {
-        elStatus.textContent = `${st.name} • ${st.trackTitle} (${playing ? '🔊 Playing' : '⏸ Paused'})`;
+        elStatus.textContent = `${st.name} • ${st.style} (${playing ? '🔊 Playing' : '⏸ Paused'})`;
       }
       const togBtn = document.getElementById('btn-toggle-afrobeats');
       if (togBtn) {
@@ -4845,7 +4846,7 @@ class AbujaClientApp {
     document.getElementById('btn-switch-station')?.addEventListener('click', () => {
       const st = this.afrobeats.cycleStation();
       updateAfrobeatsStatus();
-      this.showToast(`📻 Tuned to ${st.name} (${st.bpm} BPM)`);
+      this.showToast(`📻 Tuned to ${st.name} (${st.style})`);
     });
   }
 
@@ -5057,119 +5058,102 @@ class AbujaClientApp {
     modal.style.display = 'flex';
   }
 
+  _closeModalById(id) {
+    const m = document.getElementById(id);
+    if (m) m.hidden = true;
+  }
+
   _openEducationModal() {
     const modal = document.getElementById('education-modal');
     if (!modal) return;
     modal.hidden = false;
 
-    const banner = document.getElementById('education-status-banner');
-    const edu = this.game.s.education || { enrolledCourseId: null, completedDegrees: [], currentGpa: 3.5, lecturesAttended: 0 };
-    const curCourse = edu.enrolledCourseId ? COURSE_BY_ID[edu.enrolledCourseId] : null;
+    const s = this.game.s;
+    const edu = s.education || (s.education = { enrolledCourseId: null, progressDays: 0, completedDegrees: [] });
+    const cur = edu.enrolledCourseId ? COURSE_BY_ID[edu.enrolledCourseId] : null;
+    const done = edu.completedDegrees || [];
 
+    const banner = document.getElementById('education-status-banner');
     if (banner) {
-      if (curCourse) {
-        const pct = Math.min(100, Math.round((edu.lecturesAttended / curCourse.lecturesNeeded) * 100));
+      const degrees = done.length
+        ? done.map((id) => `<span class="meta-pill pos">🎓 ${COURSE_BY_ID[id]?.title || id}</span>`).join(' ')
+        : '<span style="color:#94a3b8;font-size:12px;">No degrees yet. Enrol below to begin.</span>';
+      if (cur) {
+        const pct = Math.min(100, Math.round(((edu.progressDays || 0) / cur.durationDays) * 100));
         banner.innerHTML = `
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
             <div>
-              <span style="font-size:11px; color:#60a5fa; font-weight:700;">ACTIVE DEGREE ENROLLMENT</span>
-              <h4 style="margin:2px 0 0 0; color:#fff; font-size:14px;">${curCourse.icon} ${curCourse.name} (${curCourse.institutionName})</h4>
-              <span style="font-size:12px; color:#94a3b8;">Lectures: ${edu.lecturesAttended} / ${curCourse.lecturesNeeded} (${pct}%) • Current GPA: ${edu.currentGpa.toFixed(2)}</span>
+              <span style="font-size:11px;color:#60a5fa;font-weight:700;">ACTIVE ENROLMENT</span>
+              <h4 style="margin:2px 0 0;color:#fff;font-size:14px;">${cur.title}</h4>
+              <span style="font-size:12px;color:#94a3b8;">${cur.institutionName} • ${edu.progressDays || 0}/${cur.durationDays} modules (${pct}%)</span>
             </div>
-            <button type="button" id="btn-attend-lecture-action" class="btn-primary" style="padding:8px 14px; font-weight:700;">
-              📖 Attend Lecture (+1 Progress)
-            </button>
+            <button type="button" id="btn-attend-lecture-action" class="btn-primary" style="padding:10px 16px;font-weight:700;">📖 Attend Lecture</button>
           </div>
-          <div style="width:100%; height:6px; background:#1e293b; border-radius:3px; margin-top:8px; overflow:hidden;">
-            <div style="width:${pct}%; height:100%; background:linear-gradient(90deg, #3b82f6, #60a5fa);"></div>
+          <div style="height:6px;background:#1e293b;border-radius:3px;margin-top:8px;overflow:hidden;">
+            <div style="width:${pct}%;height:100%;background:linear-gradient(90deg,#3b82f6,#60a5fa);"></div>
           </div>
-        `;
+          <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">${degrees}</div>`;
         document.getElementById('btn-attend-lecture-action')?.addEventListener('click', () => {
           const res = attendLecture(this.game.s);
+          this.showToast(res.message);
           if (res.graduated) {
-            this.showToast(`🎉 CONGRATULATIONS! You graduated with ${res.degree} from ${curCourse.institutionName}! +15 Clout & Permanent Salary Boost!`);
-            this.game.log(`Graduated with ${res.degree} from ${curCourse.institutionName}!`, 'good', '🎓');
+            this.game.log(res.message, 'good', '🎓');
             if (this.world3d) this.world3d.spawnNairaRain(30);
-          } else {
-            this.showToast(`📖 Lecture attended! Progress: ${res.progress} • ${res.notes || ''}`);
           }
           this._renderAll();
           this._openEducationModal();
         });
       } else {
-        const completedStr = edu.completedDegrees.length > 0
-          ? edu.completedDegrees.map((d) => `<span class="meta-pill pos">🎓 ${d.degree || d.name || 'Alumnus'}</span>`).join(' ')
-          : '<span style="color:#94a3b8; font-size:12px;">No degree completed yet. Enroll in an institution below to begin your academic journey!</span>';
         banner.innerHTML = `
-          <div style="font-size:11px; color:#94a3b8; font-weight:700;">ACADEMIC STANDING</div>
-          <div style="margin-top:4px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-            ${completedStr}
-          </div>
-        `;
+          <div style="font-size:11px;color:#94a3b8;font-weight:700;">ACADEMIC STANDING</div>
+          <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;">${degrees}</div>`;
       }
     }
 
     const listEl = document.getElementById('education-institutions-list');
-    if (listEl) {
-      listEl.innerHTML = ABUJA_INSTITUTIONS.map((inst) => `
-        <div style="background:#090d16; border:1px solid var(--border-subtle); border-radius:10px; padding:12px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px; margin-bottom:8px;">
-            <div>
-              <strong style="color:#fff; font-size:13.5px;">${inst.icon} ${inst.name} (${inst.acronym})</strong>
-              <div style="font-size:11px; color:#38bdf8;">📍 ${inst.district.toUpperCase()} • ${inst.type} • Founded ${inst.established}</div>
-            </div>
-            <span style="font-size:11px; color:#94a3b8; font-style:italic;">"${inst.motto}"</span>
-          </div>
-          <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap:8px;">
-            ${inst.courses.map((c) => {
-              const isEnrolled = edu.enrolledCourseId === c.id;
-              const isCompleted = edu.completedDegrees.some((d) => d.courseId === c.id || d.id === c.id);
-              return `
-                <div style="background:rgba(15,23,42,0.8); border:1px solid ${isEnrolled ? '#3b82f6' : 'rgba(255,255,255,0.08)'}; border-radius:8px; padding:8px 10px; display:flex; flex-direction:column; justify-content:space-between; gap:6px;">
-                  <div>
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                      <strong style="color:#fff; font-size:12px;">${c.icon} ${c.name}</strong>
-                      <span style="font-size:10.5px; color:#facc15; font-weight:700;">${formatNairaFull(c.tuitionFee)}</span>
-                    </div>
-                    <div style="font-size:11px; color:#cbd5e1; margin-top:2px;">${c.description}</div>
-                    <div style="font-size:10.5px; color:#4ade80; margin-top:4px;">
-                      Perk: +${Math.round((c.salaryMultiplier - 1) * 100)}% Salary • +${c.cloutAward} Clout
-                    </div>
-                  </div>
-                  <div>
-                    ${isCompleted ? '<button class="btn-xs" disabled style="width:100%; opacity:0.7;">✅ Degree Completed</button>' :
-                      isEnrolled ? '<button class="btn-xs btn-primary" style="width:100%;" disabled>🔵 Currently Enrolled</button>' :
-                      `<button type="button" class="btn-xs btn-enroll-course" data-id="${c.id}" style="width:100%; background:#2563eb; color:#fff; border:none; padding:5px 8px; border-radius:5px; font-weight:600;">🎓 Enroll (${formatNairaFull(c.tuitionFee)})</button>`
-                    }
-                  </div>
-                </div>
-              `;
-            }).join('')}
-          </div>
+    if (!listEl) return;
+    listEl.innerHTML = ABUJA_INSTITUTIONS.map((inst) => `
+      <div style="background:#090d16;border:1px solid var(--border-subtle);border-radius:10px;padding:12px;">
+        <div style="border-bottom:1px solid rgba(255,255,255,.06);padding-bottom:8px;margin-bottom:8px;">
+          <strong style="color:#fff;font-size:13.5px;">${inst.icon} ${inst.name}</strong>
+          <div style="font-size:11px;color:#38bdf8;">📍 ${inst.campus} • ${inst.type}</div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:2px;">${inst.desc}</div>
         </div>
-      `).join('');
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px;">
+          ${inst.courses.map((c) => {
+            const isCur = edu.enrolledCourseId === c.id;
+            const isDone = done.includes(c.id);
+            const btn = isDone
+              ? '<button class="btn-xs" disabled style="width:100%;opacity:.7;padding:9px;">✅ Completed</button>'
+              : isCur
+                ? '<button class="btn-xs" disabled style="width:100%;padding:9px;">🔵 Currently enrolled</button>'
+                : `<button type="button" class="btn-xs btn-enroll-course" data-id="${c.id}" style="width:100%;background:#2563eb;color:#fff;border:none;padding:10px;border-radius:6px;font-weight:700;">🎓 Enrol — ${formatNairaFull(c.tuition)}</button>`;
+            return `
+              <div style="background:rgba(15,23,42,.8);border:1px solid ${isCur ? '#3b82f6' : 'rgba(255,255,255,.08)'};border-radius:8px;padding:9px 10px;display:flex;flex-direction:column;justify-content:space-between;gap:6px;">
+                <div>
+                  <strong style="color:#fff;font-size:12.5px;">${c.title}</strong>
+                  <div style="font-size:11px;color:#cbd5e1;margin-top:2px;">${c.desc}</div>
+                  <div style="font-size:10.5px;color:#4ade80;margin-top:4px;">+${c.bonusSalaryPercent}% salary • +${c.cloutBonus} Clout • +${c.steezeBonus} Steeze • ${c.durationDays} modules</div>
+                </div>
+                ${btn}
+              </div>`;
+          }).join('')}
+        </div>
+      </div>`).join('');
 
-      listEl.querySelectorAll('.btn-enroll-course').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const courseId = btn.dataset.id;
-          const course = COURSE_BY_ID[courseId];
-          if (!course) return;
-          if (!this.game.canAfford(course.tuitionFee)) {
-            this.showToast(`⚠️ Insufficient Naira! Tuition is ${formatNairaFull(course.tuitionFee)}.`);
-            return;
-          }
-          const res = enrollInCourse(this.game.s, courseId);
-          if (res.success) {
-            this.showToast(`🎓 Successfully enrolled in ${course.name} at ${course.institutionName}!`);
-            this.game.log(`Enrolled in ${course.name} at ${course.institutionName}!`, 'good', '🎓');
-            this._renderAll();
-            this._openEducationModal();
-          } else {
-            this.showToast(`⚠️ ${res.reason || 'Could not enroll'}`);
-          }
-        });
+    listEl.querySelectorAll('.btn-enroll-course').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (edu.enrolledCourseId) {
+          this.showToast('⚠️ Finish your current course before enrolling in another.');
+          return;
+        }
+        const res = enrollInCourse(this.game.s, btn.dataset.id);
+        this.showToast(res.message);
+        if (res.success) this.game.log(res.message, 'good', '🎓');
+        this._renderAll();
+        this._openEducationModal();
       });
-    }
+    });
   }
 
   _openTaxModal() {
@@ -5177,67 +5161,40 @@ class AbujaClientApp {
     if (!modal) return;
     modal.hidden = false;
 
+    const a = calculateTaxAssessment(this.game.s);
     const box = document.getElementById('tax-assessment-box');
-    const assessment = calculateTaxAssessment(this.game.s);
-    const taxState = this.game.s.tax || { tccValid: false, tccExpiryDay: 0, totalTaxPaid: 0 };
-    const curDay = this.game.s.clock?.day || 1;
-    const isTccActive = taxState.tccValid && curDay <= (taxState.tccExpiryDay || 0);
-
     if (box) {
       box.innerHTML = `
-        <div style="background:#090d16; border:1px solid var(--border-subtle); border-radius:10px; padding:14px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:8px; margin-bottom:10px;">
+        <div style="background:#090d16;border:1px solid var(--border-subtle);border-radius:10px;padding:14px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;border-bottom:1px solid rgba(255,255,255,.08);padding-bottom:8px;margin-bottom:10px;">
             <div>
-              <strong style="color:#fff; font-size:14px;">FIRS Tax Clearance Certificate (TCC) Status</strong>
-              <div style="font-size:11.5px; color:#94a3b8;">FCT IRS Tax Identification Number: <strong>TIN-${this.game.s.meta.name.toUpperCase().replace(/[^A-Z]/g,'').slice(0,4) || 'ABJ'}-9021</strong></div>
+              <strong style="color:#fff;font-size:14px;">Tax Clearance Certificate (TCC)</strong>
+              <div style="font-size:11.5px;color:#94a3b8;">Taxpayer ID: <strong>${a.firsTaxId}</strong></div>
             </div>
-            <span class="card-badge" style="${isTccActive ? 'background:rgba(16,185,129,0.2); color:#4ade80;' : 'background:rgba(239,68,68,0.2); color:#f87171;'}">
-              ${isTccActive ? `✅ Valid TCC (Until Day ${taxState.tccExpiryDay})` : '⚠️ Tax Due / Expired TCC'}
+            <span class="card-badge" style="${a.hasValidTCC ? 'background:rgba(16,185,129,.2);color:#4ade80;' : 'background:rgba(239,68,68,.2);color:#f87171;'}">
+              ${a.hasValidTCC ? `✅ Valid until Day ${a.tccExpiresDay}` : '⚠️ No valid TCC'}
             </span>
           </div>
-
-          <div style="display:flex; flex-direction:column; gap:8px;">
-            <div style="display:flex; justify-content:space-between; font-size:12.5px;">
-              <span style="color:#cbd5e1;">💼 Gross Estimated Income / Net Worth:</span>
-              <strong style="color:#fff;">${formatNairaFull(assessment.grossBase)}</strong>
-            </div>
-            <div style="display:flex; justify-content:space-between; font-size:12.5px;">
-              <span style="color:#cbd5e1;">📊 FCT Progressive PAYE Income Tax:</span>
-              <span style="color:#f87171;">${formatNairaFull(assessment.payeTax)}</span>
-            </div>
-            <div style="display:flex; justify-content:space-between; font-size:12.5px;">
-              <span style="color:#cbd5e1;">🏡 FCT Luxury Property Levy (${assessment.propertyCount} properties):</span>
-              <span style="color:#f87171;">${formatNairaFull(assessment.propertyLevy)}</span>
-            </div>
-            <div style="display:flex; justify-content:space-between; font-size:12.5px;">
-              <span style="color:#cbd5e1;">🏎️ Luxury Automobile Fleet Levy:</span>
-              <span style="color:#f87171;">${formatNairaFull(assessment.vehicleLevy)}</span>
-            </div>
-            <div style="height:1px; background:rgba(255,255,255,0.1); margin:4px 0;"></div>
-            <div style="display:flex; justify-content:space-between; font-size:14px; font-weight:700;">
-              <span style="color:#facc15;">Total FIRS / FCT Assessment Due:</span>
-              <span style="color:#4ade80;">${formatNairaFull(assessment.totalTax)}</span>
-            </div>
+          <div style="display:flex;flex-direction:column;gap:8px;font-size:12.5px;">
+            <div style="display:flex;justify-content:space-between;"><span style="color:#cbd5e1;">💼 Liquid funds assessed</span><strong style="color:#fff;">${formatNairaFull(a.netIncome)}</strong></div>
+            <div style="display:flex;justify-content:space-between;"><span style="color:#cbd5e1;">📊 Progressive PAYE (this cycle)</span><span style="color:#f87171;">${formatNairaFull(a.cyclePaye)}</span></div>
+            <div style="display:flex;justify-content:space-between;"><span style="color:#cbd5e1;">🏡 Luxury property &amp; vehicle levy</span><span style="color:#f87171;">${formatNairaFull(a.luxuryTax)}</span></div>
+            <div style="height:1px;background:rgba(255,255,255,.1);"></div>
+            <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:700;"><span style="color:#facc15;">Total due</span><span style="color:#4ade80;">${formatNairaFull(a.totalDue)}</span></div>
+            <div style="font-size:11px;color:#94a3b8;">Total taxes paid so far: ${formatNairaFull(this.game.s.tax?.totalTaxesPaid || 0)}</div>
           </div>
-        </div>
-      `;
+        </div>`;
     }
 
     const payBtn = document.getElementById('btn-pay-taxes-action');
     if (payBtn) {
-      payBtn.textContent = `💳 Settle Tax Assessment (${formatNairaFull(assessment.totalTax)}) & Issue TCC`;
+      payBtn.textContent = `💳 Pay ${formatNairaFull(a.totalDue)} & get 14-day TCC`;
       payBtn.onclick = () => {
-        if (!this.game.canAfford(assessment.totalTax)) {
-          this.showToast(`⚠️ Insufficient funds to clear tax! Need ${formatNairaFull(assessment.totalTax)}.`);
-          return;
-        }
         const res = payTaxesAndIssueTCC(this.game.s);
-        if (res.success) {
-          this.showToast(`📜 FIRS Tax Cleared! Tax Clearance Certificate (TCC) issued valid until Day ${res.expiryDay}! (+5 Clout)`);
-          this.game.log(`Paid ${formatNairaFull(res.paid)} FIRS taxes. TCC valid until Day ${res.expiryDay}.`, 'good', '📜');
-          this._renderAll();
-          this._openTaxModal();
-        }
+        this.showToast(res.message);
+        if (res.success) this.game.log(res.message, 'good', '📜');
+        this._renderAll();
+        this._openTaxModal();
       };
     }
   }
@@ -5247,83 +5204,93 @@ class AbujaClientApp {
     if (!modal) return;
     modal.hidden = false;
 
-    const elState = this.game.s.elections || { party: null, votesMobilized: 0, campaignBudget: 0 };
-    const partiesGrid = document.getElementById('election-parties-grid');
-    if (partiesGrid) {
-      partiesGrid.innerHTML = POLITICAL_PARTIES.map((p) => {
-        const isMember = elState.party === p.id;
-        return `
-          <div style="background:#090d16; border:1.5px solid ${isMember ? p.color : 'var(--border-subtle)'}; border-radius:10px; padding:12px; display:flex; flex-direction:column; justify-content:space-between; gap:8px;">
-            <div>
-              <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span class="card-badge" style="background:${p.color}22; color:${p.color}; font-weight:800; font-size:12px;">${p.acronym}</span>
-                <span style="font-size:10.5px; color:#94a3b8;">${p.symbol} ${p.ideology}</span>
-              </div>
-              <h4 style="margin:6px 0 2px 0; color:#fff; font-size:13px;">${p.name}</h4>
-              <p style="font-size:11px; color:#38bdf8; margin:0 0 6px 0; font-style:italic;">"${p.slogan}"</p>
-              <p style="font-size:11px; color:#cbd5e1; margin:0; line-height:1.35;">${p.description}</p>
-            </div>
-            <div>
-              ${isMember ?
-                `<button class="btn-xs" style="width:100%; background:${p.color}; color:#fff; font-weight:700; border:none; padding:6px;" disabled>✅ Registered Party Member</button>` :
-                `<button type="button" class="btn-xs btn-join-party" data-id="${p.id}" style="width:100%; border:1px solid ${p.color}; color:${p.color}; padding:6px; font-weight:700;">Join ${p.acronym} Party</button>`
-              }
-            </div>
-          </div>
-        `;
-      }).join('');
+    const s = this.game.s;
+    const el = s.elections || (s.elections = { party: null, campaignClout: 0, office: null, voterRegistered: true, ralliesAttended: 0 });
 
-      partiesGrid.querySelectorAll('.btn-join-party').forEach((btn) => {
+    const refreshMusic = () => {
+      const st = this.afrobeats.getCurrentStation?.() || { name: 'WAZOBIA 99.5 FM' };
+      const playing = !!this.afrobeats.isPlaying;
+      const status = document.getElementById('election-music-status');
+      if (status) status.textContent = `${st.name} ${playing ? '• 🔊 Playing' : '• ⏸ Paused'}`;
+      const tog = document.getElementById('btn-toggle-afrobeats');
+      if (tog) tog.textContent = playing ? '⏸ Pause Nigerian Beat' : '▶️ Play Nigerian Beat';
+    };
+    refreshMusic();
+
+    const grid = document.getElementById('election-parties-grid');
+    if (grid) {
+      grid.innerHTML = POLITICAL_PARTIES.map((p) => {
+        const member = el.party === p.id;
+        return `
+          <div style="background:#090d16;border:1.5px solid ${member ? p.colorHex : 'var(--border-subtle)'};border-radius:10px;padding:12px;display:flex;flex-direction:column;justify-content:space-between;gap:8px;">
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span class="card-badge" style="background:${p.bgBadge};color:${p.textColor};font-weight:800;">${p.acronym}</span>
+                <span style="font-size:10.5px;color:#94a3b8;">${p.symbol}</span>
+              </div>
+              <h4 style="margin:6px 0 2px;color:#fff;font-size:13px;">${p.name}</h4>
+              <p style="font-size:11px;color:#38bdf8;margin:0 0 4px;font-style:italic;">"${p.slogan}"</p>
+              <p style="font-size:11px;color:#cbd5e1;margin:0;line-height:1.35;">${p.ideology}</p>
+              <p style="font-size:10.5px;color:#4ade80;margin:4px 0 0;">🎵 ${p.themeSong} • ${p.rallyAdvantage}</p>
+            </div>
+            ${member
+              ? `<button class="btn-xs" disabled style="width:100%;background:${p.colorHex};color:#fff;border:none;padding:10px;font-weight:700;">✅ Member</button>`
+              : `<button type="button" class="btn-xs btn-join-party" data-id="${p.id}" style="width:100%;border:1px solid ${p.colorHex};color:${p.textColor};padding:10px;font-weight:700;">Join ${p.acronym}</button>`}
+          </div>`;
+      }).join('');
+      grid.querySelectorAll('.btn-join-party').forEach((btn) => {
         btn.addEventListener('click', () => {
-          const pid = btn.dataset.id;
-          const party = POLITICAL_PARTIES.find((x) => x.id === pid);
+          const party = POLITICAL_PARTIES.find((x) => x.id === btn.dataset.id);
           if (!party) return;
-          if (!this.game.s.elections) this.game.s.elections = {};
-          this.game.s.elections.party = pid;
+          el.party = party.id;
           this.game.stat('clout', 4);
-          this.game.log(`Officially registered as a card-carrying member of ${party.name} (${party.acronym})!`, 'good', '🗳️');
-          this.showToast(`🗳️ Joined ${party.acronym}! Slogan: "${party.slogan}" (+4 Clout)`);
+          this.game.log(`Registered as a card-carrying member of ${party.name}.`, 'good', '🗳️');
+          this.showToast(`🗳️ Joined ${party.acronym} — "${party.slogan}" (+4 Clout)`);
           this._renderAll();
           this._openElectionModal();
         });
       });
     }
 
-    const ralliesList = document.getElementById('rally-venues-list');
-    if (ralliesList) {
-      ralliesList.innerHTML = RALLY_VENUES.map((v) => `
-        <div style="background:rgba(15,23,42,0.8); border:1px solid var(--border-subtle); border-radius:8px; padding:10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+    const rallies = document.getElementById('rally-venues-list');
+    if (rallies) {
+      const RALLY_COST = 15000;
+      rallies.innerHTML = RALLY_VENUES.map((v) => `
+        <div style="background:rgba(15,23,42,.8);border:1px solid var(--border-subtle);border-radius:8px;padding:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
           <div>
-            <strong style="color:#fff; font-size:12.5px;">${v.icon} ${v.name}</strong>
-            <div style="font-size:11px; color:#94a3b8;">📍 ${v.district.toUpperCase()} • Capacity: ${v.capacity.toLocaleString()} Citizens • ${v.perk}</div>
+            <strong style="color:#fff;font-size:12.5px;">🏟️ ${v.name}</strong>
+            <div style="font-size:11px;color:#94a3b8;">📍 ${v.district} • ${v.capacity.toLocaleString()} capacity</div>
+            <div style="font-size:11px;color:#cbd5e1;">${v.desc}</div>
           </div>
-          <button type="button" class="btn-xs btn-attend-rally" data-id="${v.id}" data-cost="${v.cost}" style="background:#ea580c; color:#fff; border:none; padding:6px 14px; font-weight:700; border-radius:6px;">
-            🎉 Attend Mega Rally (${formatNairaFull(v.cost)})
-          </button>
-        </div>
-      `).join('');
-
-      ralliesList.querySelectorAll('.btn-attend-rally').forEach((btn) => {
+          <button type="button" class="btn-xs btn-attend-rally" data-id="${v.id}" style="background:#ea580c;color:#fff;border:none;padding:10px 14px;font-weight:700;border-radius:6px;">🎉 Attend (${formatNairaFull(RALLY_COST)})</button>
+        </div>`).join('');
+      rallies.querySelectorAll('.btn-attend-rally').forEach((btn) => {
         btn.addEventListener('click', () => {
-          const vid = btn.dataset.id;
-          const cost = Number(btn.dataset.cost) || 15000;
-          const v = RALLY_VENUES.find((x) => x.id === vid);
+          const v = RALLY_VENUES.find((x) => x.id === btn.dataset.id);
           if (!v) return;
-          if (!this.game.canAfford(cost)) {
-            this.showToast(`⚠️ Need ${formatNairaFull(cost)} for campaign rally mobilization!`);
+          if (!this.game.canAfford(RALLY_COST)) {
+            this.showToast(`⚠️ Need ${formatNairaFull(RALLY_COST)} for rally logistics.`);
             return;
           }
-          this.game.pay(cost);
-          this.game.stat('clout', 8);
-          this.game.stat('sanity', 20);
+          this.game.pay(RALLY_COST);
+          this.game.stat('clout', el.party ? 8 : 4);
+          this.game.stat('sanity', 15);
+          el.ralliesAttended = (el.ralliesAttended || 0) + 1;
+          el.campaignClout = (el.campaignClout || 0) + 5;
           if (!this.afrobeats.isPlaying) this.afrobeats.toggle();
           if (this.world3d) this.world3d.spawnNairaRain(40);
-          this.game.log(`Rocked the campaign mega-rally at ${v.name}! Chanted party slogans with thousands of citizens.`, 'good', '🎉');
-          this.showToast(`🎉 Rallied at ${v.name}! Live Afrobeats booming! +8 Clout, +20 Sanity.`);
+          this.game.log(`Rocked the rally at ${v.name}!`, 'good', '🎉');
+          this.showToast(`🎉 Rally at ${v.name}! Afrobeats booming • +Clout +Sanity`);
           this._renderAll();
+          refreshMusic();
         });
       });
     }
+
+    const tog = document.getElementById('btn-toggle-afrobeats');
+    if (tog) tog.onclick = () => { this.afrobeats.toggle(); refreshMusic(); };
+    const sw = document.getElementById('btn-switch-station');
+    if (sw) sw.onclick = () => { this.afrobeats.cycleStation?.(); refreshMusic(); };
   }
 
   _openMegaHousingModal() {
@@ -5332,70 +5299,54 @@ class AbujaClientApp {
     modal.hidden = false;
 
     const dir = document.getElementById('mega-estates-directory');
-    if (dir) {
-      dir.innerHTML = MEGA_ESTATES.map((est) => `
-        <div style="background:#090d16; border:1px solid var(--border-subtle); border-radius:10px; padding:12px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px; margin-bottom:8px;">
-            <div>
-              <strong style="color:#fff; font-size:13.5px;">${est.icon} ${est.name}</strong>
-              <div style="font-size:11px; color:#38bdf8;">📍 ${est.district.toUpperCase()} • ${est.totalUnits.toLocaleString()} High-Capacity Player Units • Security: ${est.security}</div>
-            </div>
-            <div style="font-size:11px; color:#4ade80; display:flex; gap:6px; flex-wrap:wrap;">
-              ${est.amenities.map((a) => `<span class="meta-pill">${a}</span>`).join('')}
-            </div>
-          </div>
-          <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap:8px;">
-            ${est.unitTypes.map((u) => `
-              <div style="background:rgba(15,23,42,0.8); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:8px 10px; display:flex; flex-direction:column; justify-content:space-between; gap:6px;">
-                <div>
-                  <strong style="color:#fff; font-size:12px;">${u.name}</strong>
-                  <div style="font-size:11px; color:#facc15;">Rent: ${formatNairaFull(u.rentPerMonth)}/mo • Buy: ${formatNairaFull(u.buyPrice)}</div>
-                  <div style="font-size:10.5px; color:#94a3b8; margin-top:2px;">Capacity: ${u.capacity} citizens • Comfort: +${u.comfortBonus}</div>
-                </div>
-                <div style="display:flex; gap:6px; margin-top:4px;">
-                  <button type="button" class="btn-xs btn-rent-mega" data-rent="${u.rentPerMonth}" data-name="${u.name} at ${est.name}" style="flex:1; background:#10b981; color:#fff; border:none; padding:4px;">Rent</button>
-                  <button type="button" class="btn-xs btn-buy-mega" data-price="${u.buyPrice}" data-name="${u.name} at ${est.name}" style="flex:1; background:#2563eb; color:#fff; border:none; padding:4px;">Buy</button>
-                </div>
-              </div>
-            `).join('')}
-          </div>
+    if (!dir) return;
+    dir.innerHTML = MEGA_ESTATES.map((est) => `
+      <div style="background:#090d16;border:1px solid var(--border-subtle);border-radius:10px;padding:12px;">
+        <div style="border-bottom:1px solid rgba(255,255,255,.06);padding-bottom:8px;margin-bottom:8px;">
+          <strong style="color:#fff;font-size:13.5px;">${est.icon} ${est.name}</strong>
+          <div style="font-size:11px;color:#38bdf8;">📍 ${est.district} • ${est.type} • ${est.totalUnits.toLocaleString()} units</div>
+          <div style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap;">${(est.amenities || []).map((x) => `<span class="meta-pill">${x}</span>`).join('')}</div>
         </div>
-      `).join('');
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;">
+          ${est.units.map((u) => `
+            <div style="background:rgba(15,23,42,.8);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:9px 10px;display:flex;flex-direction:column;gap:6px;">
+              <div>
+                <strong style="color:#fff;font-size:12.5px;">${u.title}</strong>
+                <div style="font-size:11px;color:#facc15;">Rent ${formatNairaFull(u.rentMonthly)}/mo • Buy ${formatNairaFull(u.buyPrice)}</div>
+                <div style="font-size:10.5px;color:#94a3b8;">Sleeps ${u.maxOccupants} • Comfort +${u.comfortBuff}</div>
+              </div>
+              <div style="display:flex;gap:6px;">
+                <button type="button" class="btn-xs btn-rent-mega" data-est="${est.id}" data-unit="${u.id}" style="flex:1;background:#10b981;color:#fff;border:none;padding:10px;border-radius:6px;font-weight:700;">Rent</button>
+                <button type="button" class="btn-xs btn-buy-mega" data-est="${est.id}" data-unit="${u.id}" style="flex:1;background:#2563eb;color:#fff;border:none;padding:10px;border-radius:6px;font-weight:700;">Buy</button>
+              </div>
+            </div>`).join('')}
+        </div>
+      </div>`).join('');
 
-      dir.querySelectorAll('.btn-rent-mega').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const rent = Number(btn.dataset.rent);
-          const name = btn.dataset.name;
-          if (!this.game.canAfford(rent)) {
-            this.showToast(`⚠️ Need ${formatNairaFull(rent)} first month rent!`);
-            return;
-          }
-          this.game.pay(rent);
-          this.game.stat('clout', 3);
-          this.game.stat('sanity', 15);
-          this.game.log(`Rented unit in ${name}! Estate security badge issued.`, 'good', '🏡');
-          this.showToast(`🏡 Rented ${name}! +3 Clout, +15 Sanity.`);
-          this._renderAll();
-        });
-      });
-
-      dir.querySelectorAll('.btn-buy-mega').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const price = Number(btn.dataset.price);
-          const name = btn.dataset.name;
-          if (!this.game.canAfford(price)) {
-            this.showToast(`⚠️ Need ${formatNairaFull(price)} to purchase this luxury apartment!`);
-            return;
-          }
-          this.game.pay(price);
-          this.game.stat('clout', 20);
-          this.game.stat('sanity', 40);
-          this.game.log(`Purchased C of O title deed for ${name}!`, 'good', '🏙️');
-          this.showToast(`🏙️ Congratulations! You now own ${name}! (+20 Clout)`);
-          this._renderAll();
-        });
-      });
-    }
+    const find = (btn) => {
+      const est = MEGA_ESTATES.find((e) => e.id === btn.dataset.est);
+      const unit = est?.units.find((x) => x.id === btn.dataset.unit);
+      return { est, unit };
+    };
+    const settle = (mode, btn) => {
+      const { est, unit } = find(btn);
+      if (!est || !unit) return;
+      const price = mode === 'buy' ? unit.buyPrice : unit.rentMonthly;
+      if (!this.game.canAfford(price)) {
+        this.showToast(`⚠️ Need ${formatNairaFull(price)}.`);
+        return;
+      }
+      this.game.pay(price);
+      this.game.s.social.megaHome = { estate: est.name, unit: unit.title, mode };
+      this.game.stat('clout', mode === 'buy' ? 12 : 3);
+      this.game.stat('sanity', mode === 'buy' ? 30 : 12);
+      const msg = mode === 'buy' ? `Bought ${unit.title} at ${est.name}!` : `Rented ${unit.title} at ${est.name}.`;
+      this.game.log(msg, 'good', '🏙️');
+      this.showToast(`🏙️ ${msg}`);
+      this._renderAll();
+    };
+    dir.querySelectorAll('.btn-rent-mega').forEach((b) => b.addEventListener('click', () => settle('rent', b)));
+    dir.querySelectorAll('.btn-buy-mega').forEach((b) => b.addEventListener('click', () => settle('buy', b)));
   }
 
   showToast(message) {
@@ -5413,5 +5364,10 @@ class AbujaClientApp {
 
 window.addEventListener('DOMContentLoaded', () => {
   window.abujaApp = new AbujaClientApp();
+  try {
+    initUIExtras(window.abujaApp);
+  } catch (err) {
+    console.warn('UI extras failed to initialise:', err);
+  }
 });
 

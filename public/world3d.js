@@ -1813,12 +1813,13 @@ export class AbujaWorld3D {
     shirtColor = 0xf8fafc,
     pantsColor = 0x111827,
     shoeColor = 0xfacc15,
-    skinColor = 0x6b3e26
+    skinColor = 0x6b3e26,
+    hairColor = 0x090d16
   } = {}) {
     const root = new THREE.Group();
 
     const skinMat = new THREE.MeshStandardMaterial({ color: skinColor, roughness: 0.52, metalness: 0.06 });
-    const hairMat = new THREE.MeshStandardMaterial({ color: 0x090d16, roughness: 0.85 });
+    const hairMat = new THREE.MeshStandardMaterial({ color: hairColor, roughness: 0.85 });
     const jacketMat = new THREE.MeshStandardMaterial({ color: jacketColor, roughness: 0.42, metalness: 0.08 });
     const shirtMat = new THREE.MeshStandardMaterial({ color: shirtColor, roughness: 0.5 });
     const pantsMat = new THREE.MeshStandardMaterial({ color: pantsColor, roughness: 0.62 });
@@ -2617,19 +2618,25 @@ export class AbujaWorld3D {
     this.playerGroup.add(this.playerVehicleMesh);
 
     // Articulated Realistic 3rd-Person Nigeria GTA Human Character
-    this.playerHuman = this._buildHumanoidRig({
-      jacketColor: 0xf472b6,
-      shirtColor: 0xf8fafc,
-      pantsColor: 0x111827,
-      shoeColor: 0xfacc15,
-      skinColor: 0x6b3e26
-    });
+    this.playerHuman = this._buildHumanoidRig(this.playerLook || {});
     this.playerPedMesh = this.playerHuman.root;
     this.playerPedMesh.position.y = 0.2;
     this.playerPedMesh.visible = !this.inVehicle;
     this.playerGroup.add(this.playerPedMesh);
 
     this.scene.add(this.playerGroup);
+  }
+
+  /** Rebuild the player's avatar with a new look (skin, hair, outfit colours). */
+  setPlayerLook(look = {}) {
+    this.playerLook = { ...(this.playerLook || {}), ...look };
+    if (!this.playerGroup) return;
+    if (this.playerPedMesh) this.playerGroup.remove(this.playerPedMesh);
+    this.playerHuman = this._buildHumanoidRig(this.playerLook);
+    this.playerPedMesh = this.playerHuman.root;
+    this.playerPedMesh.position.y = 0.2;
+    this.playerPedMesh.visible = !this.inVehicle;
+    this.playerGroup.add(this.playerPedMesh);
   }
 
   triggerStreetPunch() {
