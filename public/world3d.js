@@ -207,6 +207,54 @@ export class AbujaWorld3D {
   }
 
   /**
+   * Procedural African fabric textures (Ankara African wax prints & metallic Brocade jacquard)
+   */
+  _createFabricTexture(pattern, primaryHex = 0x1e3a8a, accentHex = 0xfacc15) {
+    const toHexStr = (c) => '#' + ('000000' + Number(c).toString(16)).slice(-6);
+    const pCol = toHexStr(primaryHex);
+    const aCol = toHexStr(accentHex);
+
+    return this._makeCanvasTex(128, 128, (ctx, W, H) => {
+      ctx.fillStyle = pCol;
+      ctx.fillRect(0, 0, W, H);
+
+      if (pattern === 'ankara') {
+        // Vibrant Nigerian African Wax Ankara Print
+        ctx.fillStyle = aCol;
+        for (let x = 16; x < W; x += 32) {
+          for (let y = 16; y < H; y += 32) {
+            ctx.beginPath();
+            ctx.arc(x, y, 7, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(x - 11, y - 11, 22, 22);
+
+            ctx.fillStyle = '#ef4444';
+            ctx.fillRect(x - 2.5, y - 2.5, 5, 5);
+            ctx.fillStyle = aCol;
+          }
+        }
+      } else if (pattern === 'brocade') {
+        // Elegant Jacquard / Damask Brocade sheen
+        ctx.fillStyle = aCol;
+        ctx.globalAlpha = 0.35;
+        for (let i = 0; i < W; i += 16) {
+          ctx.beginPath();
+          ctx.moveTo(i, 0);
+          ctx.lineTo(i + 8, H / 2);
+          ctx.lineTo(i, H);
+          ctx.lineTo(i - 8, H / 2);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1.0;
+      }
+    });
+  }
+
+  /**
    * Procedural Nigeria afternoon sky — deep cobalt zenith fading to warm tropical haze horizon.
    */
   _makeSkyTexture() {
@@ -540,6 +588,7 @@ export class AbujaWorld3D {
       roughness: 0.88,
       metalness: 0.05
     });
+    this.roadMat = roadMat;
     const shoulderSandMat = new THREE.MeshStandardMaterial({
       color: 0xc4a882,
       roughness: 0.96
@@ -717,6 +766,7 @@ export class AbujaWorld3D {
     body.position.y = height * 0.5;
     body.castShadow = true;
     body.receiveShadow = true;
+    body.userData = { isWall: true, origHeight: height, origPosY: height * 0.5 };
     house.add(body);
 
     // White concrete plinth (ground slab)
@@ -762,6 +812,7 @@ export class AbujaWorld3D {
     roof.position.y = height + 2.4;
     roof.rotation.y = Math.PI / 4;
     roof.castShadow = true;
+    roof.userData = { isRoof: true };
     house.add(roof);
 
     // Window glass — tinted, slightly emissive (some lit at night)
@@ -1814,21 +1865,34 @@ export class AbujaWorld3D {
     pantsColor = 0x111827,
     shoeColor = 0xfacc15,
     skinColor = 0x6b3e26,
-    hairColor = 0x090d16
+    hairColor = 0x090d16,
+    hairstyle = 'fade',
+    glasses = 'none',
+    fabricPattern = 'solid',
+    agbadaDrape = false
   } = {}) {
     const root = new THREE.Group();
 
-    const skinMat = new THREE.MeshStandardMaterial({ color: skinColor, roughness: 0.52, metalness: 0.06 });
-    const hairMat = new THREE.MeshStandardMaterial({ color: hairColor, roughness: 0.85 });
-    const jacketMat = new THREE.MeshStandardMaterial({ color: jacketColor, roughness: 0.42, metalness: 0.08 });
-    const shirtMat = new THREE.MeshStandardMaterial({ color: shirtColor, roughness: 0.5 });
-    const pantsMat = new THREE.MeshStandardMaterial({ color: pantsColor, roughness: 0.62 });
-    const shoeMat = new THREE.MeshStandardMaterial({ color: shoeColor, roughness: 0.35, metalness: 0.12 });
+    const fabTex = fabricPattern !== 'solid' && typeof this._createFabricTexture === 'function'
+      ? this._createFabricTexture(fabricPattern, jacketColor, shirtColor)
+      : null;
+
+    const skinMat = new THREE.MeshStandardMaterial({ color: skinColor, roughness: 0.46, metalness: 0.08 });
+    const hairMat = new THREE.MeshStandardMaterial({ color: hairColor, roughness: 0.82 });
+    const jacketMat = new THREE.MeshStandardMaterial({
+      color: fabTex ? 0xffffff : jacketColor,
+      map: fabTex || null,
+      roughness: 0.4,
+      metalness: 0.1
+    });
+    const shirtMat = new THREE.MeshStandardMaterial({ color: shirtColor, roughness: 0.48 });
+    const pantsMat = new THREE.MeshStandardMaterial({ color: pantsColor, roughness: 0.58 });
+    const shoeMat = new THREE.MeshStandardMaterial({ color: shoeColor, roughness: 0.32, metalness: 0.15 });
     const soleMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.45 });
     const eyeWhiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
     const pupilMat = new THREE.MeshBasicMaterial({ color: 0x090d16 });
-    const lipMat = new THREE.MeshStandardMaterial({ color: 0x4a2518, roughness: 0.55 });
-    const goldMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, metalness: 0.88, roughness: 0.18 });
+    const lipMat = new THREE.MeshStandardMaterial({ color: 0x4a2518, roughness: 0.52 });
+    const goldMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, metalness: 0.9, roughness: 0.16 });
     const beltMat = new THREE.MeshStandardMaterial({ color: 0x090d16, roughness: 0.35, metalness: 0.3 });
 
     // --- 1. ATHLETIC ANATOMICAL TORSO (Tapered V-Shape Chest + Open Jacket + Fitted Inner Tee) ---
@@ -1843,6 +1907,24 @@ export class AbujaWorld3D {
     chestCore.scale.set(1.08, 1.0, 0.64);
     chestCore.castShadow = true;
     torso.add(chestCore);
+
+    // Optional Flowing Royal Agbada Drape & Gold Embroidery Panel
+    if (agbadaDrape) {
+      const drapeWing = new THREE.Mesh(
+        new THREE.CylinderGeometry(1.18, 1.04, 2.08, 18),
+        jacketMat
+      );
+      drapeWing.scale.set(1.12, 1.0, 0.52);
+      drapeWing.position.y = -0.14;
+      torso.add(drapeWing);
+
+      const embroidery = new THREE.Mesh(
+        new THREE.BoxGeometry(0.56, 0.95, 0.06),
+        goldMat
+      );
+      embroidery.position.set(0, 0.24, 0.56);
+      torso.add(embroidery);
+    }
 
     // Inner fitted crew-neck shirt visible on front (+Z is forward)
     const frontTee = new THREE.Mesh(
@@ -1916,7 +1998,7 @@ export class AbujaWorld3D {
     buckle.position.set(0, 1.82, 0.39);
     root.add(buckle);
 
-    // --- 3. REALISTIC HUMAN HEAD, FACIAL FEATURES & NIGERIAN TAPER FADE HAIRCUT ---
+    // --- 3. REALISTIC HUMAN HEAD, FACIAL FEATURES & NIGERIAN GROOM / HEADWEAR ---
     const neck = new THREE.Mesh(
       new THREE.CylinderGeometry(0.21, 0.25, 0.38, 14),
       skinMat
@@ -1945,7 +2027,7 @@ export class AbujaWorld3D {
     jaw.position.set(0, -0.16, 0.06);
     headGroup.add(jaw);
 
-    // Crisp Nigerian Taper Fade / Afro Sponge Twist Top + Hairline
+    // Hair & Nigerian Cultural Headwear Variations (Fade, Afro, Locs, Gele Wrap, Fila Cap)
     const hairTop = new THREE.Mesh(
       new THREE.SphereGeometry(0.435, 20, 16, 0, Math.PI * 2, 0, Math.PI * 0.56),
       hairMat
@@ -1954,13 +2036,59 @@ export class AbujaWorld3D {
     hairTop.position.y = 0.04;
     headGroup.add(hairTop);
 
-    const hairCrown = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.35, 0.38, 0.18, 16),
-      hairMat
-    );
-    hairCrown.scale.set(0.92, 1.0, 0.96);
-    hairCrown.position.y = 0.38;
-    headGroup.add(hairCrown);
+    if (hairstyle === 'afro') {
+      const afro = new THREE.Mesh(new THREE.SphereGeometry(0.58, 18, 16), hairMat);
+      afro.position.set(0, 0.22, -0.04);
+      headGroup.add(afro);
+    } else if (hairstyle === 'locs' || hairstyle === 'braids') {
+      for (let i = 0; i < 12; i++) {
+        const ang = (i / 12) * Math.PI * 1.5 + Math.PI * 0.25;
+        const strand = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.048, 0.036, hairstyle === 'braids' ? 0.85 : 0.68, 8),
+          hairMat
+        );
+        strand.position.set(Math.cos(ang) * 0.36, -0.05, Math.sin(ang) * 0.36 - 0.05);
+        strand.rotation.z = Math.cos(ang) * 0.18;
+        headGroup.add(strand);
+      }
+    } else if (hairstyle === 'gele') {
+      const geleMat = new THREE.MeshStandardMaterial({ color: jacketColor, roughness: 0.3, metalness: 0.25 });
+      const geleCrown = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.19, 12, 24), geleMat);
+      geleCrown.rotation.x = Math.PI / 2 - 0.32;
+      geleCrown.position.set(0, 0.38, -0.04);
+      headGroup.add(geleCrown);
+    } else if (hairstyle === 'fila') {
+      const filaMat = new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.38, metalness: 0.2 });
+      const fila = new THREE.Mesh(new THREE.CylinderGeometry(0.39, 0.42, 0.38, 18), filaMat);
+      fila.position.set(0, 0.42, 0);
+      fila.rotation.z = 0.16;
+      headGroup.add(fila);
+    } else {
+      const hairCrown = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.35, 0.38, 0.18, 16),
+        hairMat
+      );
+      hairCrown.scale.set(0.92, 1.0, 0.96);
+      hairCrown.position.y = 0.38;
+      headGroup.add(hairCrown);
+    }
+
+    // Optional Designer Sunglasses / Alhaji Aviators
+    if (glasses && glasses !== 'none') {
+      const lensMat = new THREE.MeshStandardMaterial({
+        color: glasses === 'aviator' ? 0x1e293b : 0x020617,
+        metalness: 0.85,
+        roughness: 0.12
+      });
+      for (const side of [-1, 1]) {
+        const lens = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.11, 0.05), lensMat);
+        lens.position.set(side * 0.15, 0.05, 0.42);
+        headGroup.add(lens);
+      }
+      const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.025, 0.04), goldMat);
+      bridge.position.set(0, 0.07, 0.43);
+      headGroup.add(bridge);
+    }
 
     // Realistic Eyes (Sclera + Dark Iris/Pupil) + Eyebrows
     for (const side of [-1, 1]) {
@@ -2592,6 +2720,105 @@ export class AbujaWorld3D {
     });
   }
 
+  _initThoughtBubble() {
+    if (this.thoughtBubbleGroup) return;
+    const group = new THREE.Group();
+    group.visible = false;
+    group.position.set(0, 7.2, 0);
+
+    const dotMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85 });
+    const dot1 = new THREE.Mesh(new THREE.SphereGeometry(0.12, 10, 8), dotMat);
+    dot1.position.set(0.35, -0.65, 0);
+    const dot2 = new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 8), dotMat);
+    dot2.position.set(0.55, -0.32, 0);
+    group.add(dot1, dot2);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 384;
+    canvas.height = 160;
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.needsUpdate = true;
+
+    const planeMat = new THREE.MeshBasicMaterial({
+      map: tex,
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide
+    });
+    const plane = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 1.5), planeMat);
+    plane.position.set(0.7, 0.45, 0);
+    group.add(plane);
+
+    group.userData = { canvas, tex, plane, timer: null };
+    this.thoughtBubbleGroup = group;
+    if (this.playerGroup) this.playerGroup.add(group);
+  }
+
+  showThoughtBubble(emoji = '💡', text = 'Thinking...', durationMs = 3500) {
+    if (!this.thoughtBubbleGroup) this._initThoughtBubble();
+    const bg = this.thoughtBubbleGroup;
+    if (!bg) return;
+
+    const ud = bg.userData;
+    const ctx = ud.canvas.getContext('2d');
+    const W = ud.canvas.width;
+    const H = ud.canvas.height;
+
+    ctx.clearRect(0, 0, W, H);
+
+    const r = 24;
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.94)';
+    ctx.strokeStyle = '#4ade80';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    if (typeof ctx.roundRect === 'function') {
+      ctx.roundRect(8, 8, W - 16, H - 16, r);
+    } else {
+      ctx.rect(8, 8, W - 16, H - 16);
+    }
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.font = '52px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(emoji, 60, H / 2);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 22px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+
+    const maxTxtW = W - 130;
+    let dispText = text;
+    if (ctx.measureText(dispText).width > maxTxtW) {
+      while (dispText.length > 3 && ctx.measureText(dispText + '...').width > maxTxtW) {
+        dispText = dispText.slice(0, -1);
+      }
+      dispText += '...';
+    }
+    ctx.fillText(dispText, 115, H / 2);
+
+    ud.tex.needsUpdate = true;
+    bg.visible = true;
+    bg.scale.set(0.1, 0.1, 0.1);
+
+    const startTime = performance.now();
+    const anim = () => {
+      const now = performance.now();
+      const progress = Math.min(1, (now - startTime) / 180);
+      const scale = THREE.MathUtils.lerp(0.1, 1.0, Math.sin(progress * Math.PI * 0.5));
+      bg.scale.set(scale, scale, scale);
+      if (progress < 1) requestAnimationFrame(anim);
+    };
+    requestAnimationFrame(anim);
+
+    if (ud.timer) clearTimeout(ud.timer);
+    ud.timer = setTimeout(() => {
+      bg.visible = false;
+    }, durationMs);
+  }
+
   _buildLocalPlayerRig() {
     this.playerGroup = new THREE.Group();
     this.playerGroup.position.copy(this.playerPos);
@@ -2611,6 +2838,9 @@ export class AbujaWorld3D {
     this.plumbob = this._buildPlumbob();
     this.plumbob.position.y = this.inVehicle ? 4.3 : 5.8;
     this.playerGroup.add(this.plumbob);
+
+    // Dynamic 3D Sims Thought Bubble for autonomous AI and motive needs
+    this._initThoughtBubble();
 
     // Player Widebody Sports Car (visible when inVehicle === true, matching user screenshot)
     this.playerVehicleMesh = this._buildWidebodySportsCar();
@@ -2796,6 +3026,92 @@ export class AbujaWorld3D {
     return this.cameraMode;
   }
 
+  cycleWallCutaway(forcedMode) {
+    const modes = ['up', 'cutaway', 'down'];
+    if (forcedMode && modes.includes(forcedMode)) {
+      this.wallCutawayMode = forcedMode;
+    } else {
+      const idx = modes.indexOf(this.wallCutawayMode || 'up');
+      this.wallCutawayMode = modes[(idx + 1) % modes.length];
+    }
+
+    const mode = this.wallCutawayMode;
+    const isCutaway = mode === 'cutaway';
+    const isDown = mode === 'down';
+
+    this.scene.traverse((obj) => {
+      if (!obj.userData) return;
+      if (obj.userData.isRoof) {
+        obj.visible = (mode === 'up');
+      } else if (obj.userData.isWall && obj.userData.origHeight) {
+        if (isDown) {
+          obj.scale.y = 0.08;
+          obj.position.y = (obj.userData.origPosY || obj.position.y) * 0.08;
+        } else if (isCutaway) {
+          obj.scale.y = 0.32;
+          obj.position.y = (obj.userData.origPosY || obj.position.y) * 0.32;
+        } else {
+          obj.scale.y = 1.0;
+          obj.position.y = obj.userData.origPosY || (obj.userData.origHeight * 0.5);
+        }
+      }
+    });
+
+    return this.wallCutawayMode;
+  }
+
+  pickContextAtScreen(clientX, clientY) {
+    if (!this.renderer || !this.camera) return { type: 'ground' };
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    const ndc = new THREE.Vector2(
+      ((clientX - rect.left) / rect.width) * 2 - 1,
+      -((clientY - rect.top) / rect.height) * 2 + 1
+    );
+    this.raycaster.setFromCamera(ndc, this.camera);
+
+    // 1. Check player avatar
+    if (this.playerGroup) {
+      const pHits = this.raycaster.intersectObject(this.playerGroup, true);
+      if (pHits.length > 0 && pHits[0].distance < 450) {
+        return { type: 'player', point: pHits[0].point };
+      }
+    }
+
+    // 2. Check remote players / multiplayer avatars
+    if (this.remotePlayers && this.remotePlayers.size > 0) {
+      for (const [id, rp] of this.remotePlayers.entries()) {
+        const rHits = this.raycaster.intersectObject(rp.group, true);
+        if (rHits.length > 0) {
+          return { type: 'npc', id, username: rp.name, point: rHits[0].point };
+        }
+      }
+    }
+
+    // 3. Check player houses / compounds
+    if (this.playerHouseEntries && this.playerHouseEntries.size > 0) {
+      for (const [distId, entry] of this.playerHouseEntries.entries()) {
+        const hHits = this.raycaster.intersectObject(entry.group, true);
+        if (hHits.length > 0) {
+          return { type: 'house', districtId: distId, stage: entry.stage, point: hHits[0].point };
+        }
+      }
+    }
+
+    // 4. Check district buildings
+    if (this.clickableDistrictMeshes && this.clickableDistrictMeshes.length > 0) {
+      const distHits = this.raycaster.intersectObjects(this.clickableDistrictMeshes, false);
+      if (distHits.length > 0) {
+        return {
+          type: 'district',
+          districtId: distHits[0].object.userData?.districtId,
+          point: distHits[0].point
+        };
+      }
+    }
+
+    return { type: 'ground' };
+  }
+
   toggleLowPowerMode() {
     this.lowPowerMode = !this.lowPowerMode;
     this.renderer.setPixelRatio(this.lowPowerMode ? 0.85 : Math.min(window.devicePixelRatio || 1, 2));
@@ -2841,15 +3157,15 @@ export class AbujaWorld3D {
     this.hourOfDay = hour;
     this.weather = weather;
 
-    // Keep bright tropical Nigeria GTA daytime look clearly visible, with atmospheric tint for night/harmattan
     const isNight = hour >= 20 || hour < 6;
     const isDusk = (hour >= 18 && hour < 20) || (hour >= 6 && hour < 7);
+    const isWet = weather === 'storm' || weather === 'downpour' || weather === 'rain';
 
     if (weather === 'harmattan' || weather === 'dry') {
       this.scene.background.setHex(isNight ? 0x334155 : 0xfde68a);
       this.scene.fog.color.setHex(isNight ? 0x334155 : 0xfef3c7);
       this.scene.fog.density = 0.00055;
-    } else if (weather === 'storm' || weather === 'downpour') {
+    } else if (isWet) {
       this.scene.background.setHex(0x64748b);
       this.scene.fog.color.setHex(0x94a3b8);
       this.scene.fog.density = 0.00065;
@@ -2870,9 +3186,28 @@ export class AbujaWorld3D {
     this.sunLight.intensity = isNight ? 0.95 : isDusk ? 1.35 : 1.75;
     this.sunLight.color.setHex(isDusk ? 0xfdba74 : isNight ? 0x93c5fd : 0xfffbeb);
 
+    if (this.roadMat) {
+      this.roadMat.roughness = isWet ? 0.15 : 0.88;
+      this.roadMat.metalness = isWet ? 0.55 : 0.05;
+    }
+
     for (const mat of this.windowMaterials) {
       mat.emissiveIntensity = isNight ? 0.85 : 0.22;
     }
+  }
+
+  setWeatherPreset(preset = 'sunny') {
+    const presets = {
+      sunny: { hour: 13, weather: 'sunny' },
+      rain: { hour: 15, weather: 'downpour' },
+      harmattan: { hour: 10, weather: 'harmattan' },
+      sunset: { hour: 18.5, weather: 'sunny' },
+      night: { hour: 22, weather: 'dry' }
+    };
+    const p = presets[preset] || presets.sunny;
+    this.weatherPreset = preset;
+    this.setEnvironment(p.hour, p.weather);
+    return preset;
   }
 
   spawnNairaRain(count = 28) {
@@ -3086,6 +3421,12 @@ export class AbujaWorld3D {
       this.plumbob.position.y = baseHeight + Math.sin(t * 3.2) * 0.12;
       const pulse = 1.0 + Math.sin(t * 4.0) * 0.05;
       this.plumbob.scale.set(pulse, pulse, pulse);
+    }
+
+    if (this.thoughtBubbleGroup && this.thoughtBubbleGroup.visible) {
+      this.thoughtBubbleGroup.quaternion.copy(this.camera.quaternion);
+      const bob = Math.sin(this.clock.elapsedTime * 3.0) * 0.08;
+      this.thoughtBubbleGroup.position.y = (this.inVehicle ? 5.8 : 7.2) + bob;
     }
 
     for (const entry of this.remotePlayers.values()) {
@@ -3310,6 +3651,27 @@ export class AbujaWorld3D {
     if (ud?.trimMat) ud.trimMat.color.setHex(cfg.trim);
   }
 
+  setCarWrap(colorHex, finish = 'metallic') {
+    if (!this.playerVehicleMesh?.userData) return;
+    const ud = this.playerVehicleMesh.userData;
+    if (!ud.paintMat) return;
+    const col = typeof colorHex === 'string' ? parseInt(colorHex.replace('#', ''), 16) : colorHex;
+    ud.paintMat.color.setHex(col);
+    if (finish === 'matte') {
+      ud.paintMat.roughness = 0.85;
+      ud.paintMat.metalness = 0.05;
+      ud.paintMat.clearcoat = 0.0;
+    } else if (finish === 'chrome') {
+      ud.paintMat.roughness = 0.06;
+      ud.paintMat.metalness = 0.96;
+      ud.paintMat.clearcoat = 1.0;
+    } else { // metallic
+      ud.paintMat.roughness = 0.28;
+      ud.paintMat.metalness = 0.82;
+      ud.paintMat.clearcoat = 0.8;
+    }
+  }
+
   syncPlayerHouses(plots = []) {
     if (!this.playerHouseEntries) this.playerHouseEntries = new Map();
     const seen = new Set();
@@ -3365,6 +3727,7 @@ export class AbujaWorld3D {
           );
           walls.position.y = 2.0 + wallH / 2;
           walls.castShadow = true;
+          walls.userData = { isWall: true, origHeight: wallH, origPosY: 2.0 + wallH / 2 };
           group.add(walls);
         }
 
@@ -3380,6 +3743,7 @@ export class AbujaWorld3D {
           );
           roof.position.y = 15.6;
           roof.rotation.y = Math.PI / 4;
+          roof.userData = { isRoof: true };
           group.add(roof);
         }
 
