@@ -223,7 +223,29 @@ class AbujaClientApp {
       if (raw) loaded = Game.load(raw, hooks);
     } catch (_) {}
 
-    this.game = loaded || Game.create({ name: 'Tunde', track: 'civil' }, hooks);
+    if (!loaded) {
+      let savedProfile = null;
+      try {
+        savedProfile = JSON.parse(localStorage.getItem('abuja_saved_citizen_profile') || 'null');
+      } catch (_) {}
+
+      if (savedProfile && savedProfile.name) {
+        const stObj = LIFE_STAGES[savedProfile.lifeStage] || LIFE_STAGES.adult;
+        loaded = Game.create({
+          name: savedProfile.name,
+          track: savedProfile.trackId || 'contractor',
+          gender: savedProfile.gender || 'male',
+          age: stObj.defaultAge || 28,
+          lifeStage: savedProfile.lifeStage || 'adult',
+          lifestyle: savedProfile.lifestyle || 'alhaji',
+          prevProperty: savedProfile.prevProperty || 'default'
+        }, hooks);
+      } else {
+        loaded = Game.create({ name: 'Alhaji Musa', track: 'contractor', lifestyle: 'alhaji' }, hooks);
+      }
+    }
+
+    this.game = loaded;
     this.lastFunds = this.game.funds();
 
     this.game.on((type, data) => {
@@ -4752,6 +4774,13 @@ class AbujaClientApp {
         const lifestyle = document.getElementById('char-lifestyle-select')?.value || 'alhaji';
         const propMode = document.getElementById('char-prev-prop-select')?.value || 'default';
 
+        // Persist sign-up details in browser localStorage
+        try {
+          localStorage.setItem('abuja_saved_citizen_profile', JSON.stringify({
+            name, trackId, gender, lifeStage, lifestyle, prevProperty: propMode
+          }));
+        } catch (_) {}
+
         this.game = Game.create({
           name,
           track: trackId,
@@ -4969,98 +4998,148 @@ class AbujaClientApp {
     const modal = document.getElementById('new-char-modal');
     if (!modal) return;
 
+    let saved = null;
+    try {
+      saved = JSON.parse(localStorage.getItem('abuja_saved_citizen_profile') || 'null');
+    } catch (_) {}
+
     const nameInp = document.getElementById('char-name-input');
     const occSel = document.getElementById('char-occupation-select');
-    const occPreview = document.getElementById('char-occupation-preview');
     const genderSel = document.getElementById('char-gender-select');
     const stageSel = document.getElementById('char-lifestage-select');
-    const stagePreview = document.getElementById('char-lifestage-preview');
     const lifestyleSel = document.getElementById('char-lifestyle-select');
-    const lifestylePreview = document.getElementById('char-lifestyle-preview');
     const propSel = document.getElementById('char-prev-prop-select');
+    const passportCard = document.getElementById('char-passport-preview');
 
     if (nameInp) {
-      nameInp.value = this.game.s.meta.name || 'Alhaji Musa';
+      nameInp.value = (saved && saved.name) ? saved.name : (this.game.s.meta.name || 'Alhaji Musa');
     }
 
-    // 1. Occupation Dropdown
+    // 1. Clean Occupation Dropdown
     if (occSel) {
+      const activeTrack = (saved && saved.trackId) || this.game.s.career.track || 'contractor';
       occSel.innerHTML = Object.values(TRACKS).map((tr) => `
-        <option value="${tr.id}" ${tr.id === (this.game.s.career.track || 'contractor') ? 'selected' : ''}>
-          ${tr.icon} ${tr.name} — ${tr.tagline}
+        <option value="${tr.id}" ${tr.id === activeTrack ? 'selected' : ''}>
+          ${tr.icon} ${tr.name} (${tr.field})
         </option>
       `).join('');
-      const updateOcc = () => {
-        const tr = TRACKS[occSel.value] || TRACKS.contractor;
-        if (occPreview) {
-          occPreview.innerHTML = `<strong>💼 Selected Track: ${tr.name}</strong> — ${tr.tagline}`;
-        }
-      };
-      occSel.onchange = updateOcc;
-      updateOcc();
     }
 
-    // 2. Gender Dropdown
+    // 2. Clean Gender Dropdown
     if (genderSel) {
+      const activeGender = (saved && saved.gender) || this.game.s.meta.gender || 'male';
       genderSel.innerHTML = Object.values(GENDERS).map((g) => `
-        <option value="${g.id}" ${g.id === (this.game.s.meta.gender || 'male') ? 'selected' : ''}>
+        <option value="${g.id}" ${g.id === activeGender ? 'selected' : ''}>
           ${g.label}
         </option>
       `).join('');
     }
 
-    // 3. Life Stage Dropdown
+    // 3. Clean Life Stage Dropdown
     if (stageSel) {
+      const activeStage = (saved && saved.lifeStage) || this.game.s.meta.lifeStage || 'adult';
       stageSel.innerHTML = Object.values(LIFE_STAGES).map((st) => `
-        <option value="${st.id}" ${st.id === (this.game.s.meta.lifeStage || 'adult') ? 'selected' : ''}>
-          ${st.label} (Default Age: ${st.defaultAge} yrs)
+        <option value="${st.id}" ${st.id === activeStage ? 'selected' : ''}>
+          ${st.label} (${st.defaultAge} yrs)
         </option>
       `).join('');
-      const updateStage = () => {
-        const st = LIFE_STAGES[stageSel.value] || LIFE_STAGES.adult;
-        if (stagePreview) {
-          stagePreview.innerHTML = `<strong>🎂 ${st.label}:</strong> ${st.desc}`;
-        }
-      };
-      stageSel.onchange = updateStage;
-      updateStage();
     }
 
-    // 4. Nigerian Lifestyle Caliber Dropdown
+    // 4. Clean Nigerian Lifestyle Caliber Dropdown
     if (lifestyleSel) {
+      const activeLifestyle = (saved && saved.lifestyle) || this.game.s.meta.lifestyle || 'alhaji';
       lifestyleSel.innerHTML = Object.values(NIGERIAN_LIFESTYLES).map((ls) => `
-        <option value="${ls.id}" ${ls.id === (this.game.s.meta.lifestyle || 'alhaji') ? 'selected' : ''}>
-          ${ls.name} (${ls.caliber} • ${ls.worthLabel})
+        <option value="${ls.id}" ${ls.id === activeLifestyle ? 'selected' : ''}>
+          ${ls.name.split(' (')[0]} • ${ls.worthLabel}
         </option>
       `).join('');
-      const updateLifestyle = () => {
+    }
+
+    // 5. Clean Starting Accommodation & Ride Dropdown
+    if (propSel) {
+      const activeProp = (saved && saved.prevProperty) || 'default';
+      propSel.innerHTML = Object.values(PREVIOUS_PROPERTY_OPTIONS).map((p) => `
+        <option value="${p.id}" ${p.id === activeProp ? 'selected' : ''}>
+          ${p.label.split(' (')[0]}
+        </option>
+      `).join('');
+    }
+
+    // Unified Reactive Citizen Passport & Preview Card
+    const updatePassportPreview = () => {
+      const name = nameInp?.value?.trim() || 'Citizen';
+      const tr = TRACKS[occSel?.value] || TRACKS.contractor;
+      const g = GENDERS[genderSel?.value] || GENDERS.male;
+      const st = LIFE_STAGES[stageSel?.value] || LIFE_STAGES.adult;
+      const ls = NIGERIAN_LIFESTYLES[lifestyleSel?.value] || NIGERIAN_LIFESTYLES.alhaji;
+
+      if (passportCard) {
+        passportCard.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.12); padding-bottom:8px; margin-bottom:8px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:24px;">${g.id === 'female' ? '👩🏾' : '👨🏾'}</span>
+              <div>
+                <div style="font-size:14px; font-weight:800; color:#fff;">${name}</div>
+                <div style="font-size:11px; color:#94a3b8;">${g.label} • ${st.label} (${st.defaultAge} yrs)</div>
+              </div>
+            </div>
+            <span style="font-size:11px; font-weight:700; background:rgba(16,185,129,0.2); color:#4ade80; border:1px solid rgba(74,222,128,0.4); padding:3px 8px; border-radius:999px;">
+              ${ls.caliber}
+            </span>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:6px; font-size:11px;">
+            <div style="background:rgba(15,23,42,0.6); padding:6px 8px; border-radius:6px; border:1px solid rgba(255,255,255,0.06);">
+              <span style="color:#94a3b8;">💼 Career Track:</span>
+              <div style="font-weight:700; color:#38bdf8;">${tr.icon} ${tr.name}</div>
+            </div>
+            <div style="background:rgba(15,23,42,0.6); padding:6px 8px; border-radius:6px; border:1px solid rgba(255,255,255,0.06);">
+              <span style="color:#94a3b8;">💰 Starting Liquid:</span>
+              <div style="font-weight:700; color:#4ade80; font-family:var(--font-mono);">${formatNairaFull(ls.cash + ls.bank)}</div>
+            </div>
+            <div style="background:rgba(15,23,42,0.6); padding:6px 8px; border-radius:6px; border:1px solid rgba(255,255,255,0.06);">
+              <span style="color:#94a3b8;">🚗 Starting Ride:</span>
+              <div style="font-weight:700; color:#fde047;">${(ls.defaultCar || 'corolla').toUpperCase()}</div>
+            </div>
+            <div style="background:rgba(15,23,42,0.6); padding:6px 8px; border-radius:6px; border:1px solid rgba(255,255,255,0.06);">
+              <span style="color:#94a3b8;">✨ Steeze / Composure:</span>
+              <div style="font-weight:700; color:#f472b6;">${ls.steeze}% / ${ls.composure}%</div>
+            </div>
+          </div>
+          <div style="font-size:11px; color:#cbd5e1; margin-top:8px; font-style:italic;">
+            "${ls.slangTag}"
+          </div>
+        `;
+      }
+
+      // Auto-save selections to browser localStorage so choices persist across refresh
+      try {
+        localStorage.setItem('abuja_saved_citizen_profile', JSON.stringify({
+          name,
+          trackId: occSel?.value || 'contractor',
+          gender: genderSel?.value || 'male',
+          lifeStage: stageSel?.value || 'adult',
+          lifestyle: lifestyleSel?.value || 'alhaji',
+          prevProperty: propSel?.value || 'default'
+        }));
+      } catch (_) {}
+    };
+
+    if (nameInp) nameInp.oninput = updatePassportPreview;
+    if (occSel) occSel.onchange = updatePassportPreview;
+    if (genderSel) genderSel.onchange = updatePassportPreview;
+    if (stageSel) stageSel.onchange = updatePassportPreview;
+    if (lifestyleSel) {
+      lifestyleSel.onchange = () => {
         const ls = NIGERIAN_LIFESTYLES[lifestyleSel.value] || NIGERIAN_LIFESTYLES.alhaji;
-        if (lifestylePreview) {
-          lifestylePreview.innerHTML = `
-            <strong>👑 ${ls.name} (${ls.caliber}):</strong> "${ls.slangTag}" — ${ls.desc}<br/>
-            <span style="font-family:var(--font-mono); color:#4ade80;">Starting Liquid: ${formatNairaFull(ls.cash + ls.bank)} • Steeze ${ls.steeze}% • Composure ${ls.composure}%</span>
-          `;
-        }
         if (ls.recommendedTrack && occSel && TRACKS[ls.recommendedTrack]) {
           occSel.value = ls.recommendedTrack;
-          if (occPreview) {
-            const tr = TRACKS[ls.recommendedTrack];
-            occPreview.innerHTML = `<strong>💼 Recommended Track: ${tr.name}</strong> — ${tr.tagline}`;
-          }
         }
+        updatePassportPreview();
       };
-      lifestyleSel.onchange = updateLifestyle;
-      updateLifestyle();
     }
+    if (propSel) propSel.onchange = updatePassportPreview;
 
-    // 5. Previous Property Dropdown
-    if (propSel) {
-      propSel.innerHTML = Object.values(PREVIOUS_PROPERTY_OPTIONS).map((p) => `
-        <option value="${p.id}" ${p.id === 'default' ? 'selected' : ''}>
-          ${p.label} — ${p.desc}
-        </option>
-      `).join('');
-    }
+    updatePassportPreview();
 
     const cancelBtn = document.getElementById('btn-cancel-new-char');
     if (cancelBtn) {

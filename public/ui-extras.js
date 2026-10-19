@@ -273,11 +273,11 @@ export function initUIExtras(app) {
   // ---- Styles ----
   const style = document.createElement('style');
   style.textContent = `
-    .ux-dock{position:fixed;right:10px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:10px;z-index:60}
-    .ux-dock button{width:48px;height:48px;border-radius:14px;border:1px solid rgba(255,255,255,.18);background:rgba(15,23,42,.82);backdrop-filter:blur(8px);color:#fff;font-size:22px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.35);transition:transform .15s,background .15s;display:flex;align-items:center;justify-content:center;touch-action:manipulation}
-    .ux-dock button:hover,.ux-dock button:active{transform:scale(1.1);background:rgba(16,185,129,.35)}
-    .ux-dock button.on{background:rgba(16,185,129,.55);border-color:#4ade80}
-    .ux-tip{position:absolute;right:56px;white-space:nowrap;background:#0f172a;color:#e2e8f0;font-size:11px;padding:4px 8px;border-radius:6px;pointer-events:none;opacity:0;transition:opacity .15s}
+    .ux-dock{position:fixed;left:14px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:10px;z-index:60}
+    .ux-dock button{width:46px;height:46px;border-radius:14px;border:1.5px solid rgba(255,255,255,.2);background:rgba(9,13,22,.86);backdrop-filter:blur(8px);color:#fff;font-size:22px;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.45);transition:transform .15s,background .15s;display:flex;align-items:center;justify-content:center;touch-action:manipulation}
+    .ux-dock button:hover,.ux-dock button:active{transform:scale(1.1);background:rgba(16,185,129,.4)}
+    .ux-dock button.on{background:rgba(16,185,129,.6);border-color:#4ade80}
+    .ux-tip{position:absolute;left:56px;white-space:nowrap;background:#0f172a;color:#e2e8f0;font-size:11px;font-weight:600;padding:4px 8px;border-radius:6px;pointer-events:none;opacity:0;transition:opacity .15s;border:1px solid rgba(255,255,255,.15);box-shadow:0 4px 12px rgba(0,0,0,.5)}
     .ux-dock .wrap{position:relative}
     .ux-dock .wrap:hover .ux-tip{opacity:1}
     .ux-pie{position:fixed;inset:0;z-index:200;background:rgba(2,6,23,.55);backdrop-filter:blur(3px);display:none}
@@ -301,7 +301,7 @@ export function initUIExtras(app) {
     .ux-chip.sel{border-color:#4ade80;background:rgba(16,185,129,.2);color:#fff}
     .ux-close{float:right;background:none;border:none;color:#94a3b8;font-size:22px;cursor:pointer}
     .ux-done{margin-top:16px;width:100%;padding:13px;border:none;border-radius:10px;background:#10b981;color:#fff;font-weight:800;font-size:14px;cursor:pointer}
-    @media(max-width:768px){.ux-dock{top:auto;bottom:230px;transform:none}.ux-dock button{width:44px;height:44px;font-size:20px}.ux-tip{display:none}}
+    @media(max-width:768px){.ux-dock{left:8px;top:auto;bottom:185px;transform:none}.ux-dock button{width:40px;height:40px;font-size:18px}.ux-tip{display:none}}
   `;
   document.head.appendChild(style);
 

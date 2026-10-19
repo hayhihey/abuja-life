@@ -65,6 +65,14 @@ html, body {
   display: flex;
   align-items: center;
   gap: 12px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.brand-cluster::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .gta-badge-logo {

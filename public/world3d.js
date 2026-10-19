@@ -57,7 +57,7 @@ export class AbujaWorld3D {
     this.renderer.setSize(containerEl.clientWidth, containerEl.clientHeight);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
     // PBR tone mapping & color space for GTA-quality visuals
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.08;
@@ -72,17 +72,22 @@ export class AbujaWorld3D {
     this.labelLayer.className = 'world3d-labels';
     this.container.appendChild(this.labelLayer);
 
-    // State
-    this.clock = new THREE.Clock();
+    // State (High-precision performance timer replacing deprecated THREE.Clock)
+    this.lastTime = performance.now();
+    this.elapsedTime = 0;
     this.currentDistrictId = 'cbd';
     this.weather = 'sunny';
     this.hourOfDay = 13;
     this.cameraMode = 'chase'; // 'chase' | 'helicopter'
     this.cameraYaw = 0.25;
-    this.cameraPitch = 0.22;
-    this.cameraDistance = 15.5; // Close-up 3rd-person Nigeria GTA camera
+    this.cameraPitch = 0.38; // Looking down nicely to capture character, car, road and skyline
+    this.cameraDistance = 18.5; // High-visibility 3rd-person Nigeria GTA camera
     this.isPointerDragging = false;
     this.lastPointer = { x: 0, y: 0 };
+
+    // Shared procedural texture & material caches for ultra-fast loading
+    this._duplexWallMatCache = new Map();
+    this._duplexRoofMatCache = new Map();
 
     // Player 3D controller state (starts on foot in 3rd-person Nigeria GTA style)
     const startD = DISTRICT_BY_ID.cbd || DISTRICTS[0];
@@ -95,6 +100,16 @@ export class AbujaWorld3D {
     this.punchTimer = 0;
     this.keys = { w: false, a: false, s: false, d: false, shift: false };
     this.touchVector = { x: 0, y: 0 };
+
+    // Instantly orient camera to player on startup so viewport is never blank
+    const initHoriz = Math.cos(this.cameraPitch) * this.cameraDistance;
+    const initVert = Math.sin(this.cameraPitch) * this.cameraDistance;
+    this.camera.position.set(
+      this.playerPos.x + Math.sin(this.cameraYaw) * initHoriz,
+      Math.max(4.5, initVert + 2.0),
+      this.playerPos.z + Math.cos(this.cameraYaw) * initHoriz
+    );
+    this.camera.lookAt(this.playerPos.x, 2.5, this.playerPos.z);
 
     // GTA Sky-Cam transition state
     this.skyCam = {
@@ -282,8 +297,8 @@ export class AbujaWorld3D {
     this.sunLight = new THREE.DirectionalLight(0xfff5d0, 2.4);
     this.sunLight.position.set(320, 520, 180);
     this.sunLight.castShadow = true;
-    this.sunLight.shadow.mapSize.width = 2048;
-    this.sunLight.shadow.mapSize.height = 2048;
+    this.sunLight.shadow.mapSize.width = 1024;
+    this.sunLight.shadow.mapSize.height = 1024;
     this.sunLight.shadow.camera.near = 20;
     this.sunLight.shadow.camera.far = 1800;
     this.sunLight.shadow.bias = -0.0003;
@@ -328,7 +343,7 @@ export class AbujaWorld3D {
     groundGeo.computeVertexNormals();
 
     // Canvas ground texture — laterite red + tropical grass patches
-    const groundTex = this._makeCanvasTex(512, 512, (ctx, W, H) => {
+    const groundTex = this._makeCanvasTex(256, 256, (ctx, W, H) => {
       const grad = ctx.createLinearGradient(0, 0, W, H);
       grad.addColorStop(0,   '#6b4f2a');
       grad.addColorStop(0.3, '#7a5c34');
@@ -337,21 +352,21 @@ export class AbujaWorld3D {
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, W, H);
       // Random dirt patches
-      for (let i = 0; i < 180; i++) {
+      for (let i = 0; i < 45; i++) {
         const x = Math.random() * W;
         const y = Math.random() * H;
-        const r = 4 + Math.random() * 18;
+        const r = 3 + Math.random() * 12;
         ctx.beginPath();
         ctx.arc(x, y, r, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(${100 + Math.random()*40|0}, ${75 + Math.random()*30|0}, ${25 + Math.random()*20|0}, 0.6)`;
         ctx.fill();
       }
       // Grass tufts
-      for (let i = 0; i < 120; i++) {
+      for (let i = 0; i < 35; i++) {
         const x = Math.random() * W;
         const y = Math.random() * H;
         ctx.fillStyle = `rgba(45, ${100 + Math.random()*55|0}, ${35 + Math.random()*20|0}, 0.7)`;
-        ctx.fillRect(x, y, 2 + Math.random() * 4, 6 + Math.random() * 8);
+        ctx.fillRect(x, y, 2 + Math.random() * 3, 5 + Math.random() * 6);
       }
     });
     groundTex.wrapS = groundTex.wrapT = THREE.RepeatWrapping;
@@ -735,32 +750,28 @@ export class AbujaWorld3D {
   _buildNigerianDuplex(width, height, depth, wallHex, roofHex, winMat) {
     const house = new THREE.Group();
 
-    // Canvas wall texture — painted render with horizontal striation + colour variation
-    const wallTex = this._makeCanvasTex(256, 256, (ctx, W, H) => {
-      // Base wall plaster colour
-      const r = (wallHex >> 16) & 0xff;
-      const g = (wallHex >> 8) & 0xff;
-      const b = wallHex & 0xff;
-      ctx.fillStyle = `rgb(${r},${g},${b})`;
-      ctx.fillRect(0, 0, W, H);
-      // Subtle horizontal render stripes
-      for (let y = 0; y < H; y += 6 + (y % 3)) {
-        const v = (Math.random() - 0.5) * 14;
-        ctx.fillStyle = `rgba(${r+v|0},${g+v|0},${b+v|0},0.18)`;
-        ctx.fillRect(0, y, W, 2 + Math.random() * 2);
-      }
-      // Faint weathering patches
-      for (let i = 0; i < 30; i++) {
-        ctx.fillStyle = `rgba(0,0,0,${0.02 + Math.random() * 0.06})`;
-        ctx.fillRect(Math.random()*W, Math.random()*H, 10+Math.random()*30, 5+Math.random()*15);
-      }
-    });
-    wallTex.wrapS = wallTex.wrapT = THREE.RepeatWrapping;
-    wallTex.repeat.set(2, 1);
-
-    const wallMat = new THREE.MeshStandardMaterial({
-      map: wallTex, color: 0xffffff, roughness: 0.72, metalness: 0.04
-    });
+    // Cached wall material by hex color (avoids redundant 2D canvas drawing on every house)
+    let wallMat = this._duplexWallMatCache.get(wallHex);
+    if (!wallMat) {
+      const wallTex = this._makeCanvasTex(128, 128, (ctx, W, H) => {
+        const r = (wallHex >> 16) & 0xff;
+        const g = (wallHex >> 8) & 0xff;
+        const b = wallHex & 0xff;
+        ctx.fillStyle = `rgb(${r},${g},${b})`;
+        ctx.fillRect(0, 0, W, H);
+        for (let y = 0; y < H; y += 8) {
+          const v = (Math.random() - 0.5) * 14;
+          ctx.fillStyle = `rgba(${r+v|0},${g+v|0},${b+v|0},0.18)`;
+          ctx.fillRect(0, y, W, 2);
+        }
+      });
+      wallTex.wrapS = wallTex.wrapT = THREE.RepeatWrapping;
+      wallTex.repeat.set(2, 1);
+      wallMat = new THREE.MeshStandardMaterial({
+        map: wallTex, color: 0xffffff, roughness: 0.72, metalness: 0.04
+      });
+      this._duplexWallMatCache.set(wallHex, wallMat);
+    }
 
     // Main 2-storey painted plaster body
     const body = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), wallMat);
@@ -770,10 +781,26 @@ export class AbujaWorld3D {
     body.userData = { isWall: true, origHeight: height, origPosY: height * 0.5 };
     house.add(body);
 
+    if (!this._sharedDuplexMats) {
+      this._sharedDuplexMats = {
+        plinth: new THREE.MeshStandardMaterial({ color: 0xe8e8e8, roughness: 0.62 }),
+        band: new THREE.MeshStandardMaterial({ color: 0xf5f5f5, roughness: 0.48, metalness: 0.04 }),
+        frame: new THREE.MeshBasicMaterial({ color: 0xf0f0f0 }),
+        sill: new THREE.MeshStandardMaterial({ color: 0xe0e0e0, roughness: 0.6 }),
+        balcSlab: new THREE.MeshStandardMaterial({ color: 0xdcdcdc, roughness: 0.7 }),
+        balcPost: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4, metalness: 0.3 }),
+        acUnit: new THREE.MeshStandardMaterial({ color: 0xd0d4d8, roughness: 0.45, metalness: 0.4 }),
+        pillar: new THREE.MeshStandardMaterial({ color: 0xe8e8e8, roughness: 0.55 }),
+        defaultGlass: new THREE.MeshStandardMaterial({
+          color: 0x1a2940, roughness: 0.08, metalness: 0.92, envMapIntensity: 1.4
+        })
+      };
+    }
+
     // White concrete plinth (ground slab)
     const plinth = new THREE.Mesh(
       new THREE.BoxGeometry(width + 0.6, 0.9, depth + 0.6),
-      new THREE.MeshStandardMaterial({ color: 0xe8e8e8, roughness: 0.62 })
+      this._sharedDuplexMats.plinth
     );
     plinth.position.y = 0.45;
     house.add(plinth);
@@ -782,33 +809,39 @@ export class AbujaWorld3D {
     for (const bandY of [height * 0.52, height * 0.97]) {
       const band = new THREE.Mesh(
         new THREE.BoxGeometry(width + 0.5, 0.55, depth + 0.5),
-        new THREE.MeshStandardMaterial({ color: 0xf5f5f5, roughness: 0.48, metalness: 0.04 })
+        this._sharedDuplexMats.band
       );
       band.position.y = bandY;
       house.add(band);
     }
 
-    // Pitched hip roof — corrugated aluzinc aluminum sheets (canvas texture)
-    const roofTex = this._makeCanvasTex(256, 64, (ctx, W, H) => {
-      const r = (roofHex >> 16) & 0xff;
-      const g = (roofHex >> 8) & 0xff;
-      const b = roofHex & 0xff;
-      ctx.fillStyle = `rgb(${r},${g},${b})`;
-      ctx.fillRect(0, 0, W, H);
-      // Corrugation ridges
-      for (let x = 0; x < W; x += 8) {
-        ctx.fillStyle = `rgba(255,255,255,0.12)`;
-        ctx.fillRect(x, 0, 4, H);
-        ctx.fillStyle = `rgba(0,0,0,0.1)`;
-        ctx.fillRect(x + 4, 0, 4, H);
-      }
-    });
-    roofTex.wrapS = roofTex.wrapT = THREE.RepeatWrapping;
-    roofTex.repeat.set(4, 1);
+    // Cached pitched hip roof material
+    let roofMat = this._duplexRoofMatCache.get(roofHex);
+    if (!roofMat) {
+      const roofTex = this._makeCanvasTex(128, 32, (ctx, W, H) => {
+        const r = (roofHex >> 16) & 0xff;
+        const g = (roofHex >> 8) & 0xff;
+        const b = roofHex & 0xff;
+        ctx.fillStyle = `rgb(${r},${g},${b})`;
+        ctx.fillRect(0, 0, W, H);
+        for (let x = 0; x < W; x += 8) {
+          ctx.fillStyle = `rgba(255,255,255,0.12)`;
+          ctx.fillRect(x, 0, 4, H);
+          ctx.fillStyle = `rgba(0,0,0,0.1)`;
+          ctx.fillRect(x + 4, 0, 4, H);
+        }
+      });
+      roofTex.wrapS = roofTex.wrapT = THREE.RepeatWrapping;
+      roofTex.repeat.set(4, 1);
+      roofMat = new THREE.MeshStandardMaterial({
+        map: roofTex, color: 0xffffff, roughness: 0.48, metalness: 0.28
+      });
+      this._duplexRoofMatCache.set(roofHex, roofMat);
+    }
 
     const roof = new THREE.Mesh(
       new THREE.ConeGeometry(Math.max(width, depth) * 0.8, 4.8, 4),
-      new THREE.MeshStandardMaterial({ map: roofTex, color: 0xffffff, roughness: 0.48, metalness: 0.28 })
+      roofMat
     );
     roof.position.y = height + 2.4;
     roof.rotation.y = Math.PI / 4;
@@ -817,11 +850,8 @@ export class AbujaWorld3D {
     house.add(roof);
 
     // Window glass — tinted, slightly emissive (some lit at night)
-    const frameMat = new THREE.MeshBasicMaterial({ color: 0xf0f0f0 });
-    const glassMat = winMat || new THREE.MeshStandardMaterial({
-      color: 0x1a2940, roughness: 0.08, metalness: 0.92,
-      envMapIntensity: 1.4
-    });
+    const frameMat = this._sharedDuplexMats.frame;
+    const glassMat = winMat || this._sharedDuplexMats.defaultGlass;
     const floors = [height * 0.28, height * 0.74];
     const cols = [-width * 0.28, 0, width * 0.28];
 
@@ -1065,7 +1095,7 @@ export class AbujaWorld3D {
     this.clickableDistrictMeshes = [];
 
     // Glass curtain-wall texture for CBD towers — grid of lit + dark office windows
-    const glassTex = this._makeCanvasTex(256, 512, (ctx, W, H) => {
+    const glassTex = this._makeCanvasTex(128, 256, (ctx, W, H) => {
       // Dark glass base
       ctx.fillStyle = '#0d1f35';
       ctx.fillRect(0, 0, W, H);
@@ -3356,7 +3386,10 @@ export class AbujaWorld3D {
 
   _animate() {
     this.animFrameId = requestAnimationFrame(this._animate);
-    const dt = Math.min(0.05, this.clock.getDelta());
+    const now = performance.now();
+    const dt = Math.min(0.05, Math.max(0.001, (now - (this.lastTime || now)) / 1000));
+    this.lastTime = now;
+    this.elapsedTime += dt;
 
     for (const m of this.spinningMeshes) {
       m.rotation.y += dt * 1.4;
@@ -3426,7 +3459,7 @@ export class AbujaWorld3D {
     // Animate Sims 3D Plumbob Diamond above player avatar
     if (this.plumbob) {
       this.plumbob.rotation.y += dt * 2.2;
-      const t = this.clock.elapsedTime;
+      const t = this.elapsedTime;
       const baseHeight = this.inVehicle ? 4.3 : 5.8;
       this.plumbob.position.y = baseHeight + Math.sin(t * 3.2) * 0.12;
       const pulse = 1.0 + Math.sin(t * 4.0) * 0.05;
@@ -3435,7 +3468,7 @@ export class AbujaWorld3D {
 
     if (this.thoughtBubbleGroup && this.thoughtBubbleGroup.visible) {
       this.thoughtBubbleGroup.quaternion.copy(this.camera.quaternion);
-      const bob = Math.sin(this.clock.elapsedTime * 3.0) * 0.08;
+      const bob = Math.sin(this.elapsedTime * 3.0) * 0.08;
       this.thoughtBubbleGroup.position.y = (this.inVehicle ? 5.8 : 7.2) + bob;
     }
 
@@ -3581,11 +3614,11 @@ export class AbujaWorld3D {
         this.playerHuman.torso.rotation.x = 0;
         this.playerHuman.headGroup.rotation.x = 0;
 
-        const breathe = Math.sin(this.clock.elapsedTime * 2.5) * 0.025;
+        const breathe = Math.sin(this.elapsedTime * 2.5) * 0.025;
         this.playerHuman.torso.position.y = 2.68 + breathe;
         this.playerHuman.headGroup.position.y = 4.24 + breathe * 0.5;
-        this.playerHuman.leftArmPivot.rotation.x = 0.08 + Math.sin(this.clock.elapsedTime * 1.8) * 0.025;
-        this.playerHuman.rightArmPivot.rotation.x = 0.08 - Math.sin(this.clock.elapsedTime * 1.8) * 0.025;
+        this.playerHuman.leftArmPivot.rotation.x = 0.08 + Math.sin(this.elapsedTime * 1.8) * 0.025;
+        this.playerHuman.rightArmPivot.rotation.x = 0.08 - Math.sin(this.elapsedTime * 1.8) * 0.025;
       }
 
       if (this.punchTimer > 0) {
