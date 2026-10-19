@@ -3025,6 +3025,10 @@ export class AbujaWorld3D {
     this.renderer.setSize(w, h);
   }
 
+  onResize() {
+    this.resize();
+  }
+
   toggleVehicleMode() {
     this.inVehicle = !this.inVehicle;
     this.playerVehicleMesh.visible = this.inVehicle;

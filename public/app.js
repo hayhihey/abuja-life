@@ -360,6 +360,9 @@ class AbujaClientApp {
     if (this.game.s.social?.car) {
       this.world3d.setPlayerVehicleAppearance(this.game.s.social.car);
     }
+    setTimeout(() => {
+      if (this.world3d) this.world3d.resize();
+    }, 120);
   }
 
   // --------------------------------------------------------------------------
@@ -4744,6 +4747,34 @@ class AbujaClientApp {
     document.getElementById('btn-hud-profile')?.addEventListener('click', () => {
       this._openNewCharModal();
     });
+
+    // Toggle Brief History expanded details on sign-up card
+    document.getElementById('btn-toggle-history-details')?.addEventListener('click', () => {
+      const exp = document.getElementById('abuja-history-expanded');
+      const btn = document.getElementById('btn-toggle-history-details');
+      if (exp) {
+        const isHidden = exp.style.display === 'none';
+        exp.style.display = isHidden ? 'block' : 'none';
+        if (btn) btn.textContent = isHidden ? 'Hide ▴' : 'Chronicles ▾';
+      }
+    });
+
+    // History Modal Open & Close Triggers
+    document.getElementById('btn-top-history')?.addEventListener('click', () => {
+      const modal = document.getElementById('abuja-history-modal');
+      if (modal) modal.hidden = false;
+    });
+    document.getElementById('btn-close-history-modal')?.addEventListener('click', () => {
+      const modal = document.getElementById('abuja-history-modal');
+      if (modal) modal.hidden = true;
+      if (this.world3d) this.world3d.resize();
+    });
+    document.getElementById('btn-history-play-now')?.addEventListener('click', () => {
+      const modal = document.getElementById('abuja-history-modal');
+      if (modal) modal.hidden = true;
+      if (this.world3d) this.world3d.resize();
+    });
+
     document.getElementById('btn-cancel-new-char')?.addEventListener('click', (e) => {
       e?.preventDefault?.();
       const modal = document.getElementById('new-char-modal');
@@ -4755,6 +4786,7 @@ class AbujaClientApp {
         this.game.s.meta.originConfigured = true;
       }
       this._saveGame();
+      if (this.world3d) this.world3d.resize();
       this.showToast('▶️ Resumed saved citizen in 3D Abuja!');
     });
     document.getElementById('new-char-form')?.addEventListener('submit', (e) => {
@@ -4800,6 +4832,7 @@ class AbujaClientApp {
 
         if (this.world3d) {
           try {
+            this.world3d.resize();
             this.world3d.flyToDistrict(this.game.s.loc.district);
             this.world3d.syncPlayerHouses(Object.values(this.game.s.social.plots || {}));
             if (this.game.s.social.car && typeof this.world3d.setPlayerVehicleAppearance === 'function') {
@@ -4821,6 +4854,7 @@ class AbujaClientApp {
         this._renderAll();
         this._saveGame();
         this._sendHeartbeat();
+        if (this.world3d) this.world3d.resize();
         this.showToast(`🇳🇬 Welcome to 3D Abuja, ${name}! Caliber: ${ls.name.split(' (')[0]} (${formatNairaFull(netWorth(this.game.s))} Worth)`);
       } catch (err) {
         console.error('Error completing character sign-up:', err);
