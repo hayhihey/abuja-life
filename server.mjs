@@ -415,9 +415,24 @@ function readBody(req) {
   });
 }
 
-export async function requestHandler(req, res) {
+export async function requestHandler(req, res, overridePath = null) {
   const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
-  const pathname = parsedUrl.pathname;
+  let pathname = overridePath || req.headers['x-matched-path'] || req.headers['x-forwarded-uri'] || parsedUrl.pathname;
+
+  if (pathname.includes('?')) {
+    pathname = pathname.split('?')[0];
+  }
+
+  if (!pathname.startsWith('/api/') && pathname !== '/api') {
+    const knownApi = [
+      '/stream', '/heartbeat', '/chat', '/players', '/court',
+      '/polls', '/tasks', '/transfer', '/spray', '/connect-player',
+      '/house-event', '/whot', '/bae'
+    ];
+    if (knownApi.some((p) => pathname.startsWith(p))) {
+      pathname = '/api' + pathname;
+    }
+  }
 
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -434,7 +449,7 @@ export async function requestHandler(req, res) {
     const playerId = parsedUrl.searchParams.get('playerId') || 'anon_' + Date.now();
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
+      'Cache-Control': 'no-cache, no-transform',
       'Connection': 'keep-alive',
       'Access-Control-Allow-Origin': '*',
     });
@@ -453,6 +468,15 @@ export async function requestHandler(req, res) {
     req.on('close', () => {
       sseClients.delete(client);
     });
+
+    if (process.env.VERCEL) {
+      setTimeout(() => {
+        try {
+          res.end();
+          sseClients.delete(client);
+        } catch (_) {}
+      }, 9000);
+    }
     return;
   }
 

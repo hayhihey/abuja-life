@@ -3441,6 +3441,18 @@ class AbujaClientApp {
     setInterval(() => this._sendHeartbeat(), 8000);
 
     this._fetchInitialMultiplayerState();
+    // Fallback polling for serverless deployments
+    setInterval(() => {
+      fetch('/api/players')
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          if (data && Array.isArray(data.players)) {
+            this._updateOnlinePlayers(data.players);
+          }
+        })
+        .catch(() => {});
+    }, 16000);
+
     this._connectEventStream();
   }
 
@@ -3510,7 +3522,10 @@ class AbujaClientApp {
       };
 
       this.eventSource.onerror = () => {
-        this._setNetworkGoSlow(true);
+        if (this.eventSource && this.eventSource.readyState === EventSource.CLOSED) {
+          this.eventSource.close();
+          this.eventSource = null;
+        }
       };
 
       this.eventSource.addEventListener('init', (e) => {

@@ -38,7 +38,8 @@ export class AbujaWorld3D {
 
     this.scene = new THREE.Scene();
     // Procedural Nigeria afternoon sky gradient (deep azure zenith → hazy tropical horizon haze)
-    this.scene.background = this._makeSkyTexture();
+    this.skyTexture = this._makeSkyTexture();
+    this.scene.background = this.skyTexture;
     this.scene.fog = new THREE.FogExp2(0xc8dff0, 0.00026);
 
     this.camera = new THREE.PerspectiveCamera(
@@ -3161,26 +3162,35 @@ export class AbujaWorld3D {
     const isDusk = (hour >= 18 && hour < 20) || (hour >= 6 && hour < 7);
     const isWet = weather === 'storm' || weather === 'downpour' || weather === 'rain';
 
+    const setBgColor = (hex) => {
+      if (this.scene.background && typeof this.scene.background.setHex === 'function') {
+        this.scene.background.setHex(hex);
+      } else {
+        this.scene.background = new THREE.Color(hex);
+      }
+    };
+
     if (weather === 'harmattan' || weather === 'dry') {
-      this.scene.background.setHex(isNight ? 0x334155 : 0xfde68a);
-      this.scene.fog.color.setHex(isNight ? 0x334155 : 0xfef3c7);
-      this.scene.fog.density = 0.00055;
+      setBgColor(isNight ? 0x334155 : 0xfde68a);
+      if (this.scene.fog?.color?.setHex) this.scene.fog.color.setHex(isNight ? 0x334155 : 0xfef3c7);
+      if (this.scene.fog) this.scene.fog.density = 0.00055;
     } else if (isWet) {
-      this.scene.background.setHex(0x64748b);
-      this.scene.fog.color.setHex(0x94a3b8);
-      this.scene.fog.density = 0.00065;
+      setBgColor(0x64748b);
+      if (this.scene.fog?.color?.setHex) this.scene.fog.color.setHex(0x94a3b8);
+      if (this.scene.fog) this.scene.fog.density = 0.00065;
     } else if (isNight) {
-      this.scene.background.setHex(0x1e293b);
-      this.scene.fog.color.setHex(0x1e293b);
-      this.scene.fog.density = 0.00045;
+      setBgColor(0x1e293b);
+      if (this.scene.fog?.color?.setHex) this.scene.fog.color.setHex(0x1e293b);
+      if (this.scene.fog) this.scene.fog.density = 0.00045;
     } else if (isDusk) {
-      this.scene.background.setHex(0x7dd3fc);
-      this.scene.fog.color.setHex(0xfed7aa);
-      this.scene.fog.density = 0.00038;
+      setBgColor(0x7dd3fc);
+      if (this.scene.fog?.color?.setHex) this.scene.fog.color.setHex(0xfed7aa);
+      if (this.scene.fog) this.scene.fog.density = 0.00038;
     } else {
-      this.scene.background.setHex(0x7dd3fc);
-      this.scene.fog.color.setHex(0xbae6fd);
-      this.scene.fog.density = 0.00032;
+      if (!this.skyTexture) this.skyTexture = this._makeSkyTexture();
+      this.scene.background = this.skyTexture;
+      if (this.scene.fog?.color?.setHex) this.scene.fog.color.setHex(0xbae6fd);
+      if (this.scene.fog) this.scene.fog.density = 0.00032;
     }
 
     this.sunLight.intensity = isNight ? 0.95 : isDusk ? 1.35 : 1.75;
