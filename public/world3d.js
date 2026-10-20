@@ -46,16 +46,16 @@ export class AbujaWorld3D {
       50,
       Math.max(1, containerEl.clientWidth) / Math.max(1, containerEl.clientHeight),
       0.5,
-      3200
+      1600
     );
 
     this.renderer = new THREE.WebGLRenderer({
       antialias: true,
       powerPreference: 'high-performance',
-      logarithmicDepthBuffer: true
+      logarithmicDepthBuffer: false
     });
     this.renderer.setSize(containerEl.clientWidth, containerEl.clientHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     // PBR tone mapping & color space for GTA-quality visuals
@@ -76,6 +76,10 @@ export class AbujaWorld3D {
     this.lastTime = performance.now();
     this.elapsedTime = 0;
     this.currentDistrictId = 'cbd';
+    this._canvasW = Math.max(1, containerEl.clientWidth);
+    this._canvasH = Math.max(1, containerEl.clientHeight);
+    this._labelThrottle = 0;
+    this._distVisThrottle = 0;
     this.weather = 'sunny';
     this.hourOfDay = 13;
     this.cameraMode = 'chase'; // 'chase' | 'helicopter'
@@ -294,15 +298,15 @@ export class AbujaWorld3D {
     this.scene.add(this.ambientLight);
 
     // Main sun — warm golden Nigerian afternoon at ~2pm angle
-    this.sunLight = new THREE.DirectionalLight(0xfff5d0, 2.4);
-    this.sunLight.position.set(320, 520, 180);
+    this.sunLight = new THREE.DirectionalLight(0xfff5d0, 2.2);
+    this.sunLight.position.set(160, 260, 90);
     this.sunLight.castShadow = true;
-    this.sunLight.shadow.mapSize.width = 1024;
-    this.sunLight.shadow.mapSize.height = 1024;
-    this.sunLight.shadow.camera.near = 20;
-    this.sunLight.shadow.camera.far = 1800;
-    this.sunLight.shadow.bias = -0.0003;
-    const d = 620;
+    this.sunLight.shadow.mapSize.width = 512;
+    this.sunLight.shadow.mapSize.height = 512;
+    this.sunLight.shadow.camera.near = 10;
+    this.sunLight.shadow.camera.far = 700;
+    this.sunLight.shadow.bias = -0.0005;
+    const d = 160; // Focused on active neighborhood instead of entire map
     this.sunLight.shadow.camera.left = -d;
     this.sunLight.shadow.camera.right = d;
     this.sunLight.shadow.camera.top = d;
@@ -506,7 +510,6 @@ export class AbujaWorld3D {
       );
       seg.position.set(s * 0.12, s * 2.0 + 1.1, 0);
       seg.rotation.z = -s * 0.03;
-      seg.castShadow = true;
       tree.add(seg);
     }
 
@@ -547,7 +550,6 @@ export class AbujaWorld3D {
       trunkMat
     );
     trunk.position.y = 2.7;
-    trunk.castShadow = true;
     tree.add(trunk);
 
     // Lush canopy spheres with vibrant blossom clusters
@@ -564,7 +566,6 @@ export class AbujaWorld3D {
         leafMat
       );
       leafBlob.position.set(cx, cy, cz);
-      leafBlob.castShadow = true;
       tree.add(leafBlob);
 
       // Vibrant blossom pops
@@ -698,38 +699,35 @@ export class AbujaWorld3D {
         }
 
         // Iconic alternating painted Nigerian street kerbs + roadside palm trees
-        const kerbCount = Math.min(36, Math.floor(len / 8));
-        const kerbSegLen = len / Math.max(1, kerbCount);
-        const kerbGeo = new THREE.BoxGeometry(0.68, 0.62, kerbSegLen * 0.92);
-        for (let k = 0; k < kerbCount; k++) {
-          const frac = (k + 0.5) / kerbCount - 0.5;
-          const alongZ = frac * len;
-          const kMat = k % 2 === 0 ? (isExp ? kerbRedMat : kerbBlackMat) : kerbWhiteMat;
-          for (const side of [-1, 1]) {
-            const kerb = new THREE.Mesh(kerbGeo, kMat);
-            const offsetSide = side * (width * 0.5 + 0.35);
-            kerb.position.set(
-              mid.x + Math.sin(angle) * alongZ + Math.cos(angle) * offsetSide,
-              0.52,
-              mid.z + Math.cos(angle) * alongZ - Math.sin(angle) * offsetSide
-            );
-            kerb.rotation.y = angle;
-            this.scene.add(kerb);
-          }
+        // Batched continuous painted Nigerian kerb strips (2 single meshes instead of 72 draw calls!)
+        const kerbBeamGeo = new THREE.BoxGeometry(0.65, 0.42, len * 0.96);
+        const kMat = isExp ? kerbRedMat : kerbBlackMat;
+        for (const side of [-1, 1]) {
+          const kerbBeam = new THREE.Mesh(kerbBeamGeo, kMat);
+          const offsetSide = side * (width * 0.5 + 0.35);
+          kerbBeam.position.set(
+            mid.x + Math.cos(angle) * offsetSide,
+            0.42,
+            mid.z - Math.sin(angle) * offsetSide
+          );
+          kerbBeam.rotation.y = angle;
+          this.scene.add(kerbBeam);
+        }
 
-          // Line avenues with alternating tropical palms and blooming bougainvillea trees
-          if (k % 5 === 0) {
-            const isBougainvillea = Math.floor(k / 5) % 2 === 1;
-            const tree = isBougainvillea
-              ? this._buildBougainvilleaTree(0.85 + (k % 3) * 0.12, (k % 4 === 1 ? 0xe11d48 : 0xd946ef))
-              : this._buildPalmTree(0.9 + (k % 3) * 0.15);
-            const pSide = (k % 2 === 0 ? 1 : -1) * (width * 0.5 + 3.4);
+        // 1-2 roadside tropical trees per avenue segment
+        if (len > 35) {
+          for (const tFrac of [-0.25, 0.25]) {
+            const alongZ = tFrac * len;
+            const tree = (alongZ > 0)
+              ? this._buildBougainvilleaTree(0.88, 0xe11d48)
+              : this._buildPalmTree(0.92);
+            const pSide = (tFrac > 0 ? 1 : -1) * (width * 0.5 + 3.4);
             tree.position.set(
               mid.x + Math.sin(angle) * alongZ + Math.cos(angle) * pSide,
               0.15,
               mid.z + Math.cos(angle) * alongZ - Math.sin(angle) * pSide
             );
-            tree.rotation.y = k * 1.1;
+            tree.rotation.y = tFrac * 4;
             this.scene.add(tree);
           }
         }
@@ -791,9 +789,43 @@ export class AbujaWorld3D {
         balcPost: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4, metalness: 0.3 }),
         acUnit: new THREE.MeshStandardMaterial({ color: 0xd0d4d8, roughness: 0.45, metalness: 0.4 }),
         pillar: new THREE.MeshStandardMaterial({ color: 0xe8e8e8, roughness: 0.55 }),
+        wallPlaster: new THREE.MeshStandardMaterial({ color: 0xdedede, roughness: 0.85 }),
+        wallCoping: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 }),
+        razorWire: new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.3, metalness: 0.9 }),
+        gateIron: new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.35, metalness: 0.8 }),
+        goldTrim: new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.25, metalness: 0.85 }),
+        steel: new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.3, metalness: 0.8 }),
+        geepee: new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.4 }),
+        whiteStripe: new THREE.MeshBasicMaterial({ color: 0xffffff }),
+        genShed: new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.5 }),
+        genLouver: new THREE.MeshBasicMaterial({ color: 0x111827 }),
+        dish: new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.3, metalness: 0.6 }),
         defaultGlass: new THREE.MeshStandardMaterial({
           color: 0x1a2940, roughness: 0.08, metalness: 0.92, envMapIntensity: 1.4
         })
+      };
+    }
+
+    if (!this._sharedDuplexGeos) {
+      this._sharedDuplexGeos = {
+        frame: new THREE.BoxGeometry(1.85, 1.95, 0.22),
+        pane: new THREE.BoxGeometry(1.48, 1.58, 0.25),
+        sill: new THREE.BoxGeometry(1.95, 0.18, 0.38),
+        balcPost: new THREE.BoxGeometry(0.1, 1.1, 0.1),
+        acUnit: new THREE.BoxGeometry(1.6, 0.9, 0.55),
+        pillar: new THREE.BoxGeometry(0.8, 2.8, 0.8),
+        cap: new THREE.BoxGeometry(1.1, 0.35, 1.1),
+        gatehouse: new THREE.BoxGeometry(2.4, 2.5, 2.4),
+        ghRoof: new THREE.BoxGeometry(2.8, 0.2, 2.8),
+        ghWindow: new THREE.BoxGeometry(1.0, 0.8, 0.1),
+        waterLeg: new THREE.CylinderGeometry(0.08, 0.08, 6.2, 6),
+        towerPlatform: new THREE.BoxGeometry(2.4, 0.2, 2.4),
+        tank1: new THREE.CylinderGeometry(0.85, 0.85, 1.8, 14),
+        whiteStripe: new THREE.CylinderGeometry(0.86, 0.86, 0.22, 14),
+        genShed: new THREE.BoxGeometry(2.2, 1.6, 2.0),
+        genLouver: new THREE.BoxGeometry(1.4, 0.7, 0.1),
+        dishReflector: new THREE.CylinderGeometry(0.7, 0.2, 0.2, 14),
+        dishPole: new THREE.CylinderGeometry(0.04, 0.04, 1.2, 6)
       };
     }
 
@@ -850,8 +882,10 @@ export class AbujaWorld3D {
     house.add(roof);
 
     // Window glass — tinted, slightly emissive (some lit at night)
-    const frameMat = this._sharedDuplexMats.frame;
-    const glassMat = winMat || this._sharedDuplexMats.defaultGlass;
+    const m = this._sharedDuplexMats;
+    const g = this._sharedDuplexGeos;
+    const frameMat = m.frame;
+    const glassMat = winMat || m.defaultGlass;
     const floors = [height * 0.28, height * 0.74];
     const cols = [-width * 0.28, 0, width * 0.28];
 
@@ -859,15 +893,15 @@ export class AbujaWorld3D {
       for (const cx of cols) {
         for (const side of [-1, 1]) {
           // Outer frame
-          const frame = new THREE.Mesh(new THREE.BoxGeometry(1.85, 1.95, 0.22), frameMat);
+          const frame = new THREE.Mesh(g.frame, frameMat);
           frame.position.set(cx, fy, side * (depth * 0.5 + 0.07));
           house.add(frame);
           // Glass pane
-          const pane = new THREE.Mesh(new THREE.BoxGeometry(1.48, 1.58, 0.25), glassMat);
+          const pane = new THREE.Mesh(g.pane, glassMat);
           pane.position.set(cx, fy, side * (depth * 0.5 + 0.09));
           house.add(pane);
           // Window sill concrete ledge
-          const sill = new THREE.Mesh(new THREE.BoxGeometry(1.95, 0.18, 0.38), new THREE.MeshStandardMaterial({ color: 0xe0e0e0, roughness: 0.6 }));
+          const sill = new THREE.Mesh(g.sill, m.sill);
           sill.position.set(cx, fy - 0.9, side * (depth * 0.5 + 0.18));
           house.add(sill);
         }
@@ -877,137 +911,122 @@ export class AbujaWorld3D {
     // Balcony on 2nd floor front face (concrete slab + railing posts)
     const balcSlab = new THREE.Mesh(
       new THREE.BoxGeometry(width * 0.55, 0.28, 1.8),
-      new THREE.MeshStandardMaterial({ color: 0xdcdcdc, roughness: 0.7 })
+      m.balcSlab
     );
     balcSlab.position.set(0, height * 0.74 - 1.2, depth * 0.5 + 0.9);
     house.add(balcSlab);
     // Railing posts
     for (let rp = -2; rp <= 2; rp++) {
-      const post = new THREE.Mesh(
-        new THREE.BoxGeometry(0.1, 1.1, 0.1),
-        new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4, metalness: 0.3 })
-      );
+      const post = new THREE.Mesh(g.balcPost, m.balcPost);
       post.position.set(rp * (width * 0.55 / 5), height * 0.74 - 0.65, depth * 0.5 + 0.9);
       house.add(post);
     }
 
     // AC unit box on side wall
-    const acUnit = new THREE.Mesh(
-      new THREE.BoxGeometry(1.6, 0.9, 0.55),
-      new THREE.MeshStandardMaterial({ color: 0xd0d4d8, roughness: 0.45, metalness: 0.4 })
-    );
+    const acUnit = new THREE.Mesh(g.acUnit, m.acUnit);
     acUnit.position.set(width * 0.5 + 0.25, height * 0.7, 0);
     house.add(acUnit);
 
     // Security gate pillars at entrance
-    const pillarMat = new THREE.MeshStandardMaterial({ color: 0xe8e8e8, roughness: 0.55 });
     for (const px of [-width * 0.36, width * 0.36]) {
-      const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.8, 2.8, 0.8), pillarMat);
+      const pillar = new THREE.Mesh(g.pillar, m.pillar);
       pillar.position.set(px, 1.4, depth * 0.5 + 0.5);
       house.add(pillar);
-      const cap = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.35, 1.1), pillarMat);
+      const cap = new THREE.Mesh(g.cap, m.pillar);
       cap.position.set(px, 2.95, depth * 0.5 + 0.5);
       house.add(cap);
     }
 
     // ── AUTHENTIC NIGERIAN COMPOUND ELEMENTS ─────────────────────────────
-    const wallPlasterMat = new THREE.MeshStandardMaterial({ color: 0xdedede, roughness: 0.85 });
-    const wallCopingMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 });
-    const razorWireMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.3, metalness: 0.9 });
-    const gateIronMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.35, metalness: 0.8 });
-    const goldTrimMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.25, metalness: 0.85 });
-
     const cW = width + 5.5;
     const cD = depth + 6.5;
 
     // Back compound wall with razor wire
-    const backWall = new THREE.Mesh(new THREE.BoxGeometry(cW, 2.8, 0.45), wallPlasterMat);
+    const backWall = new THREE.Mesh(new THREE.BoxGeometry(cW, 2.8, 0.45), m.wallPlaster);
     backWall.position.set(0, 1.4, -cD * 0.5);
-    const backCoping = new THREE.Mesh(new THREE.BoxGeometry(cW + 0.2, 0.2, 0.65), wallCopingMat);
+    const backCoping = new THREE.Mesh(new THREE.BoxGeometry(cW + 0.2, 0.2, 0.65), m.wallCoping);
     backCoping.position.set(0, 2.9, -cD * 0.5);
-    const backRazor = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, cW, 8), razorWireMat);
+    const backRazor = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, cW, 8), m.razorWire);
     backRazor.rotation.z = Math.PI / 2;
     backRazor.position.set(0, 3.15, -cD * 0.5);
     house.add(backWall, backCoping, backRazor);
 
     // Left compound wall
-    const leftWall = new THREE.Mesh(new THREE.BoxGeometry(0.45, 2.8, cD), wallPlasterMat);
+    const leftWall = new THREE.Mesh(new THREE.BoxGeometry(0.45, 2.8, cD), m.wallPlaster);
     leftWall.position.set(-cW * 0.5, 1.4, 0);
-    const leftCoping = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.2, cD + 0.2), wallCopingMat);
+    const leftCoping = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.2, cD + 0.2), m.wallCoping);
     leftCoping.position.set(-cW * 0.5, 2.9, 0);
-    const leftRazor = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, cD, 8), razorWireMat);
+    const leftRazor = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, cD, 8), m.razorWire);
     leftRazor.rotation.x = Math.PI / 2;
     leftRazor.position.set(-cW * 0.5, 3.15, 0);
     house.add(leftWall, leftCoping, leftRazor);
 
     // Right compound wall
-    const rightWall = new THREE.Mesh(new THREE.BoxGeometry(0.45, 2.8, cD), wallPlasterMat);
+    const rightWall = new THREE.Mesh(new THREE.BoxGeometry(0.45, 2.8, cD), m.wallPlaster);
     rightWall.position.set(cW * 0.5, 1.4, 0);
-    const rightCoping = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.2, cD + 0.2), wallCopingMat);
+    const rightCoping = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.2, cD + 0.2), m.wallCoping);
     rightCoping.position.set(cW * 0.5, 2.9, 0);
-    const rightRazor = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, cD, 8), razorWireMat);
+    const rightRazor = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, cD, 8), m.razorWire);
     rightRazor.rotation.x = Math.PI / 2;
     rightRazor.position.set(cW * 0.5, 3.15, 0);
     house.add(rightWall, rightCoping, rightRazor);
 
     // Front Sliding Black & Gold Iron Gate
-    const gatePanelL = new THREE.Mesh(new THREE.BoxGeometry(cW * 0.32, 2.6, 0.15), gateIronMat);
+    const gatePanelL = new THREE.Mesh(new THREE.BoxGeometry(cW * 0.32, 2.6, 0.15), m.gateIron);
     gatePanelL.position.set(-cW * 0.18, 1.3, cD * 0.5);
-    const gateTrimL = new THREE.Mesh(new THREE.BoxGeometry(cW * 0.32, 0.18, 0.2), goldTrimMat);
+    const gateTrimL = new THREE.Mesh(new THREE.BoxGeometry(cW * 0.32, 0.18, 0.2), m.goldTrim);
     gateTrimL.position.set(-cW * 0.18, 1.3, cD * 0.5);
     house.add(gatePanelL, gateTrimL);
 
     // Security Gateman Gatehouse at entrance
-    const gatehouse = new THREE.Mesh(new THREE.BoxGeometry(2.4, 2.5, 2.4), wallPlasterMat);
+    const gatehouse = new THREE.Mesh(g.gatehouse, m.wallPlaster);
     gatehouse.position.set(cW * 0.5 - 1.5, 1.25, cD * 0.5 - 1.5);
-    const ghRoof = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.2, 2.8), wallCopingMat);
+    const ghRoof = new THREE.Mesh(g.ghRoof, m.wallCoping);
     ghRoof.position.set(cW * 0.5 - 1.5, 2.6, cD * 0.5 - 1.5);
-    const ghWindow = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.8, 0.1), glassMat);
+    const ghWindow = new THREE.Mesh(g.ghWindow, glassMat);
     ghWindow.position.set(cW * 0.5 - 1.5, 1.5, cD * 0.5 - 0.25);
     house.add(gatehouse, ghRoof, ghWindow);
 
     // Overhead Steel Scaffolding Water Tank Tower with twin GeePee tanks
     const waterTower = new THREE.Group();
     waterTower.position.set(-cW * 0.5 + 2.2, 0, -cD * 0.5 + 2.2);
-    const legGeo = new THREE.CylinderGeometry(0.08, 0.08, 6.2, 6);
-    const steelMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.3, metalness: 0.8 });
     for (const lx of [-0.85, 0.85]) {
       for (const lz of [-0.85, 0.85]) {
-        const leg = new THREE.Mesh(legGeo, steelMat);
+        const leg = new THREE.Mesh(g.waterLeg, m.steel);
         leg.position.set(lx, 3.1, lz);
         waterTower.add(leg);
       }
     }
-    const towerPlatform = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.2, 2.4), steelMat);
+    const towerPlatform = new THREE.Mesh(g.towerPlatform, m.steel);
     towerPlatform.position.y = 6.2;
     waterTower.add(towerPlatform);
 
     // Black cylindrical GeePee tank
-    const geepeeMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.4 });
-    const tank1 = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.85, 1.8, 16), geepeeMat);
+    const tank1 = new THREE.Mesh(g.tank1, m.geepee);
     tank1.position.set(0, 7.2, 0);
-    const whiteStripe = new THREE.Mesh(new THREE.CylinderGeometry(0.86, 0.86, 0.22, 16), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+    const whiteStripe = new THREE.Mesh(g.whiteStripe, m.whiteStripe);
     whiteStripe.position.set(0, 7.3, 0);
     waterTower.add(tank1, whiteStripe);
     house.add(waterTower);
 
     // External Soundproof Diesel Generator House
-    const genShed = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.6, 2.0), new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.5 }));
+    const genShed = new THREE.Mesh(g.genShed, m.genShed);
     genShed.position.set(cW * 0.5 - 2.0, 0.8, -cD * 0.5 + 2.0);
-    const genLouver = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.7, 0.1), new THREE.MeshBasicMaterial({ color: 0x111827 }));
+    const genLouver = new THREE.Mesh(g.genLouver, m.genLouver);
     genLouver.position.set(cW * 0.5 - 2.0, 0.9, -cD * 0.5 + 3.05);
     house.add(genShed, genLouver);
 
     // Rooftop DSTV Satellite Dish
     const dishGroup = new THREE.Group();
     dishGroup.position.set(width * 0.3, height + 0.6, depth * 0.4);
-    const dishMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.3, metalness: 0.6 });
-    const dishReflector = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.2, 0.2, 16), dishMat);
+    const dishReflector = new THREE.Mesh(g.dishReflector, m.dish);
     dishReflector.rotation.x = Math.PI / 3;
-    const dishPole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.2, 6), steelMat);
+    const dishPole = new THREE.Mesh(g.dishPole, m.steel);
     dishPole.position.y = 0.4;
     dishGroup.add(dishPole, dishReflector);
     house.add(dishGroup);
+
+    return house;
 
     return house;
   }
@@ -1183,6 +1202,9 @@ export class AbujaWorld3D {
       this.clickableDistrictMeshes.push(pad);
       group.add(pad);
 
+      // Detail compound group for distance-based LOD culling (dramatically accelerates 60 FPS rendering)
+      const compoundGroup = new THREE.Group();
+
       // Black-and-white painted curb stones (kerbs) framing the compound walkway
       for (let k = -6; k <= 6; k++) {
         const kMat = Math.abs(k) % 2 === 0 ? kerbBlackMat : kerbWhiteMat;
@@ -1190,38 +1212,36 @@ export class AbujaWorld3D {
         kFront.position.set(k * 3.8, 0.45, 14.5);
         const kBack = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.55, 0.65), kMat);
         kBack.position.set(k * 3.8, 0.45, -14.5);
-        group.add(kFront, kBack);
+        compoundGroup.add(kFront, kBack);
       }
 
       // Manicured green hedges along the compound walkway (matching Images 3, 4 & 5)
       for (const hx of [-16, 16]) {
         const hedge = new THREE.Mesh(new THREE.BoxGeometry(2.2, 2.1, 22), hedgeMat);
         hedge.position.set(hx, 1.2, 0);
-        hedge.castShadow = true;
-        group.add(hedge);
+        compoundGroup.add(hedge);
       }
 
       // Mini Football Turf with White Goalposts + Parked Korope Minibus + Utility Poles
       const pitch = this._buildMiniFootballPitch();
       pitch.position.set(-24, 0, 12);
-      group.add(pitch);
+      compoundGroup.add(pitch);
 
       const van1 = this._buildParkedKoropeVan(0xe2e8f0);
       van1.position.set(19, 0.2, 18);
       van1.rotation.y = -0.35;
-      group.add(van1);
+      compoundGroup.add(van1);
 
       const van2 = this._buildParkedKoropeVan(0xfacc15);
       van2.position.set(-19, 0.2, -18);
       van2.rotation.y = 0.45;
-      group.add(van2);
+      compoundGroup.add(van2);
 
       // Concrete utility poles
       for (const [px, pz] of [[-14, 15], [14, 15], [14, -15]]) {
         const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.28, 15, 8), poleMat);
         pole.position.set(px, 7.5, pz);
-        pole.castShadow = true;
-        group.add(pole);
+        compoundGroup.add(pole);
       }
 
       // Surround district with buildings: CBD gets glass skyscrapers, others get Nigerian duplexes
@@ -1295,8 +1315,9 @@ export class AbujaWorld3D {
             this.clickableDistrictMeshes.push(child);
           }
         });
-        group.add(building);
+        compoundGroup.add(building);
       }
+      group.add(compoundGroup);
 
       const beaconGeo = new THREE.OctahedronGeometry(4.5, 0);
       const beaconMat = new THREE.MeshStandardMaterial({
@@ -1314,7 +1335,7 @@ export class AbujaWorld3D {
       group.add(beacon);
 
       this.scene.add(group);
-      this.districtNodes.set(id, { group, ring, beacon, pos });
+      this.districtNodes.set(id, { group, ring, beacon, pos, compoundGroup });
 
       const label = document.createElement('button');
       label.type = 'button';
@@ -3020,6 +3041,8 @@ export class AbujaWorld3D {
     if (!this.container) return;
     const w = Math.max(1, this.container.clientWidth);
     const h = Math.max(1, this.container.clientHeight);
+    this._canvasW = w;
+    this._canvasH = h;
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h);
@@ -3409,10 +3432,20 @@ export class AbujaWorld3D {
       car.group.position.x += Math.cos(angle) * car.laneOffset;
       car.group.position.z -= Math.sin(angle) * car.laneOffset;
       car.group.rotation.y = car.dir > 0 ? angle : angle + Math.PI;
+
+      // Distance culling for traffic cars
+      const distCar = Math.hypot(car.group.position.x - this.playerPos.x, car.group.position.z - this.playerPos.z);
+      car.group.visible = distCar < 220;
     }
 
     // Animate street pedestrians walking along compounds (or knocked down like Image 4)
     for (const npc of this.streetPedestrians) {
+      const distNpc = Math.hypot(npc.homeX - this.playerPos.x, npc.homeZ - this.playerPos.z);
+      if (distNpc > 180) {
+        npc.rig.root.visible = false;
+        continue;
+      }
+      npc.rig.root.visible = true;
       if (npc.knockedTimer > 0) {
         npc.knockedTimer -= dt;
         npc.rig.root.rotation.x = -Math.PI / 2.1;
@@ -3495,7 +3528,24 @@ export class AbujaWorld3D {
       }
     }
 
-    this._updateProjectedLabels();
+    // Distance culling update (runs every 6 frames to keep traversal minimal)
+    if (!this._distVisThrottle || ++this._distVisThrottle >= 6) {
+      this._distVisThrottle = 0;
+      this._updateDistrictVisibility();
+    }
+
+    // Keep dynamic sun & shadow coverage tightly centered around player
+    if (this.sunLight) {
+      this.sunLight.position.set(this.playerPos.x + 160, 260, this.playerPos.z + 90);
+      this.sunLight.target.position.copy(this.playerPos);
+      this.sunLight.target.updateMatrixWorld();
+    }
+
+    // Projected 2D HTML tags updated every 2nd frame to eliminate DOM reflow bottlenecks
+    if (++this._labelThrottle % 2 === 0) {
+      this._updateProjectedLabels();
+    }
+
     this.renderer.render(this.scene, this.camera);
   }
 
@@ -3682,6 +3732,26 @@ export class AbujaWorld3D {
     }
   }
 
+  _updateDistrictVisibility() {
+    const px = this.playerPos.x;
+    const pz = this.playerPos.z;
+    const isSkyCam = this.skyCam.active;
+    const isHelicopter = this.cameraMode === 'helicopter';
+    const distLimit = this.lowPowerMode ? 140 : 180;
+
+    for (const [id, node] of this.districtNodes.entries()) {
+      if (!node.compoundGroup) continue;
+      // Current active district, helicopter overview, or skyCam flight target is always rendered
+      if (id === this.currentDistrictId || (isSkyCam && id === this.skyCam.targetDistrict) || isHelicopter) {
+        node.compoundGroup.visible = true;
+        continue;
+      }
+      // Distance culling: hide detail duplex meshes of distant districts beyond active zone
+      const dist = Math.hypot(px - node.pos.x, pz - node.pos.z);
+      node.compoundGroup.visible = dist < distLimit;
+    }
+  }
+
   setPlayerVehicleAppearance(carId = 'corolla') {
     if (!this.playerVehicleMesh) return;
     const palette = {
@@ -3852,8 +3922,8 @@ export class AbujaWorld3D {
   }
 
   _updateProjectedLabels() {
-    const w = this.renderer.domElement.clientWidth;
-    const h = this.renderer.domElement.clientHeight;
+    const w = this._canvasW || this.renderer.domElement.clientWidth || 800;
+    const h = this._canvasH || this.renderer.domElement.clientHeight || 600;
     if (!w || !h) return;
 
     const tempV = new THREE.Vector3();

@@ -126,8 +126,29 @@ class AbujaClientApp {
     this._init2DMap();
     this._bindUIEvents();
     this._renderAll();
-    // Always start from the Nigerian Citizen Sign-Up & Lifestyle Caliber Creator screen on load
-    this._openNewCharModal();
+    // Check if launched directly from standalone signup.html with ?start=1
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('start') === '1') {
+      let saved = null;
+      try {
+        saved = JSON.parse(localStorage.getItem('abuja_saved_citizen_profile') || 'null');
+      } catch (_) {}
+      if (saved && saved.name) {
+        this.game.s.meta.name = saved.name;
+        if (saved.region && DISTRICT_BY_ID[saved.region]) this.game.s.loc.district = saved.region;
+        if (saved.trackId) this.game.s.career.track = saved.trackId;
+        if (saved.lifestyle) this.game.s.meta.lifestyle = saved.lifestyle;
+        this.game.s.meta.originConfigured = true;
+        const m = document.getElementById('new-char-modal');
+        if (m) { m.hidden = true; m.style.display = 'none'; }
+        this._saveGame();
+        this._renderAll();
+      } else {
+        this._openNewCharModal();
+      }
+    } else {
+      this._openNewCharModal();
+    }
     this._initMultiplayerBridge();
     this._startRadarLoop();
     this.startRealTime(1);
@@ -573,7 +594,11 @@ class AbujaClientApp {
 
     this._initNigeriaGPSRadar();
 
-    const drawRadar = () => {
+    let lastRadarTime = 0;
+    const drawRadar = (time) => {
+      requestAnimationFrame(drawRadar);
+      if (time - lastRadarTime < 80) return;
+      lastRadarTime = time;
       const w = canvas.width;
       const h = canvas.height;
       ctx.clearRect(0, 0, w, h);
@@ -669,8 +694,6 @@ class AbujaClientApp {
       ctx.fill();
       ctx.stroke();
       ctx.restore();
-
-      requestAnimationFrame(drawRadar);
     };
 
     requestAnimationFrame(drawRadar);
@@ -4798,6 +4821,8 @@ class AbujaClientApp {
       }
       try {
         const name = document.getElementById('char-name-input')?.value?.trim() || 'Alhaji Musa';
+        const email = document.getElementById('char-email-input')?.value?.trim() || 'resident@abujalife.ng';
+        const region = document.getElementById('char-region-select')?.value || 'cbd';
         const trackId = document.getElementById('char-occupation-select')?.value || 'contractor';
         const gender = document.getElementById('char-gender-select')?.value || 'male';
         const lifeStage = document.getElementById('char-lifestage-select')?.value || 'adult';
@@ -4808,11 +4833,13 @@ class AbujaClientApp {
 
         // Persist sign-up details in browser localStorage
         try {
+          const password = document.getElementById('char-password-input')?.value || 'abujalife2026';
           localStorage.setItem('abuja_saved_citizen_profile', JSON.stringify({
-            name, trackId, gender, lifeStage, lifestyle, prevProperty: propMode
+            name, email, region, trackId, gender, lifeStage, lifestyle, prevProperty: propMode, password
           }));
         } catch (_) {}
 
+        const chosenDistrict = (region && DISTRICT_BY_ID[region]) ? region : 'cbd';
         this.game = Game.create({
           name,
           track: trackId,
@@ -5038,6 +5065,9 @@ class AbujaClientApp {
     } catch (_) {}
 
     const nameInp = document.getElementById('char-name-input');
+    const emailInp = document.getElementById('char-email-input');
+    const regionSel = document.getElementById('char-region-select');
+    const pwdInp = document.getElementById('char-password-input');
     const occSel = document.getElementById('char-occupation-select');
     const genderSel = document.getElementById('char-gender-select');
     const stageSel = document.getElementById('char-lifestage-select');
@@ -5048,6 +5078,9 @@ class AbujaClientApp {
     if (nameInp) {
       nameInp.value = (saved && saved.name) ? saved.name : (this.game.s.meta.name || 'Alhaji Musa');
     }
+    if (emailInp) emailInp.value = (saved && saved.email) ? saved.email : 'resident@abujalife.ng';
+    if (regionSel && saved && saved.region) regionSel.value = saved.region;
+    if (pwdInp) pwdInp.value = (saved && saved.password) ? saved.password : 'abujalife2026';
 
     // 1. Clean Occupation Dropdown
     if (occSel) {
@@ -5149,11 +5182,14 @@ class AbujaClientApp {
       try {
         localStorage.setItem('abuja_saved_citizen_profile', JSON.stringify({
           name,
+          email: emailInp?.value || 'resident@abujalife.ng',
+          region: regionSel?.value || 'cbd',
           trackId: occSel?.value || 'contractor',
           gender: genderSel?.value || 'male',
           lifeStage: stageSel?.value || 'adult',
           lifestyle: lifestyleSel?.value || 'alhaji',
-          prevProperty: propSel?.value || 'default'
+          prevProperty: propSel?.value || 'default',
+          password: pwdInp?.value || 'abujalife2026'
         }));
       } catch (_) {}
     };

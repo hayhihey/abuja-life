@@ -827,96 +827,92 @@
     <!-- ================================================================== -->
     <!-- MODAL 3: NIGERIAN CITIZEN SIGN UP & LIFESTYLE CALIBER CREATOR       -->
     <!-- ================================================================== -->
-    <div id="new-char-modal" class="modal-backdrop">
-      <div class="modal-card" style="max-width: 680px; max-height: 92vh; overflow-y: auto;">
-        <div class="modal-badge">🇳🇬 ABUJA LIFE • CITIZEN SIGN UP &amp; IDENTITY REGISTRATION</div>
-        <h2 style="margin: 6px 0 2px;">Sign Up &amp; Register Your Citizen Identity</h2>
-        <div style="font-size:11.5px; color:#4ade80; display:flex; align-items:center; gap:5px; margin-bottom:10px;">
-          <span>💾</span> <span>Browser automatically remembers your custom name, occupation, and sign-up selections.</span>
+    <div id="new-char-modal" class="modal-backdrop sims-backdrop">
+      <div class="sims-card">
+        <!-- Diamond Shape Visual Anchor -->
+        <div class="game-logo">
+          <div class="game-logo-inner">✨</div>
         </div>
 
-        <!-- 📜 BRIEF HISTORY OF ABUJA (FCT) • THE GENESIS (1976 - PRESENT) -->
-        <div class="abuja-history-card" style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.92) 100%); border: 1.5px solid rgba(245, 158, 11, 0.55); border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55);">
-          <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:8px; margin-bottom:8px;">
-            <div style="display:flex; align-items:center; gap:8px;">
-              <span style="font-size:22px;">📜</span>
-              <div>
-                <h3 style="margin:0; font-size:13.5px; color:#fde047; font-family:var(--font-display); letter-spacing:0.5px;">THE GENESIS OF ABUJA (FCT) • BRIEF HISTORY</h3>
-                <span style="font-size:10.5px; color:#94a3b8;">Center of Unity • Master Plan by Kenzo Tange • Seat of Power</span>
-              </div>
-            </div>
-            <button type="button" id="btn-toggle-history-details" class="btn-xs" style="border-color:#facc15; color:#facc15; font-size:10.5px; padding:3px 8px; font-weight:700;">Chronicles ▾</button>
+        <h2>Create Your Resident</h2>
+        <p class="subtitle">Set up your account to start building your dream neighborhood.</p>
+
+        <!-- 📜 Thematic Brief History Chronicles (Collapsible) -->
+        <div class="sims-history-box" style="margin-bottom: 16px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 10px 14px; text-align: left;">
+          <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" id="btn-toggle-history-details">
+            <span style="font-size: 0.84rem; font-weight: 700; color: #1e293b;">📜 The Genesis of Abuja (1976 - Present)</span>
+            <span id="btn-history-text" style="font-size: 0.8rem; font-weight: 700; color: #2563eb;">Chronicles ▾</span>
           </div>
-          <p style="font-size:11.5px; color:#cbd5e1; line-height:1.45; margin:0 0 6px;">
-            In <strong>1976</strong>, the Justice Akinola Aguda panel selected Abuja as Nigeria's neutral Federal Capital Territory to unite all 36 states in the nation's geographic heart. Designed by world-renowned Japanese master architect <strong>Kenzo Tange</strong> with iconic crescent zones facing the sacred monolith of <strong>Aso Rock</strong>, the capital officially moved from Lagos on <strong>December 12, 1991</strong>.
-          </p>
-          <div id="abuja-history-expanded" style="font-size:11px; color:#94a3b8; line-height:1.4; border-top:1px dashed rgba(255,255,255,0.08); padding-top:8px; margin-top:6px;">
-            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:6px; margin-bottom:6px;">
-              <div style="background:rgba(0,0,0,0.3); padding:6px 8px; border-radius:6px; border:1px solid rgba(255,255,255,0.06);">
-                <strong style="color:#38bdf8; display:block;">1976: Aguda Panel</strong>
-                <span>Chosen for ethnic neutrality &amp; central geographical unity.</span>
-              </div>
-              <div style="background:rgba(0,0,0,0.3); padding:5px 8px; border-radius:6px; border:1px solid rgba(255,255,255,0.06);">
-                <strong style="color:#4ade80; display:block;">Kenzo Tange Plan</strong>
-                <span>Curved city axis aligned directly with monolithic Aso Rock.</span>
-              </div>
-              <div style="background:rgba(0,0,0,0.3); padding:5px 8px; border-radius:6px; border:1px solid rgba(255,255,255,0.06);">
-                <strong style="color:#fde047; display:block;">1991: Babangida Move</strong>
-                <span>Seat of the Federal Republic officially moved from Lagos.</span>
-              </div>
-              <div style="background:rgba(0,0,0,0.3); padding:5px 8px; border-radius:6px; border:1px solid rgba(255,255,255,0.06);">
-                <strong style="color:#f472b6; display:block;">Key Districts</strong>
-                <span>Maitama, Asokoro, Wuse 2, Garki &amp; Central CBD.</span>
-              </div>
-            </div>
-            <p style="margin:0; color:#e2e8f0; font-style:italic;">
-              Today, you arrive at the FCT City Gate. Register your identity below to begin your journey across Abuja!
-            </p>
+          <div id="abuja-history-expanded" style="display: none; margin-top: 8px; font-size: 0.82rem; color: #475569; line-height: 1.45; border-top: 1px dashed #cbd5e1; padding-top: 8px;">
+            In <strong>1976</strong>, the Justice Aguda panel designated Abuja as Nigeria's neutral Federal Capital Territory to unite all 36 states in the nation's heart. Master-planned by Japanese architect <strong>Kenzo Tange</strong> facing sacred <strong>Aso Rock</strong>, the capital moved from Lagos on <strong>Dec 12, 1991</strong>. Register your identity below to move in!
           </div>
         </div>
 
         <form id="new-char-form">
-          <div class="form-row-2col">
+          <div class="form-group">
+            <label for="char-name-input">Resident / Family Name</label>
+            <input type="text" id="char-name-input" placeholder="e.g., The Pleasant Household / Alhaji Musa" value="Alhaji Musa" required>
+          </div>
+
+          <div class="form-group">
+            <label for="char-email-input">Account Email</label>
+            <input type="email" id="char-email-input" placeholder="resident@abujalife.ng" value="resident@abujalife.ng" required>
+          </div>
+
+          <!-- Thematic breakdown elements common in life-sim profiles -->
+          <div class="form-row">
             <div class="form-group">
-              <label for="char-name-input" style="font-size:12px; font-weight:700; color:#f8fafc;">👤 1. Citizen Name (Write Any Name You Wish):</label>
-              <input id="char-name-input" type="text" placeholder="e.g. Alhaji Musa, Baddie Zaynab, Odogwu Chidi" value="Alhaji Musa" maxlength="28" required style="width:100%; background:#090d16; color:#fff; border:1.5px solid var(--naira-gold); border-radius:8px; padding:10px; font-size:13.5px; font-weight:600;" />
+              <label for="char-region-select">Starting Server / Region</label>
+              <select id="char-region-select">
+                <option value="cbd">Central Business District (CBD)</option>
+                <option value="maitama">Maitama Luxury Heights</option>
+                <option value="wuse2">Wuse 2 Nightlife Strip</option>
+                <option value="jabi">Jabi Lake Waterfront</option>
+                <option value="garki">Garki Commercial Hub</option>
+                <option value="lagos_island">Eko Atlantic Link (Lagos)</option>
+              </select>
             </div>
             <div class="form-group">
-              <label for="char-occupation-select" style="font-size:12px; font-weight:700; color:#f8fafc;">💼 2. Occupation &amp; Track (Dropdown):</label>
-              <select id="char-occupation-select" style="width:100%; background:#090d16; color:#fff; border:1.5px solid var(--border-subtle); border-radius:8px; padding:10px; font-size:13px; font-weight:600;"></select>
+              <label for="char-occupation-select">Career Track</label>
+              <select id="char-occupation-select" required></select>
             </div>
           </div>
 
-          <div class="form-row-2col">
+          <div class="form-row">
             <div class="form-group">
-              <label for="char-lifestyle-select" style="font-size:12px; font-weight:700; color:#f8fafc;">👑 3. Lifestyle Caliber &amp; Net Worth (Dropdown):</label>
-              <select id="char-lifestyle-select" style="width:100%; background:#090d16; color:#fff; border:1.5px solid var(--border-subtle); border-radius:8px; padding:10px; font-size:13px; font-weight:600;"></select>
+              <label for="char-lifestyle-select">Nigerian Lifestyle Caliber</label>
+              <select id="char-lifestyle-select" required></select>
             </div>
             <div class="form-group">
-              <label for="char-prev-prop-select" style="font-size:12px; font-weight:700; color:#f8fafc;">🏡 4. Starting Accommodation &amp; Ride (Dropdown):</label>
-              <select id="char-prev-prop-select" style="width:100%; background:#090d16; color:#fff; border:1.5px solid var(--border-subtle); border-radius:8px; padding:10px; font-size:13px; font-weight:600;"></select>
-            </div>
-          </div>
-
-          <div class="form-row-2col">
-            <div class="form-group">
-              <label for="char-gender-select" style="font-size:12px; font-weight:700; color:#f8fafc;">🚻 5. Gender (Dropdown):</label>
-              <select id="char-gender-select" style="width:100%; background:#090d16; color:#fff; border:1.5px solid var(--border-subtle); border-radius:8px; padding:10px; font-size:13px;"></select>
-            </div>
-            <div class="form-group">
-              <label for="char-lifestage-select" style="font-size:12px; font-weight:700; color:#f8fafc;">🎂 6. Life Stage &amp; Age (Dropdown):</label>
-              <select id="char-lifestage-select" style="width:100%; background:#090d16; color:#fff; border:1.5px solid var(--border-subtle); border-radius:8px; padding:10px; font-size:13px;"></select>
+              <label for="char-prev-prop-select">Starting Accommodation</label>
+              <select id="char-prev-prop-select" required></select>
             </div>
           </div>
 
-          <!-- Clean Reactive Citizen Identity & Passport Card -->
-          <div id="char-passport-preview" style="margin: 10px 0; background: linear-gradient(135deg, rgba(15,23,42,0.95) 0%, rgba(6,78,59,0.3) 100%); border: 1.5px solid rgba(74,222,128,0.35); border-radius: 12px; padding: 12px 14px; box-shadow: 0 4px 18px rgba(0,0,0,0.45);">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="char-gender-select">Gender</label>
+              <select id="char-gender-select"></select>
+            </div>
+            <div class="form-group">
+              <label for="char-lifestage-select">Life Stage</label>
+              <select id="char-lifestage-select"></select>
+            </div>
           </div>
 
-          <div class="modal-actions" style="margin-top:10px; display:flex; gap:10px;">
-            <button type="button" id="btn-cancel-new-char" class="btn-secondary" style="flex:1; padding:12px;" onclick="(function(){var m=document.getElementById('new-char-modal');if(m){m.hidden=true;m.style.display='none';}try{if(window.abujaApp?.game?.s?.meta){window.abujaApp.game.s.meta.originConfigured=true;window.abujaApp._saveGame?.();}}catch(e){}})()">▶️ Continue Saved Citizen</button>
-            <button type="submit" class="btn-primary" style="flex:1.4; padding:12px; font-size:14px; font-weight:700;">🚀 Complete Sign Up &amp; Launch Abuja Life</button>
+          <div class="form-group">
+            <label for="char-password-input">Password</label>
+            <input type="password" id="char-password-input" placeholder="••••••••" value="abujalife2026" required>
           </div>
+
+          <!-- Reactive Citizen Passport / Demographic Preview Card -->
+          <div id="char-passport-preview" class="sims-passport-preview"></div>
+
+          <button type="submit" class="submit-btn">Move In &amp; Play</button>
+
+          <p class="footer-text">
+            Already registered? <a href="#" id="btn-cancel-new-char">Load Saved Game</a>
+          </p>
         </form>
       </div>
     </div>

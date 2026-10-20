@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create a Household - Life Simulation Sign Up</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🇳🇬</text></svg>" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        body {
+            /* Vibrant, comforting gradient synonymous with life simulators */
+            background: linear-gradient(135px, #4facfe 0%, #00f2fe 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* Glassmorphism card giving a modern, clean launcher feel */
+        .sims-card {
+            background: rgba(255, 255, 255, 0.94);
+            backdrop-filter: blur(12px);
+            width: 480px;
+            max-width: 100%;
+            border-radius: 24px;
+            padding: 36px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            border: 4px solid #ffffff;
+            text-align: center;
+        }
+
+        /* Plumbob/Icon placeholder style */
+        .game-logo {
+            width: 60px;
+            height: 60px;
+            background: #22c55e;
+            margin: 0 auto 20px auto;
+            transform: rotate(45deg);
+            box-shadow: 0 10px 20px rgba(34, 197, 94, 0.4);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s ease;
+        }
+
+        .game-logo:hover {
+            transform: rotate(45deg) scale(1.08);
+        }
+
+        .game-logo-inner {
+            transform: rotate(-45deg);
+            color: white;
+            font-weight: bold;
+            font-size: 1.5rem;
+        }
+
+        h2 {
+            color: #1e293b;
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            color: #64748b;
+            font-size: 0.95rem;
+            margin-bottom: 24px;
+        }
+
+        .form-group {
+            text-align: left;
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 6px;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #cbd5e1;
+            border-radius: 12px;
+            font-size: 1rem;
+            color: #334155;
+            outline: none;
+            background: #f8fafc;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        /* Focus rings mimic crisp selection borders found in character creators */
+        .form-group input:focus, .form-group select:focus {
+            border-color: #3b82f6;
+            background: #ffffff;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+        }
+
+        /* Side-by-side demographic selection to make it feel like a creation suite */
+        .form-row {
+            display: flex;
+            gap: 12px;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 14px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 14px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+            transition: all 0.2s ease;
+        }
+
+        .submit-btn:hover {
+            background: #1d4ed8;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
+        }
+
+        .footer-text {
+            margin-top: 22px;
+            font-size: 0.9rem;
+            color: #64748b;
+        }
+
+        .footer-text a {
+            color: #2563eb;
+            text-decoration: none;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .footer-text a:hover {
+            text-decoration: underline;
+        }
+
+        .passport-banner {
+            background: linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%);
+            border: 1.5px solid #86efac;
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin-bottom: 14px;
+            text-align: left;
+            font-size: 0.85rem;
+            color: #1e293b;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sims-card">
+        <!-- Diamond Shape Visual Anchor -->
+        <div class="game-logo">
+            <div class="game-logo-inner">✨</div>
+        </div>
+
+        <h2>Create Your Resident</h2>
+        <p class="subtitle">Set up your account to start building your dream neighborhood.</p>
+
+        <form id="signup-form">
+            <div class="form-group">
+                <label for="username">Resident / Family Name</label>
+                <input type="text" id="username" placeholder="e.g., The Pleasant Household / Alhaji Musa" value="Alhaji Musa" required>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Account Email</label>
+                <input type="email" id="email" placeholder="name@domain.com" value="resident@abujalife.ng" required>
+            </div>
+
+            <!-- Thematic breakdown elements common in life-sim profiles -->
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="region">Starting Server/Region</label>
+                    <select id="region">
+                        <option value="cbd">Willow Creek (CBD Central)</option>
+                        <option value="maitama">Maitama Luxury Heights</option>
+                        <option value="wuse2">Wuse 2 Nightlife Strip</option>
+                        <option value="jabi">Jabi Lake Waterfront</option>
+                        <option value="garki">Garki Commercial Hub</option>
+                        <option value="lagos_island">Eko Atlantic (Lagos)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="occupation">Career Track</label>
+                    <select id="occupation">
+                        <option value="contractor">🏗️ Contractor (Real Estate)</option>
+                        <option value="tech">💻 Tech Bro (FinTech)</option>
+                        <option value="civil">🏛️ Civil Servant (Ministry)</option>
+                        <option value="trader">📦 Trader (Wuse Market)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="lifestyle">Lifestyle Caliber</label>
+                    <select id="lifestyle">
+                        <option value="alhaji">👑 Alhaji / Big Man (High Clout)</option>
+                        <option value="baddie">💅 Abuja Baddie (Top Steeze)</option>
+                        <option value="techbro">🚀 Remote Tech Bro (Naira + FX)</option>
+                        <option value="hustler">⚡ Street Hustler (High Energy)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="gender">Gender</label>
+                    <select id="gender">
+                        <option value="male">👨🏾 Male</option>
+                        <option value="female">👩🏾 Female</option>
+                        <option value="neutral">🧑🏾 Non-Binary</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="••••••••" value="abujalife2026" required>
+            </div>
+
+            <div id="passport-preview" class="passport-banner">
+                <strong style="color: #15803d;">🇳🇬 Resident Passport Ready</strong>
+                <div style="font-size: 0.8rem; color: #64748b; margin-top: 2px;">
+                    Custom name, occupation and caliber will be saved automatically to your browser.
+                </div>
+            </div>
+
+            <button type="submit" class="submit-btn">Move In &amp; Play</button>
+
+            <p class="footer-text">
+                Already registered? <a href="/" id="btn-load-game">Load Saved Game</a>
+            </p>
+        </form>
+    </div>
+
+    <script>
+        // Load existing saved profile if present
+        try {
+            const saved = JSON.parse(localStorage.getItem('abuja_saved_citizen_profile') || 'null');
+            if (saved) {
+                if (saved.name) document.getElementById('username').value = saved.name;
+                if (saved.email) document.getElementById('email').value = saved.email;
+                if (saved.region) document.getElementById('region').value = saved.region;
+                if (saved.trackId) document.getElementById('occupation').value = saved.trackId;
+                if (saved.lifestyle) document.getElementById('lifestyle').value = saved.lifestyle;
+                if (saved.gender) document.getElementById('gender').value = saved.gender;
+            }
+        } catch (_) {}
+
+        document.getElementById('signup-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const profile = {
+                name: document.getElementById('username').value.trim() || 'Alhaji Musa',
+                email: document.getElementById('email').value.trim() || 'resident@abujalife.ng',
+                region: document.getElementById('region').value || 'cbd',
+                trackId: document.getElementById('occupation').value || 'contractor',
+                lifestyle: document.getElementById('lifestyle').value || 'alhaji',
+                gender: document.getElementById('gender').value || 'male',
+                lifeStage: 'adult',
+                prevProperty: 'default',
+                password: document.getElementById('password').value || 'abujalife2026'
+            };
+
+            try {
+                localStorage.setItem('abuja_saved_citizen_profile', JSON.stringify(profile));
+            } catch (_) {}
+
+            // Navigate to main game with instant launch flag
+            window.location.href = '/?start=1';
+        });
+
+        document.getElementById('btn-load-game').addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.href = '/';
+        });
+    </script>
+</body>
+</html>
