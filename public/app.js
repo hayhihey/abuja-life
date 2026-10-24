@@ -147,7 +147,12 @@ class AbujaClientApp {
         this._openNewCharModal();
       }
     } else {
-      this._openNewCharModal();
+      if (!this.game?.s?.meta?.originConfigured) {
+        this._openNewCharModal();
+      } else {
+        const m = document.getElementById('new-char-modal');
+        if (m) { m.hidden = true; m.style.display = 'none'; }
+      }
     }
     this._initMultiplayerBridge();
     this._startRadarLoop();
@@ -4953,6 +4958,355 @@ class AbujaClientApp {
       updateAfrobeatsStatus();
       this.showToast(`📻 Tuned to ${st.name} (${st.style})`);
     });
+
+    // 1-Tap Quick Start Preset Persona Buttons (in #new-char-modal)
+    document.querySelectorAll('[data-modal-persona]').forEach((card) => {
+      card.addEventListener('click', () => {
+        const key = card.getAttribute('data-modal-persona');
+        this._launchPresetPersona(key);
+      });
+    });
+
+    // Naija Quick Play Dock Buttons
+    document.getElementById('nqd-btn-chop')?.addEventListener('click', () => this.quickChopLife());
+    document.getElementById('nqd-btn-spray')?.addEventListener('click', () => this.quickSprayCash());
+    document.getElementById('nqd-btn-hustle')?.addEventListener('click', () => this.quickHustle());
+    document.getElementById('nqd-btn-cruise')?.addEventListener('click', () => this.openQuickCruiseModal());
+    document.getElementById('nqd-btn-radio')?.addEventListener('click', () => {
+      this.quickCycleRadio();
+      updateAfrobeatsStatus();
+    });
+    document.getElementById('nqd-btn-gen')?.addEventListener('click', () => this.quickToggleGenerator());
+    document.getElementById('nqd-btn-party')?.addEventListener('click', () => {
+      this.quickOwambeParty();
+      updateAfrobeatsStatus();
+    });
+
+    // Quick Cruise Modal controls
+    document.getElementById('btn-close-cruise-modal')?.addEventListener('click', () => {
+      const m = document.getElementById('quick-cruise-modal');
+      if (m) m.hidden = true;
+    });
+
+    document.querySelectorAll('.quick-cruise-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const dest = btn.getAttribute('data-cruise-dest');
+        this.executeQuickCruise(dest);
+      });
+    });
+
+    // Ergonomic Global Keyboard Shortcuts (Keys 1 - 7)
+    this._initQuickShortcuts(updateAfrobeatsStatus);
+  }
+
+  _initQuickShortcuts(updateAfrobeatsStatus) {
+    document.addEventListener('keydown', (e) => {
+      if (['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target?.tagName)) return;
+      if (e.key === '1') {
+        e.preventDefault();
+        this.quickChopLife();
+      } else if (e.key === '2') {
+        e.preventDefault();
+        this.quickSprayCash();
+      } else if (e.key === '3') {
+        e.preventDefault();
+        this.quickHustle();
+      } else if (e.key === '4') {
+        e.preventDefault();
+        this.openQuickCruiseModal();
+      } else if (e.key === '5') {
+        e.preventDefault();
+        this.quickCycleRadio();
+        if (typeof updateAfrobeatsStatus === 'function') updateAfrobeatsStatus();
+      } else if (e.key === '6') {
+        e.preventDefault();
+        this.quickToggleGenerator();
+      } else if (e.key === '7') {
+        e.preventDefault();
+        this.quickOwambeParty();
+        if (typeof updateAfrobeatsStatus === 'function') updateAfrobeatsStatus();
+      }
+    });
+  }
+
+  _launchPresetPersona(key) {
+    const PERSONAS = {
+      obinna: {
+        name: 'Chief Obinna',
+        email: 'obinna@maitama.ng',
+        region: 'maitama',
+        trackId: 'contractor',
+        lifestyle: 'alhaji',
+        gender: 'male',
+        lifeStage: 'adult',
+        prevProperty: 'default',
+        password: 'abujalife2026'
+      },
+      chioma: {
+        name: 'Chioma Gold',
+        email: 'chioma@wuse2.ng',
+        region: 'wuse2',
+        trackId: 'tech',
+        lifestyle: 'baddie',
+        gender: 'female',
+        lifeStage: 'young_adult',
+        prevProperty: 'default',
+        password: 'abujalife2026'
+      },
+      tunde: {
+        name: 'Tunde Ade',
+        email: 'tunde@fintech.ng',
+        region: 'jabi',
+        trackId: 'tech',
+        lifestyle: 'techbro',
+        gender: 'male',
+        lifeStage: 'young_adult',
+        prevProperty: 'default',
+        password: 'abujalife2026'
+      },
+      musa: {
+        name: 'Alhaji Musa',
+        email: 'musa@wusemarket.ng',
+        region: 'garki',
+        trackId: 'trader',
+        lifestyle: 'hustler',
+        gender: 'male',
+        lifeStage: 'adult',
+        prevProperty: 'default',
+        password: 'abujalife2026'
+      }
+    };
+
+    const p = PERSONAS[key] || PERSONAS.obinna;
+    const modal = document.getElementById('new-char-modal');
+    if (modal) {
+      modal.hidden = true;
+      modal.style.display = 'none';
+    }
+
+    try {
+      localStorage.setItem('abuja_saved_citizen_profile', JSON.stringify(p));
+    } catch (_) {}
+
+    const stObj = LIFE_STAGES[p.lifeStage] || LIFE_STAGES.adult;
+    this.game = Game.create({
+      name: p.name,
+      track: p.trackId,
+      gender: p.gender,
+      age: stObj.defaultAge || 28,
+      lifeStage: p.lifeStage,
+      lifestyle: p.lifestyle,
+      prevProperty: p.prevProperty
+    }, {
+      decide: (decision) => this._promptDecisionModal(decision)
+    });
+
+    if (p.region && DISTRICT_BY_ID[p.region]) {
+      this.game.s.loc.district = p.region;
+    }
+    this.game.s.meta.originConfigured = true;
+    this._ensureExtendedPlayerState();
+    this._initGameListenersAfterReset();
+    this.lastFunds = this.game.funds();
+
+    if (this.world3d) {
+      try {
+        this.world3d.resize();
+        this.world3d.flyToDistrict(this.game.s.loc.district);
+        this.world3d.syncPlayerHouses(Object.values(this.game.s.social.plots || {}));
+        if (typeof this.world3d.setPlayerVehicleAppearance === 'function') {
+          this.world3d.setPlayerVehicleAppearance(this.game.s.social.car || 'along');
+        }
+        this.world3d.spawnNairaRain(35);
+      } catch (err) {
+        console.warn('3D world update warning on preset persona launch:', err);
+      }
+    }
+
+    const ls = NIGERIAN_LIFESTYLES[p.lifestyle] || NIGERIAN_LIFESTYLES.alhaji;
+    this.game.log(`Spawned in Abuja as ${p.name} • ${ls.name}!`, 'good', '🇳🇬');
+    this.showToast(`🇳🇬 Welcome to 3D Abuja, ${p.name}! Caliber: ${ls.caliber} (${formatNairaFull(netWorth(this.game.s))} Worth)`);
+    this._renderAll();
+    this._saveGame();
+    this._sendHeartbeat();
+  }
+
+  // --------------------------------------------------------------------------
+  // NIGERIAN QUICK PLAY ACTIONS (FAST, FUN & AUTHENTIC VIBE)
+  // --------------------------------------------------------------------------
+  quickChopLife() {
+    const cost = 2500;
+    if (!this.game.canAfford(cost)) {
+      return this.showToast('⚠️ Sapa alert! Need ₦2,500 to chop suya/mama put!');
+    }
+    this.game.pay(cost);
+    if (this.afrobeats?.playSfx) {
+      this.afrobeats.playSfx('suya_sizzle');
+      setTimeout(() => this.afrobeats.playSfx('chop_life'), 250);
+    }
+    this.game.stat('energy', 18);
+    this.game.stat('sanity', 10);
+    if (this.game.s.sims?.motives) {
+      this.game.s.sims.motives.hunger = Math.min(100, (this.game.s.sims.motives.hunger || 50) + 40);
+      this.game.s.sims.motives.energy = Math.min(100, (this.game.s.sims.motives.energy || 50) + 20);
+    }
+    if (this.world3d?.showThoughtBubble) {
+      this.world3d.showThoughtBubble('🍗', 'Chop Life Sweet!', 3000);
+    }
+    this.game.log('Chopped spicy roadside Abuja suya & cold drink (+Hunger, +Energy).', 'good', '🍗');
+    this.showToast('🍗 Chop life before life chop you! 🥩 (+Hunger, +18 Energy, +10 Sanity)');
+    this._renderAll();
+  }
+
+  quickSprayCash() {
+    const amount = 5000;
+    if (!this.game.canAfford(amount)) {
+      return this.showToast('⚠️ Sapa! Need ₦5,000 cash in hand to spray!');
+    }
+    this.game.pay(amount);
+    if (this.afrobeats?.playSfx) {
+      this.afrobeats.playSfx('spray_cash');
+    }
+    if (this.world3d?.spawnNairaRain) {
+      this.world3d.spawnNairaRain(32);
+    }
+    if (this.world3d?.showThoughtBubble) {
+      this.world3d.showThoughtBubble('💸', 'OPOR! E Choke!', 3200);
+    }
+    this.game.stat('clout', 8);
+    if (this.game.s.social) {
+      this.game.s.social.steeze = Math.min(100, (this.game.s.social.steeze || 80) + 4);
+    }
+    this.game.log(`Sprayed ${formatNairaFull(amount)} in crisp CBN notes! People dey shout "Odogwu!"`, 'good', '💸');
+    this.showToast('💸 Opor! E choke! Cash dey rain for Abuja! 💸 (+8 Clout, +4 Steeze)');
+    this._renderAll();
+  }
+
+  quickHustle() {
+    const track = this.game.s.career.track || 'contractor';
+    let reward = 45000;
+    let label = 'Street Hustle';
+    if (track === 'contractor') {
+      reward = 65000;
+      label = 'Supplied building blocks to Maitama site';
+    } else if (track === 'tech') {
+      reward = 70000;
+      label = 'Delivered remote Flutter/Node API gig for Lagos startup';
+    } else if (track === 'trader') {
+      reward = 50000;
+      label = 'Sold 2 cartons of gadgets at Banex Plaza';
+    } else {
+      reward = 40000;
+      label = 'Processed official departmental clearance allowance';
+    }
+
+    this.game.earn(reward, { cash: true });
+    if (this.afrobeats?.playSfx) {
+      this.afrobeats.playSfx('bank_alert');
+    }
+    if (this.world3d?.showThoughtBubble) {
+      this.world3d.showThoughtBubble('💰', `+${formatNairaFull(reward)} Alert!`, 3200);
+    }
+    this.game.advance(30);
+    this.game.stat('energy', -10);
+    this.game.log(`Completed quick hustle: ${label}! Earned ${formatNairaFull(reward)}.`, 'good', '💼');
+    this.showToast(`💰 CREDIT ALERT: +${formatNairaFull(reward)}! ${label}! Soft work!`);
+    this._renderAll();
+  }
+
+  openQuickCruiseModal() {
+    const modal = document.getElementById('quick-cruise-modal');
+    if (modal) {
+      modal.hidden = false;
+      if (this.afrobeats?.playSfx) this.afrobeats.playSfx('taxi_horn');
+    }
+  }
+
+  executeQuickCruise(dest) {
+    if (!dest || !DISTRICT_BY_ID[dest]) return;
+    const modal = document.getElementById('quick-cruise-modal');
+    if (modal) modal.hidden = true;
+
+    const fare = dest === 'lagos_island' ? 15000 : 1000;
+    if (this.game.canAfford(fare)) {
+      this.game.pay(fare);
+    }
+
+    if (this.afrobeats?.playSfx) {
+      this.afrobeats.playSfx('taxi_horn');
+    }
+
+    this.game.arrive(dest);
+    if (this.world3d) {
+      this.world3d.flyToDistrict(dest);
+    }
+
+    const dName = DISTRICT_BY_ID[dest].name;
+    const banter = [
+      `🚕 Green Cab arrived at ${dName}! Driver: "Oga, we don land! Have a blessed day!" 🚕💨`,
+      `🚕 Zoomed to ${dName} with zero go-slow! Conductor: "Drop your change well!" 🚕💨`,
+      `🚕 Smooth cruise into ${dName}! "Abuja expressway clear die today!" 🚕💨`
+    ];
+    const b = banter[Math.floor(Math.random() * banter.length)];
+    this.showToast(b);
+    this._renderAll();
+  }
+
+  quickCycleRadio() {
+    if (!this.afrobeats) return;
+    if (!this.afrobeats.isPlaying) this.afrobeats.play();
+    const st = this.afrobeats.cycleStation();
+    const topLabel = document.getElementById('top-music-label');
+    if (topLabel) {
+      topLabel.textContent = `▶ ${st.name.split(' ')[0]}`;
+      topLabel.style.color = '#4ade80';
+    }
+    this.showToast(`📻 Tuned to ${st.name} • ${st.style} (${st.vibe})`);
+  }
+
+  quickToggleGenerator() {
+    const s = this.game.s;
+    if (!s.sims) s.sims = { installedObjects: [], utilities: {} };
+    if (!s.sims.utilities) s.sims.utilities = {};
+
+    const isRunning = Boolean(s.sims.utilities.generatorRunning);
+    s.sims.utilities.generatorRunning = !isRunning;
+
+    if (!isRunning) {
+      if (this.afrobeats?.playSfx) this.afrobeats.playSfx('generator');
+      if (this.world3d?.showThoughtBubble) this.world3d.showThoughtBubble('⚡', 'Gen Humming!', 3000);
+      this.showToast('⚡ I-Pass-My-Neighbor generator humming! Constant 240V in compound!');
+      this.game.log('Switched on compound generator. Estate power active.', 'info', '⚡');
+    } else {
+      if (this.afrobeats?.playSfx) this.afrobeats.playSfx('up_nepa');
+      if (this.world3d?.showThoughtBubble) this.world3d.showThoughtBubble('💡', 'UP NEPA!', 3500);
+      this.showToast('💡 UP NEPA! National grid restored! Generator turned off!');
+      this.game.log('Up NEPA! Public power returned to Abuja feeder line.', 'good', '💡');
+    }
+    this._renderAll();
+  }
+
+  quickOwambeParty() {
+    if (this.afrobeats?.playSfx) {
+      this.afrobeats.playSfx('party_horn');
+    }
+    if (this.afrobeats && !this.afrobeats.isPlaying) {
+      this.afrobeats.play();
+    }
+    if (this.world3d?.spawnNairaRain) {
+      this.world3d.spawnNairaRain(48);
+    }
+    if (this.world3d?.showThoughtBubble) {
+      this.world3d.showThoughtBubble('🎉', 'OWAMBE LIVE!', 3500);
+    }
+    this.game.stat('sanity', 18);
+    this.game.stat('clout', 12);
+    if (this.game.s.sims?.motives) {
+      this.game.s.sims.motives.fun = Math.min(100, (this.game.s.sims.motives.fun || 50) + 35);
+    }
+    this.game.log('Rocked an impromptu Owambe street party! Live Afrobeats booming, crowd dancing!', 'good', '💃');
+    this.showToast('🎉 Owambe is LIVE! Gbedu wey dey enter body! 💃🕺 (+Fun, +12 Clout, +18 Sanity)');
+    this._renderAll();
   }
 
   _initGameListenersAfterReset() {

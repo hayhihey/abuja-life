@@ -3295,6 +3295,202 @@ html, body {
   text-align: left;
 }
 
+/* ========================================================================== */
+/* 1-TAP QUICK START PERSONA CARDS (SIGN-UP / START)                          */
+/* ========================================================================== */
+.quick-start-box {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 2px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 14px;
+  margin-bottom: 18px;
+  text-align: left;
+}
+
+.quick-start-title {
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #0284c7;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.persona-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.persona-card {
+  background: #ffffff;
+  border: 2px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 1.4, 0.4, 1);
+  position: relative;
+  text-align: left;
+}
+
+.persona-card:hover {
+  border-color: #2563eb;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.16);
+  background: #f0f7ff;
+}
+
+.persona-card.selected {
+  border-color: #10b981;
+  background: #f0fdf4;
+  box-shadow: 0 0 0 2px #10b981;
+}
+
+.persona-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: #0f172a;
+}
+
+.persona-desc {
+  font-size: 0.76rem;
+  color: #64748b;
+  margin-top: 4px;
+  line-height: 1.3;
+}
+
+.persona-badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #e0f2fe;
+  color: #0369a1;
+  margin-top: 6px;
+}
+
+.or-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0;
+  color: #94a3b8;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.or-divider::before, .or-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #cbd5e1;
+}
+
+/* ========================================================================== */
+/* NAIJA QUICK PLAY DOCK (VIBRANT 1-CLICK NIGERIAN ACTIONS)                   */
+/* ========================================================================== */
+.naija-quick-dock {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 55;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(10, 15, 29, 0.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 2px solid rgba(74, 222, 128, 0.45);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.65), 0 0 20px rgba(16, 185, 129, 0.2);
+  border-radius: 999px;
+  padding: 7px 12px;
+  user-select: none;
+  -webkit-user-select: none;
+  max-width: calc(100vw - 24px);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.naija-quick-dock::-webkit-scrollbar {
+  display: none;
+}
+
+.nqd-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 60px;
+  height: 48px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.16s cubic-bezier(0.2, 1.4, 0.4, 1);
+  white-space: nowrap;
+  touch-action: manipulation;
+}
+
+.nqd-btn:hover, .nqd-btn:active {
+  transform: translateY(-2px) scale(1.06);
+  background: rgba(16, 185, 129, 0.28);
+  border-color: #4ade80;
+  box-shadow: 0 4px 14px rgba(74, 222, 128, 0.4);
+}
+
+.nqd-ico {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.nqd-lbl {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #e2e8f0;
+}
+
+.nqd-btn.gold-accent:hover {
+  background: rgba(250, 204, 21, 0.28);
+  border-color: #facc15;
+  box-shadow: 0 4px 14px rgba(250, 204, 21, 0.4);
+}
+
+@media (max-width: 768px) {
+  .persona-grid {
+    grid-template-columns: 1fr;
+  }
+  .naija-quick-dock {
+    bottom: 74px;
+    padding: 6px 10px;
+    gap: 6px;
+  }
+  .nqd-btn {
+    min-width: 52px;
+    height: 44px;
+    padding: 3px 8px;
+  }
+  .nqd-ico {
+    font-size: 16px;
+  }
+  .nqd-lbl {
+    font-size: 9px;
+  }
+}
+
+
 
 
 

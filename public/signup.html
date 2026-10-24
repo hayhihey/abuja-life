@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create a Household - Life Simulation Sign Up</title>
+    <title>Create a Household - Abuja Life Simulation</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🇳🇬</text></svg>" />
     <style>
         * {
@@ -25,23 +25,23 @@
 
         /* Glassmorphism card giving a modern, clean launcher feel */
         .sims-card {
-            background: rgba(255, 255, 255, 0.94);
-            backdrop-filter: blur(12px);
-            width: 480px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(14px);
+            width: 520px;
             max-width: 100%;
-            border-radius: 24px;
-            padding: 36px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            border-radius: 26px;
+            padding: 34px 30px;
+            box-shadow: 0 24px 48px rgba(0, 0, 0, 0.16);
             border: 4px solid #ffffff;
             text-align: center;
         }
 
         /* Plumbob/Icon placeholder style */
         .game-logo {
-            width: 60px;
-            height: 60px;
+            width: 56px;
+            height: 56px;
             background: #22c55e;
-            margin: 0 auto 20px auto;
+            margin: 0 auto 16px auto;
             transform: rotate(45deg);
             box-shadow: 0 10px 20px rgba(34, 197, 94, 0.4);
             border-radius: 4px;
@@ -63,37 +63,138 @@
         }
 
         h2 {
-            color: #1e293b;
-            font-size: 1.8rem;
-            margin-bottom: 8px;
-            font-weight: 700;
+            color: #0f172a;
+            font-size: 1.75rem;
+            margin-bottom: 6px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
 
         .subtitle {
             color: #64748b;
-            font-size: 0.95rem;
-            margin-bottom: 24px;
+            font-size: 0.92rem;
+            margin-bottom: 20px;
+        }
+
+        /* 1-Tap Quick Start Persona Presets */
+        .quick-start-box {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border: 2px solid #e2e8f0;
+            border-radius: 18px;
+            padding: 14px;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .quick-start-title {
+            font-size: 0.85rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #0284c7;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .persona-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .persona-card {
+            background: #ffffff;
+            border: 2px solid #cbd5e1;
+            border-radius: 12px;
+            padding: 10px 12px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.2, 1.4, 0.4, 1);
+            position: relative;
+            text-align: left;
+        }
+
+        .persona-card:hover {
+            border-color: #2563eb;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 18px rgba(37, 99, 235, 0.16);
+            background: #f0f7ff;
+        }
+
+        .persona-card.selected {
+            border-color: #10b981;
+            background: #f0fdf4;
+            box-shadow: 0 0 0 2px #10b981;
+        }
+
+        .persona-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 700;
+            font-size: 0.92rem;
+            color: #0f172a;
+        }
+
+        .persona-desc {
+            font-size: 0.76rem;
+            color: #64748b;
+            margin-top: 4px;
+            line-height: 1.3;
+        }
+
+        .persona-badge {
+            display: inline-block;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 999px;
+            background: #e0f2fe;
+            color: #0369a1;
+            margin-top: 6px;
+        }
+
+        .or-divider {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 18px 0;
+            color: #94a3b8;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .or-divider::before, .or-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #cbd5e1;
         }
 
         .form-group {
             text-align: left;
-            margin-bottom: 16px;
+            margin-bottom: 14px;
         }
 
         .form-group label {
             display: block;
-            font-size: 0.85rem;
-            font-weight: 600;
+            font-size: 0.82rem;
+            font-weight: 700;
             color: #475569;
-            margin-bottom: 6px;
+            margin-bottom: 5px;
         }
 
         .form-group input, .form-group select {
             width: 100%;
-            padding: 12px 16px;
+            padding: 11px 14px;
             border: 2px solid #cbd5e1;
             border-radius: 12px;
-            font-size: 1rem;
+            font-size: 0.95rem;
             color: #334155;
             outline: none;
             background: #f8fafc;
@@ -101,17 +202,15 @@
             font-family: inherit;
         }
 
-        /* Focus rings mimic crisp selection borders found in character creators */
         .form-group input:focus, .form-group select:focus {
             border-color: #3b82f6;
             background: #ffffff;
             box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
         }
 
-        /* Side-by-side demographic selection to make it feel like a creation suite */
         .form-row {
             display: flex;
-            gap: 12px;
+            gap: 10px;
         }
 
         .form-row .form-group {
@@ -125,30 +224,34 @@
             color: white;
             border: none;
             border-radius: 14px;
-            font-size: 1.1rem;
-            font-weight: 600;
+            font-size: 1.05rem;
+            font-weight: 700;
             cursor: pointer;
-            margin-top: 10px;
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+            margin-top: 8px;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
             transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
 
         .submit-btn:hover {
             background: #1d4ed8;
             transform: translateY(-1px);
-            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
+            box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35);
         }
 
         .footer-text {
-            margin-top: 22px;
-            font-size: 0.9rem;
+            margin-top: 18px;
+            font-size: 0.88rem;
             color: #64748b;
         }
 
         .footer-text a {
             color: #2563eb;
             text-decoration: none;
-            font-weight: 600;
+            font-weight: 700;
             cursor: pointer;
         }
 
@@ -160,11 +263,17 @@
             background: linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%);
             border: 1.5px solid #86efac;
             border-radius: 12px;
-            padding: 12px 14px;
-            margin-bottom: 14px;
+            padding: 10px 12px;
+            margin-bottom: 12px;
             text-align: left;
-            font-size: 0.85rem;
+            font-size: 0.84rem;
             color: #1e293b;
+        }
+
+        @media (max-width: 520px) {
+            .persona-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -176,13 +285,45 @@
             <div class="game-logo-inner">✨</div>
         </div>
 
-        <h2>Create Your Resident</h2>
-        <p class="subtitle">Set up your account to start building your dream neighborhood.</p>
+        <h2><span>🇳🇬</span> Create Your Resident</h2>
+        <p class="subtitle">1-Tap to jump straight into Abuja or customize your citizen below.</p>
+
+        <!-- 1-TAP QUICK PLAY PERSONAS (EASY & FAST) -->
+        <div class="quick-start-box">
+            <div class="quick-start-title">⚡ 1-Tap Quick Start (Choose &amp; Play Instantly)</div>
+            <div class="persona-grid">
+                <div class="persona-card" data-persona="obinna" title="Click to play as Chief Obinna">
+                    <div class="persona-header"><span>👑</span> Chief Obinna</div>
+                    <div class="persona-desc">Maitama Big Man • Luxury Duplex, Benz &amp; High Protocol</div>
+                    <span class="persona-badge" style="background:#fef3c7; color:#92400e;">₦2,500,000 Starting</span>
+                </div>
+
+                <div class="persona-card" data-persona="chioma" title="Click to play as Chioma Gold">
+                    <div class="persona-header"><span>💅</span> Chioma Gold</div>
+                    <div class="persona-desc">Abuja Baddie • Wuse 2 Penthouse &amp; Top Steeze</div>
+                    <span class="persona-badge" style="background:#fce7f3; color:#9d174d;">₦1,200,000 Starting</span>
+                </div>
+
+                <div class="persona-card" data-persona="tunde" title="Click to play as Tunde Ade">
+                    <div class="persona-header"><span>💻</span> Tunde Ade</div>
+                    <div class="persona-desc">Remote Tech Bro • Jabi Lake, Cyber Coupe &amp; FX USD</div>
+                    <span class="persona-badge" style="background:#e0e7ff; color:#3730a3;">₦850k + $1,500 USD</span>
+                </div>
+
+                <div class="persona-card" data-persona="musa" title="Click to play as Alhaji Musa">
+                    <div class="persona-header"><span>📦</span> Alhaji Musa</div>
+                    <div class="persona-desc">Market Merchant • Garki Hub, Saloon &amp; Trade Clout</div>
+                    <span class="persona-badge" style="background:#dcfce7; color:#166534;">₦600,000 Starting</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="or-divider">Or customize your profile</div>
 
         <form id="signup-form">
             <div class="form-group">
                 <label for="username">Resident / Family Name</label>
-                <input type="text" id="username" placeholder="e.g., The Pleasant Household / Alhaji Musa" value="Alhaji Musa" required>
+                <input type="text" id="username" placeholder="e.g., Chief Obinna / Alhaji Musa" value="Alhaji Musa" required>
             </div>
 
             <div class="form-group">
@@ -193,12 +334,12 @@
             <!-- Thematic breakdown elements common in life-sim profiles -->
             <div class="form-row">
                 <div class="form-group">
-                    <label for="region">Starting Server/Region</label>
+                    <label for="region">Starting District</label>
                     <select id="region">
-                        <option value="cbd">Willow Creek (CBD Central)</option>
                         <option value="maitama">Maitama Luxury Heights</option>
                         <option value="wuse2">Wuse 2 Nightlife Strip</option>
                         <option value="jabi">Jabi Lake Waterfront</option>
+                        <option value="cbd">Willow Creek (CBD Central)</option>
                         <option value="garki">Garki Commercial Hub</option>
                         <option value="lagos_island">Eko Atlantic (Lagos)</option>
                     </select>
@@ -242,11 +383,13 @@
             <div id="passport-preview" class="passport-banner">
                 <strong style="color: #15803d;">🇳🇬 Resident Passport Ready</strong>
                 <div style="font-size: 0.8rem; color: #64748b; margin-top: 2px;">
-                    Custom name, occupation and caliber will be saved automatically to your browser.
+                    Custom name, career, and caliber are saved automatically to your browser.
                 </div>
             </div>
 
-            <button type="submit" class="submit-btn">Move In &amp; Play</button>
+            <button type="submit" class="submit-btn">
+                <span>🚀</span> Move In &amp; Play 3D Abuja
+            </button>
 
             <p class="footer-text">
                 Already registered? <a href="/" id="btn-load-game">Load Saved Game</a>
@@ -255,6 +398,53 @@
     </div>
 
     <script>
+        const PERSONAS = {
+            obinna: {
+                name: 'Chief Obinna',
+                email: 'obinna@maitama.ng',
+                region: 'maitama',
+                trackId: 'contractor',
+                lifestyle: 'alhaji',
+                gender: 'male',
+                lifeStage: 'adult',
+                prevProperty: 'default',
+                password: 'abujalife2026'
+            },
+            chioma: {
+                name: 'Chioma Gold',
+                email: 'chioma@wuse2.ng',
+                region: 'wuse2',
+                trackId: 'tech',
+                lifestyle: 'baddie',
+                gender: 'female',
+                lifeStage: 'young_adult',
+                prevProperty: 'default',
+                password: 'abujalife2026'
+            },
+            tunde: {
+                name: 'Tunde Ade',
+                email: 'tunde@fintech.ng',
+                region: 'jabi',
+                trackId: 'tech',
+                lifestyle: 'techbro',
+                gender: 'male',
+                lifeStage: 'young_adult',
+                prevProperty: 'default',
+                password: 'abujalife2026'
+            },
+            musa: {
+                name: 'Alhaji Musa',
+                email: 'musa@wusemarket.ng',
+                region: 'garki',
+                trackId: 'trader',
+                lifestyle: 'hustler',
+                gender: 'male',
+                lifeStage: 'adult',
+                prevProperty: 'default',
+                password: 'abujalife2026'
+            }
+        };
+
         // Load existing saved profile if present
         try {
             const saved = JSON.parse(localStorage.getItem('abuja_saved_citizen_profile') || 'null');
@@ -267,6 +457,34 @@
                 if (saved.gender) document.getElementById('gender').value = saved.gender;
             }
         } catch (_) {}
+
+        function launchProfile(p) {
+            try {
+                localStorage.setItem('abuja_saved_citizen_profile', JSON.stringify(p));
+            } catch (_) {}
+            window.location.href = '/?start=1';
+        }
+
+        // 1-Tap Quick Start Click Handlers
+        document.querySelectorAll('.persona-card').forEach((card) => {
+            card.addEventListener('click', () => {
+                const pKey = card.getAttribute('data-persona');
+                const p = PERSONAS[pKey];
+                if (p) {
+                    card.classList.add('selected');
+                    // Fill form inputs visually
+                    document.getElementById('username').value = p.name;
+                    document.getElementById('email').value = p.email;
+                    document.getElementById('region').value = p.region;
+                    document.getElementById('occupation').value = p.trackId;
+                    document.getElementById('lifestyle').value = p.lifestyle;
+                    document.getElementById('gender').value = p.gender;
+
+                    // Launch instantly!
+                    setTimeout(() => launchProfile(p), 180);
+                }
+            });
+        });
 
         document.getElementById('signup-form').addEventListener('submit', (e) => {
             e.preventDefault();
@@ -281,13 +499,7 @@
                 prevProperty: 'default',
                 password: document.getElementById('password').value || 'abujalife2026'
             };
-
-            try {
-                localStorage.setItem('abuja_saved_citizen_profile', JSON.stringify(profile));
-            } catch (_) {}
-
-            // Navigate to main game with instant launch flag
-            window.location.href = '/?start=1';
+            launchProfile(profile);
         });
 
         document.getElementById('btn-load-game').addEventListener('click', (e) => {

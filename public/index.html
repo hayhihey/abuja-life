@@ -340,6 +340,40 @@
             <span class="gmac-lbl">SPRAY ₦</span>
           </button>
         </div>
+
+        <!-- ============================================================== -->
+        <!-- NAIJA QUICK PLAY DOCK (VIBRANT 1-CLICK NIGERIAN ACTIONS)       -->
+        <!-- ============================================================== -->
+        <nav class="naija-quick-dock" id="naija-quick-dock" aria-label="Naija Quick Actions Dock">
+          <button type="button" class="nqd-btn" id="nqd-btn-chop" title="🍗 Chop Life (Eat Suya &amp; Jollof) [Shortcut: 1]">
+            <span class="nqd-ico">🍗</span>
+            <span class="nqd-lbl">Chop Life</span>
+          </button>
+          <button type="button" class="nqd-btn gold-accent" id="nqd-btn-spray" title="💸 Spray Naira Notes in 3D (+Clout &amp; Steeze) [Shortcut: 2]">
+            <span class="nqd-ico">💸</span>
+            <span class="nqd-lbl">Spray ₦</span>
+          </button>
+          <button type="button" class="nqd-btn" id="nqd-btn-hustle" title="💰 Fast Street Hustle (+₦ Cash Alert) [Shortcut: 3]">
+            <span class="nqd-ico">💰</span>
+            <span class="nqd-lbl">Quick Mula</span>
+          </button>
+          <button type="button" class="nqd-btn" id="nqd-btn-cruise" title="🚕 Hail Green Cab / Cruise Abuja [Shortcut: 4]">
+            <span class="nqd-ico">🚕</span>
+            <span class="nqd-lbl">Cruise/Cab</span>
+          </button>
+          <button type="button" class="nqd-btn" id="nqd-btn-radio" title="📻 Switch Naija FM Radio Station [Shortcut: 5]">
+            <span class="nqd-ico">📻</span>
+            <span class="nqd-lbl">Naija FM</span>
+          </button>
+          <button type="button" class="nqd-btn" id="nqd-btn-gen" title="⚡ UP NEPA! / Compound Generator [Shortcut: 6]">
+            <span class="nqd-ico">⚡</span>
+            <span class="nqd-lbl">Up NEPA!</span>
+          </button>
+          <button type="button" class="nqd-btn gold-accent" id="nqd-btn-party" title="🕺 Owambe Street Party (Live Afrobeats &amp; Horns) [Shortcut: 7]">
+            <span class="nqd-ico">🕺</span>
+            <span class="nqd-lbl">Owambe</span>
+          </button>
+        </nav>
       </section>
 
       <!-- Mobile Tap-Outside Backdrop to Dismiss Drawer Effortlessly -->
@@ -834,8 +868,40 @@
           <div class="game-logo-inner">✨</div>
         </div>
 
-        <h2>Create Your Resident</h2>
-        <p class="subtitle">Set up your account to start building your dream neighborhood.</p>
+        <h2><span>🇳🇬</span> Create Your Resident</h2>
+        <p class="subtitle">1-Tap to jump straight into Abuja or customize your citizen below.</p>
+
+        <!-- ⚡ 1-TAP QUICK PLAY PERSONAS (EASY & FAST) -->
+        <div class="quick-start-box">
+          <div class="quick-start-title">⚡ 1-Tap Quick Start (Choose &amp; Play Instantly)</div>
+          <div class="persona-grid">
+            <div class="persona-card" data-modal-persona="obinna" title="Click to play as Chief Obinna">
+              <div class="persona-header"><span>👑</span> Chief Obinna</div>
+              <div class="persona-desc">Maitama Big Man • Luxury Duplex, Benz &amp; High Protocol</div>
+              <span class="persona-badge" style="background:#fef3c7; color:#92400e;">₦2,500,000 Starting</span>
+            </div>
+
+            <div class="persona-card" data-modal-persona="chioma" title="Click to play as Chioma Gold">
+              <div class="persona-header"><span>💅</span> Chioma Gold</div>
+              <div class="persona-desc">Abuja Baddie • Wuse 2 Penthouse &amp; Top Steeze</div>
+              <span class="persona-badge" style="background:#fce7f3; color:#9d174d;">₦1,200,000 Starting</span>
+            </div>
+
+            <div class="persona-card" data-modal-persona="tunde" title="Click to play as Tunde Ade">
+              <div class="persona-header"><span>💻</span> Tunde Ade</div>
+              <div class="persona-desc">Remote Tech Bro • Jabi Lake, Cyber Coupe &amp; FX USD</div>
+              <span class="persona-badge" style="background:#e0e7ff; color:#3730a3;">₦850k + $1,500 USD</span>
+            </div>
+
+            <div class="persona-card" data-modal-persona="musa" title="Click to play as Alhaji Musa">
+              <div class="persona-header"><span>📦</span> Alhaji Musa</div>
+              <div class="persona-desc">Market Merchant • Garki Hub, Saloon &amp; Trade Clout</div>
+              <span class="persona-badge" style="background:#dcfce7; color:#166534;">₦600,000 Starting</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="or-divider">Or customize your profile</div>
 
         <!-- 📜 Thematic Brief History Chronicles (Collapsible) -->
         <div class="sims-history-box" style="margin-bottom: 16px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 10px 14px; text-align: left;">
@@ -1119,6 +1185,67 @@
         </p>
         <div id="nigeria-full-gps-map" style="width:100%; height:420px; border-radius:12px; border:2px solid rgba(74,222,128,0.5); overflow:hidden; background:#0f172a;"></div>
         <div id="nigeria-gps-street-chips" style="display:flex; gap:6px; flex-wrap:wrap; max-height:110px; overflow-y:auto;"></div>
+      </div>
+    </div>
+
+    <!-- ================================================================== -->
+    <!-- MODAL: QUICK CRUISE & GREEN CAB SELECTOR (FAST TRAVEL & CRUISE)    -->
+    <!-- ================================================================== -->
+    <div id="quick-cruise-modal" class="modal-backdrop" hidden>
+      <div class="modal-card" style="max-width: 580px; width: 95vw;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <span class="modal-badge" style="background:rgba(34,197,94,0.2); color:#4ade80; border-color:rgba(34,197,94,0.45);">🚕 FCT ABUJA GREEN CAB &amp; SPORTS CRUISE</span>
+            <h2 style="margin-top:4px;">Cruise Abuja Streets (1-Tap Travel)</h2>
+          </div>
+          <button type="button" id="btn-close-cruise-modal" class="gta-icon-btn">✕</button>
+        </div>
+        <p style="font-size:12px; color:#cbd5e1; margin:6px 0 14px; line-height:1.4;">
+          Hop into an Abuja Green Cab or fire up your Widebody Sports Coupe to cruise to top hotspots instantly with zero traffic stress!
+        </p>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:10px;" id="quick-cruise-grid">
+          <button type="button" class="btn-secondary quick-cruise-btn" data-cruise-dest="maitama" style="text-align:left; padding:12px; border-radius:12px; border:1.5px solid rgba(56,189,248,0.4); cursor:pointer;">
+            <div style="font-size:14px; font-weight:800; color:#38bdf8;">👑 Maitama Heights</div>
+            <div style="font-size:11px; color:#94a3b8; margin-top:2px;">Transcorp Hilton &amp; Billionaires</div>
+            <span style="font-size:10px; color:#4ade80; font-weight:700;">₦1,500 Cab Fare</span>
+          </button>
+
+          <button type="button" class="btn-secondary quick-cruise-btn" data-cruise-dest="wuse2" style="text-align:left; padding:12px; border-radius:12px; border:1.5px solid rgba(244,114,182,0.4); cursor:pointer;">
+            <div style="font-size:14px; font-weight:800; color:#f472b6;">💅 Wuse 2 Strip</div>
+            <div style="font-size:11px; color:#94a3b8; margin-top:2px;">Adetokunbo Ademola Nightlife</div>
+            <span style="font-size:10px; color:#4ade80; font-weight:700;">₦1,000 Cab Fare</span>
+          </button>
+
+          <button type="button" class="btn-secondary quick-cruise-btn" data-cruise-dest="jabi" style="text-align:left; padding:12px; border-radius:12px; border:1.5px solid rgba(74,222,128,0.4); cursor:pointer;">
+            <div style="font-size:14px; font-weight:800; color:#4ade80;">🌊 Jabi Lake Mall</div>
+            <div style="font-size:11px; color:#94a3b8; margin-top:2px;">Waterfront Promenade &amp; Lounges</div>
+            <span style="font-size:10px; color:#4ade80; font-weight:700;">₦800 Cab Fare</span>
+          </button>
+
+          <button type="button" class="btn-secondary quick-cruise-btn" data-cruise-dest="cbd" style="text-align:left; padding:12px; border-radius:12px; border:1.5px solid rgba(250,204,21,0.4); cursor:pointer;">
+            <div style="font-size:14px; font-weight:800; color:#fde047;">🏛️ Central Area (CBD)</div>
+            <div style="font-size:11px; color:#94a3b8; margin-top:2px;">National Mosque, Church &amp; BPP</div>
+            <span style="font-size:10px; color:#4ade80; font-weight:700;">₦1,200 Cab Fare</span>
+          </button>
+
+          <button type="button" class="btn-secondary quick-cruise-btn" data-cruise-dest="garki" style="text-align:left; padding:12px; border-radius:12px; border:1.5px solid rgba(168,85,247,0.4); cursor:pointer;">
+            <div style="font-size:14px; font-weight:800; color:#c084fc;">📦 Garki Hub</div>
+            <div style="font-size:11px; color:#94a3b8; margin-top:2px;">Commercial Trade &amp; Area 1 Kiosk</div>
+            <span style="font-size:10px; color:#4ade80; font-weight:700;">₦700 Cab Fare</span>
+          </button>
+
+          <button type="button" class="btn-secondary quick-cruise-btn" data-cruise-dest="lagos_island" style="text-align:left; padding:12px; border-radius:12px; border:1.5px solid rgba(251,146,60,0.4); cursor:pointer;">
+            <div style="font-size:14px; font-weight:800; color:#fb923c;">🌊 Eko Atlantic (Lagos)</div>
+            <div style="font-size:11px; color:#94a3b8; margin-top:2px;">Lekki-Epe Expressway &amp; Ocean</div>
+            <span style="font-size:10px; color:#4ade80; font-weight:700;">₦15,000 Flight/Express</span>
+          </button>
+        </div>
+
+        <div style="margin-top:14px; padding:10px; background:rgba(15,23,42,0.8); border-radius:10px; border:1px solid rgba(255,255,255,0.08); font-size:11.5px; color:#94a3b8; display:flex; align-items:center; gap:8px;">
+          <span>💡</span>
+          <span>Or press <strong>F</strong> anytime to hop in/out of your Widebody Sports Car and drive manually with WASD or joystick!</span>
+        </div>
       </div>
     </div>
 
