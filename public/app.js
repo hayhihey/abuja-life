@@ -6101,7 +6101,7 @@ class AbujaClientApp {
       const heroTrack = document.getElementById('char-hero-track');
       const heroVibe = document.getElementById('char-hero-vibe');
       if (heroSvgCont) {
-        heroSvgCont.innerHTML = renderCharacterAvatarSVG(tr.id, g.id, 80);
+        heroSvgCont.innerHTML = renderCharacterAvatarSVG(AVATAR_MAP[tr.id] || 'contractor', 80);
       }
       if (heroName) heroName.textContent = name;
       if (heroTrack) heroTrack.textContent = `${tr.icon} ${tr.name} • ${st.label}`;

@@ -539,11 +539,11 @@
               </div>
               <div class="form-row-2col">
                 <div class="form-group" style="margin-bottom:0;">
-                  <label>Custom Task Instructions</label>
+                  <label for="task-title-input">Custom Task Instructions</label>
                   <input id="task-title-input" type="text" placeholder="e.g. Deliver 30-ton granite to my Guzape plot sharp-sharp" />
                 </div>
                 <div class="form-group" style="margin-bottom:0;">
-                  <label>Naira Bounty (Escrow Cost ₦)</label>
+                  <label for="task-reward-input">Naira Bounty (Escrow Cost ₦)</label>
                   <input id="task-reward-input" type="number" min="5000" max="500000" step="5000" value="30000" required />
                 </div>
               </div>
@@ -622,11 +622,11 @@
             <form id="court-file-form" class="court-file-form" style="display:flex; flex-direction:column; gap:7px; margin-top:4px;">
               <div class="form-row-2col">
                 <div class="form-group" style="margin-bottom:0;">
-                  <label>Defendant (Player, Landlord, or Agency)</label>
+                  <label for="court-defendant-input">Defendant (Player, Landlord, or Agency)</label>
                   <input id="court-defendant-input" type="text" placeholder="e.g. Lugbe Landlord / VIO Patrol" required />
                 </div>
                 <div class="form-group" style="margin-bottom:0;">
-                  <label>Damages Claimed (₦)</label>
+                  <label for="court-claim-input">Damages Claimed (₦)</label>
                   <input id="court-claim-input" type="number" min="20000" max="2000000" step="10000" value="250000" required />
                 </div>
               </div>
@@ -726,6 +726,7 @@
                   type="text"
                   maxlength="240"
                   placeholder="Chat with players, negotiate deals, or DM a friend..."
+                  aria-label="Multiplayer chat message input"
                   autocomplete="off"
                 />
                 <button type="submit" class="btn-primary mp-send-btn">Send</button>
@@ -819,6 +820,7 @@
               type="text"
               maxlength="180"
               placeholder="Quick chat to FCT..."
+              aria-label="Quick street message input"
               style="flex:1; background:#090d16; border:1px solid var(--border-subtle); border-radius:5px; padding:4px 7px; color:#fff; font-size:11px;"
             />
             <button type="submit" class="btn-xs" style="border-color:#10b981; color:#4ade80;">Send</button>
@@ -964,12 +966,12 @@
         <form id="new-char-form">
           <div class="form-group">
             <label for="char-name-input">Resident / Family Name</label>
-            <input type="text" id="char-name-input" placeholder="e.g., The Pleasant Household / Alhaji Musa" value="Alhaji Musa" required>
+            <input type="text" id="char-name-input" placeholder="e.g., The Pleasant Household / Alhaji Musa" value="Alhaji Musa" autocomplete="username" required>
           </div>
 
           <div class="form-group">
             <label for="char-email-input">Account Email</label>
-            <input type="email" id="char-email-input" placeholder="resident@abujalife.ng" value="resident@abujalife.ng" required>
+            <input type="email" id="char-email-input" placeholder="resident@abujalife.ng" value="resident@abujalife.ng" autocomplete="email" required>
           </div>
 
           <!-- Thematic breakdown elements common in life-sim profiles -->
