@@ -49,11 +49,25 @@ export class AbujaWorld3D {
       1600
     );
 
-    this.renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      powerPreference: 'high-performance',
-      logarithmicDepthBuffer: false
-    });
+    try {
+      this.renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        powerPreference: 'high-performance',
+        logarithmicDepthBuffer: false
+      });
+      this.webglAvailable = true;
+    } catch (err) {
+      console.warn('WebGL initialization failed, falling back to 2D tactical mode:', err);
+      this.webglAvailable = false;
+      this.container.innerHTML = `
+        <div class="webgl-fallback-card">
+          <div class="wfc-badge">🇳🇬 2D TACTICAL SIMULATION</div>
+          <h3>WebGL Graphics Acceleration Unavailable</h3>
+          <p>WebGL hardware rendering is unavailable or disabled in this browser. Abuja Life has seamlessly initialized in 2D Tactical Simulation Mode with all careers, economy, commute, and actions fully playable.</p>
+        </div>
+      `;
+      throw err;
+    }
     this.renderer.setSize(containerEl.clientWidth, containerEl.clientHeight);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
     this.renderer.shadowMap.enabled = true;
@@ -62,6 +76,17 @@ export class AbujaWorld3D {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.08;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+    // Context loss resilience
+    this.renderer.domElement.addEventListener('webglcontextlost', (e) => {
+      e.preventDefault();
+      console.warn('WebGL context lost - pausing render loop until restored.');
+      if (this.animFrameId) cancelAnimationFrame(this.animFrameId);
+    });
+    this.renderer.domElement.addEventListener('webglcontextrestored', () => {
+      console.log('WebGL context restored - restarting render loop.');
+      this.animFrameId = requestAnimationFrame(this._animate);
+    });
 
     // Clear container and mount canvas + 3D HTML overlay layer
     this.container.innerHTML = '';
@@ -2971,8 +2996,18 @@ export class AbujaWorld3D {
         this.cameraDistance = 46;
         this.cameraPitch = 0.62;
         this.cameraYaw = Math.PI / 4;
+        if (typeof this.options.onCycleCamera === 'function') {
+          this.options.onCycleCamera(this.cameraMode);
+        }
       }
-      if (k === ' ' || k === 'e') {
+      if (k === 'e') {
+        e.preventDefault();
+        const handled = typeof this.options.onContextInteract === 'function' ? this.options.onContextInteract() : false;
+        if (!handled) {
+          this.triggerStreetPunch();
+        }
+      }
+      if (k === ' ') {
         e.preventDefault();
         this.triggerStreetPunch();
       }
@@ -3063,6 +3098,9 @@ export class AbujaWorld3D {
       this.cameraDistance = this.inVehicle ? 26 : 15.5;
       this.cameraPitch = this.inVehicle ? 0.24 : 0.20;
     }
+    if (typeof this.options?.onToggleVehicle === 'function') {
+      this.options.onToggleVehicle(this.inVehicle);
+    }
     return this.inVehicle;
   }
 
@@ -3080,6 +3118,9 @@ export class AbujaWorld3D {
       this.cameraMode = 'chase';
       this.cameraDistance = this.inVehicle ? 26 : 15.5;
       this.cameraPitch = this.inVehicle ? 0.24 : 0.20;
+    }
+    if (typeof this.options?.onCycleCamera === 'function') {
+      this.options.onCycleCamera(this.cameraMode);
     }
     return this.cameraMode;
   }

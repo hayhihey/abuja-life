@@ -1,4 +1,4 @@
-// Zero-dependency HTTP & Real-Time Multiplayer Server for "Abuja Life: GTA FCT Edition"
+// Zero-dependency HTTP & Real-Time Multiplayer Server for "Abuja Life: 3D FCT Open City Edition"
 // Incorporates community fixes & viral features inspired by @Shalom_HeyEliy:
 // - High-unread-count safe paginated chat (/api/chat) + normalized sender/author fields
 // - Anti-scam staff impersonation filter & verified player badges
@@ -293,6 +293,17 @@ const playerTasks = [
 
 const playerInbox = new Map();
 const sseClients = new Set();
+const lastActionTimes = new Map();
+
+function checkRateLimit(key, minCooldownMs = 1500) {
+  const now = Date.now();
+  const last = lastActionTimes.get(key) || 0;
+  if (now - last < minCooldownMs) {
+    return false;
+  }
+  lastActionTimes.set(key, now);
+  return true;
+}
 
 function pushInbox(targetId, event) {
   if (!playerInbox.has(targetId)) playerInbox.set(targetId, []);
@@ -662,6 +673,11 @@ export async function requestHandler(req, res, overridePath = null) {
   if (pathname === '/api/tasks/create' && req.method === 'POST') {
     try {
       const body = await readBody(req);
+      if (!checkRateLimit(`task_${body.creatorId || 'anon'}`, 2500)) {
+        res.writeHead(429, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: 'Task dispatch cooldown active. Please wait 2 seconds.' }));
+        return;
+      }
       const reward = Math.min(2000000, Math.max(3000, Math.round(Number(body.reward) || 15000)));
       const taskType = body.taskType || 'push_file';
       const benefitLabels = {
@@ -851,6 +867,11 @@ export async function requestHandler(req, res, overridePath = null) {
   if (pathname === '/api/court/file' && req.method === 'POST') {
     try {
       const body = await readBody(req);
+      if (!checkRateLimit(`court_${body.plaintiffId || 'anon'}`, 4000)) {
+        res.writeHead(429, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: 'Court filing docket cooldown. Please wait 4 seconds.' }));
+        return;
+      }
       const claimAmount = Math.min(5000000, Math.max(10000, Math.round(Number(body.claimAmount) || 100000)));
       const newCase = {
         id: 'case_' + Date.now().toString(36),
@@ -1013,9 +1034,19 @@ export async function requestHandler(req, res, overridePath = null) {
     try {
       const body = await readBody(req);
       const amount = Math.round(Number(body.amount) || 0);
-      if (!body.fromId || !body.toId || amount <= 0) {
+      if (!body.fromId || !body.toId || amount < 500 || amount > 50000000) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok: false, error: 'Invalid transfer details' }));
+        res.end(JSON.stringify({ ok: false, error: 'Invalid transfer details (Min ₦500, Max ₦50,000,000)' }));
+        return;
+      }
+      if (body.fromId === body.toId) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: 'Cannot wire transfer funds to yourself' }));
+        return;
+      }
+      if (!checkRateLimit(`wire_${body.fromId}`, 1500)) {
+        res.writeHead(429, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: 'Transfer cooldown active. Please wait a moment.' }));
         return;
       }
       const target = livePlayers.get(body.toId);
@@ -1192,7 +1223,7 @@ if (!process.env.VERCEL) {
   const server = http.createServer(requestHandler);
   server.listen(PORT, () => {
     console.log(`====================================================`);
-    console.log(`   ABUJA LIFE: GTA 3D EDITION RUNNING ON PORT ${PORT}`);
+    console.log(`   ABUJA LIFE: 3D FCT OPEN CITY EDITION RUNNING ON PORT ${PORT}`);
     console.log(`   URL: http://localhost:${PORT}`);
     console.log(`   Real-Time Multiplayer SSE & 3D FCT World Active`);
     console.log(`====================================================`);

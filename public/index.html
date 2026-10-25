@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>ABUJA LIFE: NIGERIA GTA — 3D Street &amp; Real Nigeria GPS Edition</title>
+  <title>ABUJA LIFE: 3D FCT Life Simulation &amp; Open City Engine</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🇳🇬</text></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,500;0,600;0,700;1,700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
-  <!-- Leaflet Real Nigeria Street GPS Map CSS & JS -->
+  <!-- Virtual Nigeria Street GIS & OpenStreetMap Reference -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <link rel="stylesheet" href="/style.css" />
@@ -24,19 +24,20 @@
 <body>
   <div id="app" class="gta-shell nigeria-gta-fullscreen">
 
-    <!-- Network "Go-Slow" Auto-Recovery Pill (Inspired by lagoslife.app resilience) -->
-    <div id="net-status-pill" class="net-status-pill" hidden>
-      <span>⏳ FCT network hit a small go-slow… reconnecting</span>
-      <button id="btn-force-resync" class="btn-xs">Re-sync Now</button>
+    <!-- Network & Presence Auto-Recovery Pill (Resilient connection manager) -->
+    <div id="net-status-pill" class="net-status-pill" data-status="live">
+      <span id="net-status-dot" class="net-status-dot">🟢</span>
+      <span id="net-status-text">FCT Network Connected</span>
+      <button id="btn-force-resync" class="btn-xs btn-resync" title="Force re-sync with FCT servers">Re-sync</button>
     </div>
 
     <!-- ================================================================== -->
-    <!-- COMPACT TOP ICON STRIP (Hidden/Minimal so 3D Nigeria GTA is 100%)  -->
+    <!-- COMPACT TOP BAR & STATUS INDICATORS                                -->
     <!-- ================================================================== -->
     <header class="gta-topbar gta-topbar-minimal">
       <div class="brand-cluster" style="display:flex; align-items:center; gap:6px; overflow-x:auto; white-space:nowrap; max-width:calc(100vw - 190px); padding-bottom:2px; scrollbar-width:none; -ms-overflow-style:none;">
         <div class="gta-badge-logo" id="btn-toggle-district-card" style="cursor:pointer;" title="Click to toggle District Postcard">
-          <span class="badge-top">🇳🇬 GTA</span>
+          <span class="badge-top">🇳🇬 FCT</span>
           <span class="badge-main">ABUJA</span>
         </div>
         <button type="button" class="top-nav-icon-pill" id="btn-hud-profile" title="Configure Profile, Occupation & Lifestyle Caliber">
@@ -44,7 +45,7 @@
           <span id="hud-player-name" class="hud-player-name" style="font-size:11.5px; font-weight:700;">Citizen</span>
           <span id="hud-career-badge" class="hud-career-badge" style="font-size:9.5px; padding:2px 5px;">Hustler</span>
           <span id="hud-age-gender-pill" hidden>👨🏾 26y</span>
-          <span id="hud-online-pill" hidden>● 8 ONLINE</span>
+          <span id="hud-online-pill" class="hud-online-pill">● Connecting…</span>
           <span id="hud-bae-pill" hidden>💍 Bae</span>
           <span id="hud-caliber-pill" hidden>✨ Steeze 80%</span>
         </button>
@@ -52,26 +53,15 @@
           <span>📻</span>
           <span id="top-music-label" style="font-size:10.5px; font-weight:700; color:#c7d2fe;">WAZOBIA FM</span>
         </button>
-        <button type="button" class="top-nav-icon-pill" id="btn-top-history" title="Read Brief History of Abuja FCT (1976 - Present)">
-          <span>📜</span>
-          <span style="font-size:10.5px; font-weight:700; color:#fde047;">Abuja History</span>
-        </button>
-        <button type="button" class="top-nav-icon-pill" id="btn-top-edu" title="Open Higher Institutions & Universities">
-          <span>🎓</span>
-          <span style="font-size:10.5px; font-weight:700; color:#93c5fd;">Uni / Law</span>
-        </button>
-        <button type="button" class="top-nav-icon-pill" id="btn-top-tax" title="Open FIRS & FCT Tax Clearance Assessment">
-          <span>📜</span>
-          <span style="font-size:10.5px; font-weight:700; color:#86efac;">FIRS Tax</span>
-        </button>
-        <button type="button" class="top-nav-icon-pill" id="btn-top-election" title="Open General Elections, Parties & Rallies">
-          <span>🗳️</span>
-          <span style="font-size:10.5px; font-weight:700; color:#fdba74;">Elections</span>
-        </button>
-        <button type="button" class="top-nav-icon-pill" id="btn-top-mega-housing" title="Open Mega Multiplayer Accommodation">
-          <span>🏙️</span>
-          <span style="font-size:10.5px; font-weight:700; color:#6ee7b7;">Estates</span>
-        </button>
+
+        <!-- Hidden Legacy Nav IDs for Full Backward Compatibility -->
+        <span style="display:none;">
+          <button type="button" id="btn-top-history"></button>
+          <button type="button" id="btn-top-edu"></button>
+          <button type="button" id="btn-top-tax"></button>
+          <button type="button" id="btn-top-election"></button>
+          <button type="button" id="btn-top-mega-housing"></button>
+        </span>
       </div>
 
       <!-- Hidden Legacy Top-Right Holders (Kept for DOM compatibility) -->
@@ -179,67 +169,56 @@
         </div>
 
         <!-- ============================================================== -->
-        <!-- "MAKE ALL THE OTHERS LIKE ICON" — FLOATING GTA ICON DOCK       -->
+        <!-- CONSOLIDATED GAME NAVIGATION DOCK (6 CORE PILLARS)             -->
         <!-- ============================================================== -->
         <nav class="gta-floating-icon-dock" id="gta-floating-icon-dock" aria-label="Game Menus Icon Dock">
-          <button type="button" class="gta-dock-icon" data-dock-tab="actions" title="⚡ Street Hustle &amp; District Moves">
-            <span class="gdi-ico">⚡</span>
-            <span class="gdi-lbl">Hustle</span>
+          <button type="button" class="gta-dock-icon active" data-dock-tab="explore" title="🧭 Explore: Street Roaming, Commute &amp; GPS Map">
+            <span class="gdi-ico">🧭</span>
+            <span class="gdi-lbl">Explore</span>
           </button>
-          <button type="button" class="gta-dock-icon" data-dock-tab="commute" title="🛣️ Commute &amp; Expressways">
-            <span class="gdi-ico">🛣️</span>
-            <span class="gdi-lbl">Commute</span>
-          </button>
-          <button type="button" class="gta-dock-icon" data-dock-tab="shop" title="🛍️ MarketWishes.com Mall &amp; 36-State Tourist Centers">
-            <span class="gdi-ico">🛍️</span>
-            <span class="gdi-lbl">Shop/Tour</span>
-          </button>
-          <button type="button" class="gta-dock-icon" data-dock-tab="career" title="💼 Career &amp; BPP Contracts">
+          <button type="button" class="gta-dock-icon" data-dock-tab="work" title="💼 Work: Daily Hustle, Careers &amp; Tenders">
             <span class="gdi-ico">💼</span>
-            <span class="gdi-lbl">Career</span>
+            <span class="gdi-lbl">Work</span>
           </button>
-          <button type="button" class="gta-dock-icon" data-dock-tab="housing" title="🏗️ Build 3D House &amp; AGIS Land">
-            <span class="gdi-ico">🏗️</span>
-            <span class="gdi-lbl">House</span>
-          </button>
-          <button type="button" class="gta-dock-icon" data-dock-tab="sims" title="🏠 The Sims Motives, Smart Home &amp; Build Catalog">
+          <button type="button" class="gta-dock-icon" data-dock-tab="home" title="🏠 Home: The Sims Needs, 3D House Builder &amp; Estates">
             <span class="gdi-ico">🏠</span>
-            <span class="gdi-lbl">Sims/Home</span>
+            <span class="gdi-lbl">Home</span>
           </button>
-          <button type="button" class="gta-dock-icon" data-dock-tab="network" title="📋 Paid Tasks &amp; Links">
-            <span class="gdi-ico">📋</span>
-            <span class="gdi-lbl">Tasks</span>
-          </button>
-          <button type="button" class="gta-dock-icon" data-dock-tab="games" title="🎲 Nigerian Lifestyle, Garage, Whot &amp; Ludo">
-            <span class="gdi-ico">🎲</span>
-            <span class="gdi-lbl">Lifestyle</span>
-          </button>
-          <button type="button" class="gta-dock-icon" data-dock-tab="court" title="⚖️ FCT High Court &amp; Polls">
-            <span class="gdi-ico">⚖️</span>
-            <span class="gdi-lbl">Court</span>
-          </button>
-          <button type="button" class="gta-dock-icon" data-dock-tab="multiplayer" title="💬 Live Multiplayer Chat">
+          <button type="button" class="gta-dock-icon" data-dock-tab="social" title="💬 Social: Live FCT Chat, Citizens &amp; Court">
             <span class="gdi-ico">💬</span>
-            <span class="gdi-lbl">Chat</span>
+            <span class="gdi-lbl">Social</span>
             <span id="dock-chat-badge" class="gdi-badge" hidden>0</span>
           </button>
-          <button type="button" class="gta-dock-icon" data-dock-tab="feed" title="📻 FCT Street Log">
-            <span class="gdi-ico">📻</span>
-            <span class="gdi-lbl">Log</span>
+          <button type="button" class="gta-dock-icon" data-dock-tab="lifestyle" title="🪩 Lifestyle: Wazobia Radio, Mall, Garage &amp; Games">
+            <span class="gdi-ico">🪩</span>
+            <span class="gdi-lbl">Lifestyle</span>
           </button>
-          <button type="button" class="gta-dock-icon" id="btn-dock-gps" title="🗺️ Full Nigeria Street GPS Map (Abuja &amp; Lagos)">
-            <span class="gdi-ico">🗺️</span>
-            <span class="gdi-lbl">GPS Map</span>
-          </button>
-          <button type="button" class="gta-dock-icon" id="btn-dock-vault" title="🏦 CBN Physical Naira Vault &amp; Wire">
-            <span class="gdi-ico">🏦</span>
-            <span class="gdi-lbl">₦ Vault</span>
-          </button>
-          <button type="button" class="gta-dock-icon" id="btn-dock-profile" title="👤 Citizen Sign-Up &amp; Lifestyle Caliber">
+          <button type="button" class="gta-dock-icon" data-dock-tab="profile" title="👤 Profile: Citizen Identity, CBN ₦ Vault &amp; Uni">
             <span class="gdi-ico">👤</span>
             <span class="gdi-lbl">Profile</span>
           </button>
+
+          <!-- Hidden legacy triggers for full backward compatibility -->
+          <span style="display:none;">
+            <button id="btn-dock-gps"></button>
+            <button id="btn-dock-vault"></button>
+            <button id="btn-dock-profile"></button>
+          </span>
         </nav>
+
+        <!-- ============================================================== -->
+        <!-- CONTEXTUAL 3D INTERACTION PROMPT                               -->
+        <!-- ============================================================== -->
+        <div id="hud-context-prompt" class="hud-context-prompt" hidden>
+          <div class="hcp-box">
+            <span id="hcp-icon" class="hcp-icon">⚡</span>
+            <div class="hcp-info">
+              <span id="hcp-label" class="hcp-label">Explore Landmark</span>
+              <span id="hcp-sub" class="hcp-sub">Press E or Tap to Interact</span>
+            </div>
+            <button type="button" id="btn-context-act" class="hcp-act-btn">ACT (E)</button>
+          </div>
+        </div>
 
         <!-- Top-Left Compact Camera/Action Icon Pills + Collapsible District Postcard -->
         <div class="stage-top-left-overlay">
@@ -397,22 +376,20 @@
           </button>
         </div>
 
-        <!-- Navigation Tabs -->
-        <nav class="deck-tabs" role="tablist">
-          <button class="tab-btn active" data-tab="actions">⚡ Hustle</button>
-          <button class="tab-btn" data-tab="commute">🛣️ Commute</button>
-          <button class="tab-btn" data-tab="shop" style="color:#c4b5fd;">🛍️ Shop/Tour</button>
-          <button class="tab-btn" data-tab="career">💼 Career</button>
-          <button class="tab-btn" data-tab="housing">🏗️ House/Land</button>
-          <button class="tab-btn" data-tab="sims" style="color:#fde047; font-weight:700;">🏠 Sims &amp; Home</button>
-          <button class="tab-btn" data-tab="network">📋 Tasks/Links</button>
-          <button class="tab-btn" data-tab="games">🎲 Lifestyle</button>
-          <button class="tab-btn" data-tab="court">⚖️ Court</button>
-          <button class="tab-btn tab-btn-live" data-tab="multiplayer">
-            💬 Chat <span id="chat-unread-badge" class="chat-badge">LIVE</span>
+        <!-- Consolidated 6-Pillar Navigation Tabs -->
+        <nav class="deck-tabs deck-tabs-pillars" role="tablist">
+          <button class="tab-btn active" data-tab="explore">🧭 Explore</button>
+          <button class="tab-btn" data-tab="work">💼 Work</button>
+          <button class="tab-btn" data-tab="home">🏠 Home</button>
+          <button class="tab-btn tab-btn-live" data-tab="social">
+            💬 Social <span id="chat-unread-badge" class="chat-badge" hidden>0</span>
           </button>
-          <button class="tab-btn" data-tab="feed">📻 Log</button>
+          <button class="tab-btn" data-tab="lifestyle">🪩 Lifestyle</button>
+          <button class="tab-btn" data-tab="profile">👤 Profile</button>
         </nav>
+
+        <!-- SUB-NAVIGATION FOR CONSOLIDATED PILLARS -->
+        <div id="deck-sub-nav" class="deck-sub-nav"></div>
 
         <!-- TAB 1: DISTRICT HUSTLE, DAILY MISSIONS & ACTIONS -->
         <div id="tab-actions" class="tab-pane active">
@@ -772,6 +749,66 @@
           <div id="feed-log-list" class="feed-log-list"></div>
         </div>
 
+        <!-- TAB 10: CITIZEN PROFILE, CIVIC SUITE & SAVE RECOVERY -->
+        <div id="tab-profile" class="tab-pane">
+          <div class="pane-header">
+            <h3>Citizen Profile &amp; FCT Civic Protocol</h3>
+            <p class="pane-subtitle">Manage your citizen identity, CBN physical Naira vault, civic clearance, and save data backup.</p>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:12px;">
+            <!-- Profile Identity Card -->
+            <div class="career-summary-box" style="border-color: rgba(56, 189, 248, 0.45);">
+              <div class="card-top">
+                <div>
+                  <span class="card-badge">IDENTITY PASSPORT</span>
+                  <h3 id="profile-pane-name" class="card-title" style="margin-top:4px;">Citizen</h3>
+                </div>
+                <button type="button" id="btn-profile-recreate" class="btn-xs" style="border-color:#38bdf8; color:#7dd3fc;">✏️ Re-customize</button>
+              </div>
+              <p id="profile-pane-details" class="card-desc">Federal Capital Territory registered resident.</p>
+            </div>
+
+            <!-- Civic Suite Quick Access Grid -->
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:8px;">
+              <button type="button" class="btn-secondary" id="btn-profile-open-vault" style="padding:10px; text-align:left;">
+                <div style="font-weight:700; color:#4ade80;">🏦 CBN ₦ Vault</div>
+                <div style="font-size:10px; color:#94a3b8;">Cash vs Bank &amp; Wire</div>
+              </button>
+              <button type="button" class="btn-secondary" id="btn-profile-open-edu" style="padding:10px; text-align:left;">
+                <div style="font-weight:700; color:#93c5fd;">🎓 Higher Institutions</div>
+                <div style="font-size:10px; color:#94a3b8;">UniAbuja, Baze, Law</div>
+              </button>
+              <button type="button" class="btn-secondary" id="btn-profile-open-tax" style="padding:10px; text-align:left;">
+                <div style="font-weight:700; color:#86efac;">📜 FIRS Tax Clearance</div>
+                <div style="font-size:10px; color:#94a3b8;">Assess &amp; Issue TCC</div>
+              </button>
+              <button type="button" class="btn-secondary" id="btn-profile-open-election" style="padding:10px; text-align:left;">
+                <div style="font-weight:700; color:#fdba74;">🗳️ General Elections</div>
+                <div style="font-size:10px; color:#94a3b8;">Parties &amp; Rallies</div>
+              </button>
+            </div>
+
+            <!-- Save Game Backup & Recovery (Addresses Audit Phase 2) -->
+            <div class="game-card" style="border-color: rgba(16, 185, 129, 0.4);">
+              <div class="card-top">
+                <span class="card-badge" style="background:rgba(16,185,129,0.2); color:#4ade80; border-color:rgba(16,185,129,0.4);">💾 SAVE GAME BACKUP &amp; RECOVERY</span>
+              </div>
+              <p class="card-desc" style="margin:4px 0 10px;">
+                Your character auto-saves to your browser storage every minute. You can also download a local JSON backup file to prevent data loss or transfer your character to another computer.
+              </p>
+              <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button type="button" id="btn-export-save" class="btn-secondary" style="flex:1; border-color:#34d399; color:#6ee7b7;">📥 Export Save File</button>
+                <label class="btn-secondary" style="flex:1; text-align:center; cursor:pointer; border-color:#38bdf8; color:#7dd3fc; margin:0; display:flex; align-items:center; justify-content:center;">
+                  📤 Import Save File
+                  <input type="file" id="file-import-save" accept=".json" style="display:none;" />
+                </label>
+                <button type="button" id="btn-reset-save" class="btn-xs" style="border-color:#ef4444; color:#f87171;">⚠️ Reset Game</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Persistent Always-Available Quick-Chat Bar & Live Ticker Footer (Chat from ANY tab!) -->
         <div class="deck-quick-chat-bar">
           <span class="qcb-badge">💬 LIVE</span>
@@ -1079,12 +1116,12 @@
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <div>
             <span class="modal-badge" style="background:rgba(16,185,129,0.2); color:#4ade80; border-color:rgba(16,185,129,0.4);">🏙️ ABUJA MULTIPLAYER MEGA-HOUSING DIRECTORY</span>
-            <h2 style="margin-top:4px;">Mega-Estates &amp; High-Rise Towers (Hosting 2,850+ Citizens)</h2>
+            <h2 style="margin-top:4px;">Mega-Estates &amp; High-Rise Towers (FCT Master Plan Capacity: 2,850 Units)</h2>
           </div>
           <button type="button" id="btn-close-mega-housing" class="gta-icon-btn">✕</button>
         </div>
         <p style="font-size:12px; color:#cbd5e1; margin-top:6px;">
-          Built to accommodate thousands of online players across the Federal Capital Territory. Explore luxury apartments in <strong>Aso Rock View Towers (500 units)</strong>, family townhouses in <strong>Gwarinpa Federal Estate (1,200 units)</strong>, serviced suites in <strong>Wuse 2 Royal Palms (350 units)</strong>, or student flats in <strong>Kubwa Campus Village (800 units)</strong>.
+          Designed according to the Abuja Master Plan residential grid to accommodate thousands of simulated FCT residents and live citizens. Explore luxury apartments in <strong>Aso Rock View Towers (500 units)</strong>, family townhouses in <strong>Gwarinpa Federal Estate (1,200 units)</strong>, serviced suites in <strong>Wuse 2 Royal Palms (350 units)</strong>, or student flats in <strong>Kubwa Campus Village (800 units)</strong>.
         </p>
 
         <!-- Mega Estates Directory -->
@@ -1126,7 +1163,7 @@
               <strong style="color:#4ade80; font-size:13px;">1979: Kenzo Tange Master Plan</strong>
             </div>
             <p style="font-size:11.5px; color:#cbd5e1; margin:0; line-height:1.4;">
-              Renowned Pritzker Prize-winning Japanese architect Kenzo Tange and International Planning Associates (IPA) crafted the Abuja Master Plan. The city is designed in concentric crescent crescents, where the Central Business District, National Assembly, Supreme Court, and Presidential Villa sit on a dramatic grand axis directly terminating at the majestic 400-meter monolith of <strong>Aso Rock</strong>.
+              Renowned Pritzker Prize-winning Japanese architect Kenzo Tange and International Planning Associates (IPA) crafted the Abuja Master Plan. The city is designed in concentric crescents, where the Central Business District, National Assembly, Supreme Court, and Presidential Villa sit on a dramatic grand axis directly terminating at the majestic 400-meter monolith of <strong>Aso Rock</strong>.
             </p>
           </div>
 
@@ -1171,8 +1208,8 @@
       <div class="modal-card" style="max-width: 900px; width: 95vw; max-height: 92vh; display:flex; flex-direction:column; gap:10px;">
         <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
           <div>
-            <span class="modal-badge" style="background:rgba(16,185,129,0.2); color:#4ade80; border-color:rgba(16,185,129,0.4);">🛰️ NIGERIA LIVE STREET GPS • OPENSTREETMAP SATELLITE NAV</span>
-            <h2 style="margin-top:4px;">Real Nigeria Street GPS Map (Abuja FCT &amp; Lagos Corridor)</h2>
+            <span class="modal-badge" style="background:rgba(16,185,129,0.2); color:#4ade80; border-color:rgba(16,185,129,0.4);">🛰️ VIRTUAL NIGERIA STREET GIS • OPENSTREETMAP REFERENCE</span>
+            <h2 style="margin-top:4px;">Virtual Nigeria Street GIS (Abuja FCT &amp; Lagos Corridors)</h2>
           </div>
           <div style="display:flex; gap:6px; align-items:center;">
             <button type="button" id="btn-gps-focus-abuja" class="btn-xs" style="border-color:#4ade80; color:#4ade80;">📍 Focus Abuja Streets</button>
@@ -1181,7 +1218,7 @@
           </div>
         </div>
         <p style="font-size:12px; color:#cbd5e1; margin:0;">
-          Explore real Nigerian streets (<em>Shehu Shagari Way, Adetokunbo Ademola Crescent, Aso Drive, Aguiyi Ironsi St, Bala Sokoto Way, Kubwa Expressway, Admiralty Way Lekki, Ozumba Mbadiwe</em>). Click any district pin on the GPS map or street button below to teleport/commute onto that street in 3D!
+          In-game geospatial simulation displaying the Abuja Master Plan and Lagos transport corridors referenced to OpenStreetMap data (<em>Shehu Shagari Way, Adetokunbo Ademola Crescent, Aso Drive, Aguiyi Ironsi St, Bala Sokoto Way, Kubwa Expressway</em>). Click any district pin or street button below to travel in 3D!
         </p>
         <div id="nigeria-full-gps-map" style="width:100%; height:420px; border-radius:12px; border:2px solid rgba(74,222,128,0.5); overflow:hidden; background:#0f172a;"></div>
         <div id="nigeria-gps-street-chips" style="display:flex; gap:6px; flex-wrap:wrap; max-height:110px; overflow-y:auto;"></div>

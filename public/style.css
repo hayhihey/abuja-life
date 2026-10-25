@@ -3490,6 +3490,255 @@ html, body {
   }
 }
 
+/* ==========================================================================
+   CONSOLIDATED 6-PILLAR NAVIGATION, SUB-NAV & CONTEXTUAL HUD PROMPT
+   ========================================================================== */
+.deck-tabs-pillars {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr) !important;
+  background: rgba(7, 11, 20, 0.98);
+  border-bottom: 1px solid var(--border-subtle);
+  overflow-x: hidden !important;
+}
+
+.deck-tabs-pillars .tab-btn {
+  padding: 10px 4px;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+  letter-spacing: 0.2px;
+  transition: all 0.18s ease;
+  touch-action: manipulation;
+}
+
+.deck-tabs-pillars .tab-btn:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+}
+
+.deck-tabs-pillars .tab-btn.active {
+  color: #fbbf24;
+  border-bottom-color: #fbbf24;
+  background: rgba(251, 191, 36, 0.08);
+}
+
+.deck-sub-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  background: rgba(11, 17, 32, 0.95);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none;
+}
+
+.deck-sub-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.sub-tab-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+  color: #cbd5e1;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  touch-action: manipulation;
+}
+
+.sub-tab-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.sub-tab-btn.active {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.5);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.25);
+}
+
+/* Contextual 3D Interaction Prompt HUD */
+.hud-context-prompt {
+  position: absolute;
+  bottom: 82px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 45;
+  pointer-events: auto;
+  animation: promptPulse 2s infinite ease-in-out;
+}
+
+@keyframes promptPulse {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(-3px); }
+}
+
+.hcp-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(7, 12, 23, 0.94);
+  border: 1.5px solid #f59e0b;
+  border-radius: 12px;
+  padding: 6px 14px 6px 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 16px rgba(245, 158, 11, 0.35);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.hcp-box:hover {
+  border-color: #fbbf24;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.7), 0 0 22px rgba(251, 191, 36, 0.5);
+}
+
+.hcp-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.hcp-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.hcp-label {
+  font-family: var(--font-display, inherit);
+  font-size: 12px;
+  font-weight: 700;
+  color: #f8fafc;
+  line-height: 1.2;
+}
+
+.hcp-sub {
+  font-size: 10px;
+  color: #fbbf24;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.hcp-act-btn {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  border: 1px solid #fef08a;
+  border-radius: 6px;
+  color: #000;
+  font-weight: 800;
+  font-size: 11px;
+  padding: 4px 10px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  margin-left: 4px;
+}
+
+.hcp-act-btn:hover {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+}
+
+/* Network Status Indicator Pill */
+.net-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(15, 23, 42, 0.88);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 9999px;
+  padding: 3px 8px;
+  font-size: 10.5px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.net-status-pill .nsp-dot {
+  font-size: 9px;
+}
+
+.net-status-pill[data-status="live"] {
+  border-color: rgba(34, 197, 94, 0.4);
+  color: #86efac;
+}
+.net-status-pill[data-status="live"] .nsp-dot {
+  color: #22c55e;
+  animation: liveBlink 2s infinite ease-in-out;
+}
+
+@keyframes liveBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.net-status-pill[data-status="reconnecting"] {
+  border-color: rgba(245, 158, 11, 0.5);
+  color: #fde047;
+  background: rgba(245, 158, 11, 0.12);
+}
+.net-status-pill[data-status="reconnecting"] .nsp-dot {
+  color: #eab308;
+  animation: reconnectFlash 0.9s infinite alternate;
+}
+
+@keyframes reconnectFlash {
+  0% { opacity: 0.2; }
+  100% { opacity: 1; }
+}
+
+.net-status-pill[data-status="offline"] {
+  border-color: rgba(148, 163, 184, 0.4);
+  color: #cbd5e1;
+  background: rgba(30, 41, 59, 0.6);
+}
+.net-status-pill[data-status="offline"] .nsp-dot {
+  color: #94a3b8;
+}
+
+.net-status-pill[data-status="syncing"] {
+  border-color: rgba(56, 189, 248, 0.5);
+  color: #7dd3fc;
+}
+.net-status-pill[data-status="syncing"] .nsp-dot {
+  color: #38bdf8;
+}
+
+.nsp-resync-btn {
+  padding: 1px 6px;
+  font-size: 9.5px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  cursor: pointer;
+}
+
+.nsp-resync-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* WebGL Fallback Card */
+.webgl-fallback-card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(11, 17, 32, 0.96);
+  border: 1.5px solid #38bdf8;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 420px;
+  text-align: center;
+  color: #f8fafc;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.8), 0 0 20px rgba(56, 189, 248, 0.3);
+  z-index: 100;
+}
+
 
 
 

@@ -115,6 +115,11 @@ class AbujaClientApp {
     this.whotState = null;
     this.ludoState = null;
     this.afrobeats = new AbujaAfrobeatsEngine();
+    this.netState = 'connecting';
+    this.reconnectAttempts = 0;
+    this.maxReconnectAttempts = 5;
+    this.reconnectTimer = null;
+    this.currentContextAction = null;
 
     this._initGame();
     this._ensureExtendedPlayerState();
@@ -313,6 +318,74 @@ class AbujaClientApp {
     } catch (_) {}
   }
 
+  exportSaveGame() {
+    try {
+      const data = this.game.serialize();
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const citizenName = (this.game?.s?.meta?.name || 'citizen').replace(/[^a-z0-9_-]/gi, '_');
+      a.href = url;
+      a.download = `abuja_life_save_${citizenName}_day${this.game?.s?.t?.day || 1}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      this.showToast('💾 Save game exported successfully!');
+    } catch (err) {
+      console.error('Export save failed:', err);
+      this.showToast('⚠️ Failed to export save game');
+    }
+  }
+
+  importSaveGame(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const text = e.target.result;
+        const parsed = JSON.parse(text);
+        if (!parsed || !parsed.meta) {
+          throw new Error('Invalid save game structure');
+        }
+        localStorage.setItem(STORAGE_KEY, text);
+        this.showToast('💾 Save imported! Reloading Abuja simulation…');
+        setTimeout(() => window.location.reload(), 800);
+      } catch (err) {
+        console.error('Import save failed:', err);
+        alert('⚠️ Invalid or corrupted Abuja Life save file.');
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  resetSaveGame() {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem('abuja_saved_citizen_profile');
+      sessionStorage.removeItem(PLAYER_ID_KEY);
+      this.showToast('🔄 Game reset. Starting fresh in Abuja…');
+      setTimeout(() => window.location.reload(), 800);
+    } catch (err) {
+      console.error('Reset save failed:', err);
+      window.location.reload();
+    }
+  }
+
+  _syncDriveButtons(inCar) {
+    const topBtn = document.getElementById('btn-toggle-drive');
+    if (topBtn) {
+      topBtn.textContent = inCar ? '🏎️ Sports Car (F)' : '🚶🏾 Walk Mode (F)';
+      topBtn.classList.toggle('active', inCar);
+    }
+    const mobBtn = document.getElementById('btn-mobile-drive');
+    const mobIco = document.getElementById('gmac-drive-ico');
+    const mobLbl = document.getElementById('gmac-drive-lbl');
+    if (mobBtn) mobBtn.classList.toggle('active', inCar);
+    if (mobIco) mobIco.textContent = inCar ? '🚶🏾' : '🏎️';
+    if (mobLbl) mobLbl.textContent = inCar ? 'EXIT CAR' : 'ENTER CAR';
+  }
+
   startRealTime(speed = 1) {
     this.simSpeed = speed;
     if (this.realTimeTimer) clearInterval(this.realTimeTimer);
@@ -375,6 +448,22 @@ class AbujaClientApp {
         } else {
           this.showToast('👊🏾 Street Punch! Walk up to any street rival on the walkway and press Space / Punch!');
         }
+      },
+      onToggleVehicle: (inVehicle) => {
+        this._syncDriveButtons(inVehicle);
+      },
+      onCycleCamera: (camMode) => {
+        const camBtn = document.getElementById('btn-toggle-cam');
+        if (camBtn) {
+          camBtn.textContent = camMode === 'helicopter' ? '🚁 Chopper Cam (V)' : (camMode === 'dollhouse' ? '🏠 Dollhouse (V)' : '🎥 3rd-Person (V)');
+        }
+      },
+      onContextInteract: () => {
+        if (typeof this.currentContextAction === 'function') {
+          this.currentContextAction();
+          return true;
+        }
+        return false;
       }
     });
 
@@ -699,9 +788,78 @@ class AbujaClientApp {
       ctx.fill();
       ctx.stroke();
       ctx.restore();
+
+      this._updateContextualPrompt();
     };
 
     requestAnimationFrame(drawRadar);
+  }
+
+  _updateContextualPrompt() {
+    const promptEl = document.getElementById('hud-context-prompt');
+    const labelEl = document.getElementById('hcp-label');
+    const subEl = document.getElementById('hcp-sub');
+    const iconEl = document.getElementById('hcp-icon');
+    if (!promptEl || !labelEl) return;
+
+    if (!this.world3d || this.world3d.lowPowerMode || !this.game?.s) {
+      promptEl.hidden = true;
+      this.currentContextAction = null;
+      return;
+    }
+
+    const curDistId = this.game.s.loc.district;
+    const curDist = DISTRICT_BY_ID[curDistId];
+    if (!curDist) {
+      promptEl.hidden = true;
+      this.currentContextAction = null;
+      return;
+    }
+
+    // 1. In Vehicle -> prompt to step out
+    if (this.world3d.inVehicle) {
+      promptEl.hidden = false;
+      if (iconEl) iconEl.textContent = '🚶🏾';
+      labelEl.textContent = 'Step Out of Sports Car';
+      if (subEl) subEl.textContent = 'Press F or Tap to Walk';
+      this.currentContextAction = () => {
+        const inCar = this.world3d.toggleVehicleMode();
+        this._syncDriveButtons(inCar);
+      };
+      return;
+    }
+
+    // 2. Near Compound / Plot
+    const userPlots = this.game.s.social?.plots || {};
+    const localPlot = userPlots[curDistId];
+    if (localPlot && localPlot.progress > 0) {
+      promptEl.hidden = false;
+      if (iconEl) iconEl.textContent = '🏠';
+      labelEl.textContent = `Your Compound (${localPlot.duplexType || 'Duplex'})`;
+      if (subEl) subEl.textContent = 'Press E or Tap to Manage Home';
+      this.currentContextAction = () => {
+        this.switchTab('home', 'tab-sims');
+      };
+      return;
+    }
+
+    // 3. Near Primary District Landmark Spot
+    const landmarks = curDist.landmarks || [];
+    if (landmarks.length > 0) {
+      const lm = landmarks[0];
+      promptEl.hidden = false;
+      if (iconEl) iconEl.textContent = lm.icon || '📍';
+      labelEl.textContent = `Explore ${lm.name}`;
+      if (subEl) subEl.textContent = 'Press E or Tap to View Moves';
+      this.currentContextAction = () => {
+        this.switchTab('explore', 'tab-actions');
+        this.showToast(`📍 At ${lm.name}! Available district moves opened.`);
+      };
+      return;
+    }
+
+    promptEl.hidden = true;
+    this.currentContextAction = null;
   }
 
   // --------------------------------------------------------------------------
@@ -722,6 +880,24 @@ class AbujaClientApp {
     this._renderLifestyleTab();
     this._renderCourtTab();
     this._renderFeedTab();
+    this._renderProfileTab();
+  }
+
+  _renderProfileTab() {
+    if (!this.game?.s) return;
+    const s = this.game.s;
+    const nameEl = document.getElementById('profile-pane-name');
+    const detailsEl = document.getElementById('profile-pane-details');
+    if (nameEl) {
+      nameEl.textContent = s.meta.name || 'Citizen';
+    }
+    if (detailsEl) {
+      const curDist = DISTRICT_BY_ID[s.loc.district]?.name || s.loc.district;
+      const trackName = TRACKS[s.career.track]?.name || s.career.track;
+      const nw = formatNairaFull(netWorth(s));
+      const ls = NIGERIAN_LIFESTYLES[s.meta.lifestyle]?.caliber || 'Standard Resident';
+      detailsEl.textContent = `${trackName} • ${s.meta.age || 26} yrs • Based in ${curDist} • Caliber: ${ls} • Net Worth: ${nw}`;
+    }
   }
 
   _renderHUD() {
@@ -3564,25 +3740,48 @@ class AbujaClientApp {
   }
 
   _connectEventStream() {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+
     try {
       if (this.eventSource) {
         this.eventSource.close();
+        this.eventSource = null;
       }
       this.eventSource = new EventSource('/api/stream');
 
       this.eventSource.onopen = () => {
-        this._setNetworkGoSlow(false);
+        this.reconnectAttempts = 0;
+        this._setNetworkState('live');
       };
 
       this.eventSource.onerror = () => {
-        if (this.eventSource && this.eventSource.readyState === EventSource.CLOSED) {
+        if (this.eventSource) {
           this.eventSource.close();
           this.eventSource = null;
+        }
+
+        if (this.reconnectAttempts < this.maxReconnectAttempts) {
+          this.reconnectAttempts++;
+          const backoff = Math.min(16000, 1000 * Math.pow(2, this.reconnectAttempts - 1));
+          this._setNetworkState('reconnecting', this.reconnectAttempts);
+          this.reconnectTimer = setTimeout(() => {
+            this._connectEventStream();
+          }, backoff);
+        } else {
+          // Bounded retries: gracefully operate in Single-Player Simulation Mode
+          this._setNetworkState('offline');
+          if (!this.onlinePlayers || !this.onlinePlayers.length) {
+            this._updateOnlinePlayers(this._getSimulatedCitizens());
+          }
         }
       };
 
       this.eventSource.addEventListener('init', (e) => {
-        this._setNetworkGoSlow(false);
+        this.reconnectAttempts = 0;
+        this._setNetworkState('live');
         const payload = JSON.parse(e.data);
         if (Array.isArray(payload.players)) this._updateOnlinePlayers(payload.players);
         if (Array.isArray(payload.chat)) {
@@ -3660,20 +3859,92 @@ class AbujaClientApp {
         }
       });
     } catch (_) {
-      this._setNetworkGoSlow(true);
+      this._setNetworkState('offline');
+      if (!this.onlinePlayers || !this.onlinePlayers.length) {
+        this._updateOnlinePlayers(this._getSimulatedCitizens());
+      }
     }
   }
 
-  _setNetworkGoSlow(isSlow) {
+  _setNetworkState(state, info = null) {
+    this.netState = state;
     const pill = document.getElementById('net-status-pill');
-    if (pill) pill.hidden = !isSlow;
+    const dot = document.getElementById('net-status-dot');
+    const text = document.getElementById('net-status-text');
+    const resyncBtn = document.getElementById('btn-force-resync');
+    if (!pill) return;
+
+    pill.dataset.status = state;
+    pill.hidden = false;
+
+    if (state === 'live') {
+      if (dot) dot.textContent = '🟢';
+      if (text) text.textContent = 'FCT Live Connected';
+      if (resyncBtn) resyncBtn.hidden = true;
+      setTimeout(() => {
+        if (this.netState === 'live') pill.hidden = true;
+      }, 3500);
+    } else if (state === 'reconnecting') {
+      if (dot) dot.textContent = '⏳';
+      if (text) text.textContent = `FCT Network Reconnecting (${info || 1}/${this.maxReconnectAttempts})…`;
+      if (resyncBtn) {
+        resyncBtn.hidden = false;
+        resyncBtn.textContent = 'Re-sync';
+      }
+    } else if (state === 'offline') {
+      if (dot) dot.textContent = '🟡';
+      if (text) text.textContent = 'Single-Player Simulation Mode';
+      if (resyncBtn) {
+        resyncBtn.hidden = false;
+        resyncBtn.textContent = 'Go Online';
+      }
+    } else if (state === 'syncing') {
+      if (dot) dot.textContent = '🔄';
+      if (text) text.textContent = 'Synchronizing FCT state…';
+      if (resyncBtn) {
+        resyncBtn.hidden = false;
+        resyncBtn.textContent = 'Syncing…';
+      }
+    }
   }
 
   _forceNetworkResync() {
-    this._setNetworkGoSlow(false);
+    this.reconnectAttempts = 0;
+    this._setNetworkState('syncing');
     this._fetchInitialMultiplayerState();
+    this._sendHeartbeat();
     this._connectEventStream();
-    this.showToast('📡 FCT Network resynced cleanly!');
+    this.showToast('📡 Synchronizing FCT Network...');
+    setTimeout(() => {
+      if (this.netState === 'syncing') {
+        this._setNetworkState('live');
+        this.showToast('✅ FCT Network resynced cleanly!');
+      }
+    }, 1200);
+  }
+
+  _getSimulatedCitizens() {
+    const s = this.game.s;
+    const selfUser = {
+      id: this.playerId,
+      name: s.meta.name,
+      career: TRACKS[s.career.track]?.name || s.career.track,
+      district: s.loc.district,
+      clout: Math.round(s.clout),
+      netWorth: netWorth(s),
+      isHuman: true,
+      isBot: false
+    };
+    const defaultBots = [
+      { id: 'bot_emeka', name: 'Chief Emeka "Aso" Okonkwo', career: 'Contractor / Vendor', district: 'maitama', clout: 88, netWorth: 185000000, isHuman: false, isBot: true },
+      { id: 'bot_zainab', name: 'Hajiya Zainab Lawal', career: 'Civil Service', district: 'asokoro', clout: 92, netWorth: 42000000, isHuman: false, isBot: true },
+      { id: 'bot_danjuma', name: 'Engr. Danjuma Gambo', career: 'Contractor / Vendor', district: 'guzape', clout: 74, netWorth: 68000000, isHuman: false, isBot: true },
+      { id: 'bot_tunde_san', name: 'Barr. Tunde Ogunleye (SAN)', career: 'Senior Advocate', district: 'cbd', clout: 80, netWorth: 31000000, isHuman: false, isBot: true },
+      { id: 'bot_amaka', name: 'Amaka "Wuse" Eze', career: 'Tech & Creative Nomad', district: 'wuse2', clout: 45, netWorth: 24500000, isHuman: false, isBot: true },
+      { id: 'bot_sani', name: 'Mallam Sani Usman', career: 'Street Trader & Transport', district: 'utako', clout: 32, netWorth: 14000000, isHuman: false, isBot: true },
+      { id: 'bot_kemi', name: 'Kemi Balogun', career: 'Tech & Creative Nomad', district: 'jabi', clout: 38, netWorth: 16800000, isHuman: false, isBot: true }
+    ];
+    return [selfUser, ...defaultBots];
   }
 
   _sendHeartbeat() {
@@ -3700,14 +3971,25 @@ class AbujaClientApp {
   }
 
   _updateOnlinePlayers(players) {
+    if (!Array.isArray(players) || !players.length) {
+      players = this._getSimulatedCitizens();
+    }
     this.onlinePlayers = players;
-    const count = players.length;
+    const totalCount = players.length;
+    const humanCount = players.filter((p) => p.isHuman).length || 1;
+    const botCount = totalCount - humanCount;
+    const curDist = this.game?.s?.loc?.district || 'cbd';
+    const districtCount = players.filter((p) => p.district === curDist).length;
 
     const pill = document.getElementById('hud-online-pill');
-    if (pill) pill.textContent = `● ${count} ONLINE`;
+    if (pill) {
+      pill.hidden = false;
+      pill.textContent = `● ${totalCount} CITIZENS (${humanCount} Live • ${botCount} Autonomous)`;
+      pill.title = `${districtCount} in ${DISTRICT_BY_ID[curDist]?.short || curDist} district`;
+    }
 
     const mpCount = document.getElementById('mp-online-count');
-    if (mpCount) mpCount.textContent = count;
+    if (mpCount) mpCount.textContent = totalCount;
 
     if (this.world3d) {
       this.world3d.syncRemotePlayers(players, this.playerId);
@@ -4223,6 +4505,9 @@ class AbujaClientApp {
     // FCT High Court Lawsuit Filing Form
     document.getElementById('court-file-form')?.addEventListener('submit', (e) => {
       e.preventDefault();
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      if (submitBtn?.disabled) return;
+
       const defInput = document.getElementById('court-defendant-input');
       const chargeSel = document.getElementById('court-charge-select');
       const claimInput = document.getElementById('court-claim-input');
@@ -4236,6 +4521,13 @@ class AbujaClientApp {
         this.showToast('⚠️ Need ₦5,000 High Court filing fee!');
         return;
       }
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.dataset.origText = submitBtn.textContent;
+        submitBtn.textContent = '⚖️ Filing Suit...';
+      }
+
       this.game.pay(filingFee);
       this.game.stat('clout', 2);
       this._recordDailyProgress('social');
@@ -4252,12 +4544,26 @@ class AbujaClientApp {
         })
       })
         .then((r) => r.json())
-        .then(() => {
+        .then((data) => {
           if (defInput) defInput.value = '';
-          this.showToast(`⚖️ Suit filed at Maitama High Court against ${defendant}! (+2 Clout)`);
+          if (data.ok) {
+            this.showToast(`⚖️ Suit filed at Maitama High Court against ${defendant}! (+2 Clout)`);
+          } else {
+            this.showToast(`⚠️ ${data.error || 'High Court rejected suit'}`);
+          }
           this._renderHUD();
         })
-        .catch(() => {});
+        .catch(() => {
+          this.showToast('⚠️ Network error filing lawsuit');
+        })
+        .finally(() => {
+          setTimeout(() => {
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.textContent = submitBtn.dataset.origText || 'File Suit';
+            }
+          }, 2000);
+        });
     });
 
     document.getElementById('btn-cycle-radio')?.addEventListener('click', () => {
@@ -4292,19 +4598,7 @@ class AbujaClientApp {
       this._renderAll();
     });
 
-    const syncDriveButtons = (inCar) => {
-      const topBtn = document.getElementById('btn-toggle-drive');
-      if (topBtn) {
-        topBtn.textContent = inCar ? '🏎️ Sports Car (F)' : '🚶🏾 Walk Mode (F)';
-        topBtn.classList.toggle('active', inCar);
-      }
-      const mobBtn = document.getElementById('btn-mobile-drive');
-      const mobIco = document.getElementById('gmac-drive-ico');
-      const mobLbl = document.getElementById('gmac-drive-lbl');
-      if (mobBtn) mobBtn.classList.toggle('active', inCar);
-      if (mobIco) mobIco.textContent = inCar ? '🚶🏾' : '🏎️';
-      if (mobLbl) mobLbl.textContent = inCar ? 'EXIT CAR' : 'ENTER CAR';
-    };
+    const syncDriveButtons = (inCar) => this._syncDriveButtons(inCar);
 
     const handleToggleDrive = () => {
       if (!this.world3d) return;
@@ -4315,6 +4609,17 @@ class AbujaClientApp {
 
     document.getElementById('btn-toggle-drive')?.addEventListener('click', handleToggleDrive);
     document.getElementById('btn-mobile-drive')?.addEventListener('click', handleToggleDrive);
+
+    // Contextual 3D Interaction Button & HUD Prompt
+    const triggerContextAct = () => {
+      if (typeof this.currentContextAction === 'function') {
+        this.currentContextAction();
+      }
+    };
+    document.getElementById('btn-context-act')?.addEventListener('click', triggerContextAct);
+    document.getElementById('hud-context-prompt')?.addEventListener('click', (e) => {
+      if (e.target.id !== 'btn-context-act') triggerContextAct();
+    });
 
     document.getElementById('btn-toggle-cam')?.addEventListener('click', (e) => {
       if (!this.world3d) return;
@@ -4497,22 +4802,43 @@ class AbujaClientApp {
     // Submit Peer-to-Peer Naira Wire Form
     document.getElementById('vault-wire-form')?.addEventListener('submit', (e) => {
       e.preventDefault();
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      if (submitBtn?.disabled) return;
+
       const sel = document.getElementById('wire-recipient-select');
       const amtInput = document.getElementById('wire-amount-input');
       const noteInput = document.getElementById('wire-note-input');
 
-      const toId = sel.value;
-      const toName = sel.selectedOptions[0]?.dataset.name || 'FCT Player';
-      const amount = Math.round(Number(amtInput.value) || 0);
-      const note = noteInput.value.trim() || 'Abuja Protocol Support';
+      const toId = sel?.value;
+      const toName = sel?.selectedOptions[0]?.dataset.name || 'FCT Player';
+      const amount = Math.round(Number(amtInput?.value) || 0);
+      const note = noteInput?.value.trim() || 'Abuja Protocol Support';
 
+      if (!toId) {
+        this.showToast('⚠️ Please select a recipient from the FCT network.');
+        return;
+      }
+      if (toId === this.playerId) {
+        this.showToast('⚠️ Cannot wire Naira to your own wallet.');
+        return;
+      }
       if (amount < 500) {
         this.showToast('⚠️ Minimum CBN transfer is ₦500.');
+        return;
+      }
+      if (amount > 50000000) {
+        this.showToast('⚠️ Maximum transfer per wire is ₦50,000,000.');
         return;
       }
       if (!this.game.canAfford(amount)) {
         this.showToast('⚠️ Insufficient Naira balance for this transfer!');
         return;
+      }
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.dataset.origText = submitBtn.textContent;
+        submitBtn.textContent = '💸 Wiring...';
       }
 
       this.game.pay(amount);
@@ -4531,7 +4857,24 @@ class AbujaClientApp {
           amount,
           note
         })
-      }).catch(() => {});
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          if (!data.ok) {
+            this.showToast(`⚠️ Transfer warning: ${data.error || 'Server error'}`);
+          }
+        })
+        .catch(() => {
+          this.showToast('⚠️ Network issue during wire transfer');
+        })
+        .finally(() => {
+          setTimeout(() => {
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.textContent = submitBtn.dataset.origText || 'Execute Wire';
+            }
+          }, 2000);
+        });
 
       if (this.world3d) this.world3d.spawnNairaRain(28);
       document.getElementById('naira-vault-modal').hidden = true;
@@ -4641,6 +4984,9 @@ class AbujaClientApp {
     // Peer-to-Peer Paid Task Assignment Form
     document.getElementById('assign-task-form')?.addEventListener('submit', (e) => {
       e.preventDefault();
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      if (submitBtn?.disabled) return;
+
       const assigneeSel = document.getElementById('task-assignee-select');
       const typeSel = document.getElementById('task-type-select');
       const rewardInp = document.getElementById('task-reward-input');
@@ -4659,6 +5005,12 @@ class AbujaClientApp {
       if (!this.game.canAfford(reward)) {
         this.showToast('⚠️ Insufficient Naira balance to escrow this task reward!');
         return;
+      }
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.dataset.origText = submitBtn.textContent;
+        submitBtn.textContent = '📋 Escrowing...';
       }
 
       this.game.pay(reward);
@@ -4691,6 +5043,14 @@ class AbujaClientApp {
         })
         .catch(() => {
           this.showToast('⚠️ Network error posting task');
+        })
+        .finally(() => {
+          setTimeout(() => {
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.textContent = submitBtn.dataset.origText || 'Escrow & Assign Task';
+            }
+          }, 2000);
         });
     });
 
@@ -4734,6 +5094,37 @@ class AbujaClientApp {
     // Dock Profile Icon -> Citizen Sign-Up & Caliber Creator
     document.getElementById('btn-dock-profile')?.addEventListener('click', () => {
       this._openNewCharModal();
+    });
+
+    // Profile Pillar Quick Civic Buttons
+    document.getElementById('btn-profile-recreate')?.addEventListener('click', () => {
+      this._openNewCharModal();
+    });
+    document.getElementById('btn-profile-open-vault')?.addEventListener('click', () => {
+      this.openNairaVaultModal();
+    });
+    document.getElementById('btn-profile-open-edu')?.addEventListener('click', () => {
+      this._openEducationModal();
+    });
+    document.getElementById('btn-profile-open-tax')?.addEventListener('click', () => {
+      this._openTaxModal();
+    });
+    document.getElementById('btn-profile-open-election')?.addEventListener('click', () => {
+      this._openElectionModal();
+    });
+
+    // Save Game Backup & Recovery (Export / Import / Reset)
+    document.getElementById('btn-export-save')?.addEventListener('click', () => {
+      this.exportSaveGame();
+    });
+    document.getElementById('file-import-save')?.addEventListener('change', (e) => {
+      const file = e.target.files?.[0];
+      if (file) this.importSaveGame(file);
+    });
+    document.getElementById('btn-reset-save')?.addEventListener('click', () => {
+      if (confirm('Are you sure you want to reset your Abuja Life simulation? This cannot be undone.')) {
+        this.resetSaveGame();
+      }
     });
 
     // Toggle Top-Left District Postcard Info Card
@@ -5353,29 +5744,117 @@ class AbujaClientApp {
     });
   }
 
-  switchTab(tabId) {
-    this.activeTab = tabId;
+  switchTab(tabId, subTargetId = null) {
+    const ALIAS_MAP = {
+      actions: { pillar: 'explore', target: 'tab-actions' },
+      commute: { pillar: 'explore', target: 'tab-commute' },
+      career: { pillar: 'work', target: 'tab-career' },
+      housing: { pillar: 'home', target: 'tab-housing' },
+      sims: { pillar: 'home', target: 'tab-sims' },
+      network: { pillar: 'social', target: 'tab-network' },
+      court: { pillar: 'social', target: 'tab-court' },
+      multiplayer: { pillar: 'social', target: 'tab-multiplayer' },
+      feed: { pillar: 'social', target: 'tab-feed' },
+      shop: { pillar: 'lifestyle', target: 'tab-shop' },
+      games: { pillar: 'lifestyle', target: 'tab-games' },
+      profile: { pillar: 'profile', target: 'tab-profile' },
+      vault: { pillar: 'profile', target: 'tab-profile' },
+      explore: { pillar: 'explore', target: 'tab-actions' },
+      work: { pillar: 'work', target: 'tab-career' },
+      home: { pillar: 'home', target: 'tab-sims' },
+      social: { pillar: 'social', target: 'tab-multiplayer' },
+      lifestyle: { pillar: 'lifestyle', target: 'tab-shop' }
+    };
+
+    const mapping = ALIAS_MAP[tabId] || { pillar: tabId, target: `tab-${tabId}` };
+    const pillar = mapping.pillar;
+    const targetPaneId = subTargetId || mapping.target;
+
+    this.activeTab = pillar;
     const deck = document.getElementById('command-deck-panel');
     if (deck) deck.classList.remove('is-drawer-closed');
     const backdrop = document.getElementById('mobile-drawer-backdrop');
     if (backdrop) backdrop.hidden = window.innerWidth > 768;
 
+    // Highlight pillar button in deck-tabs
     document.querySelectorAll('.deck-tabs .tab-btn').forEach((b) => {
-      b.classList.toggle('active', b.dataset.tab === tabId);
+      b.classList.toggle('active', b.dataset.tab === pillar);
     });
+    // Highlight dock icon
     document.querySelectorAll('.gta-dock-icon[data-dock-tab]').forEach((b) => {
-      b.classList.toggle('active', b.dataset.dockTab === tabId);
+      b.classList.toggle('active', b.dataset.dockTab === pillar);
     });
+
+    // Render and sync Sub-Navigation tabs for active pillar
+    this._renderSubNav(pillar, targetPaneId);
+
+    // Show only the target pane among tab-panes
     document.querySelectorAll('.tab-pane').forEach((p) => {
-      p.classList.toggle('active', p.id === `tab-${tabId}`);
+      const isMatch = p.id === targetPaneId;
+      p.classList.toggle('active', isMatch);
+      p.style.display = isMatch ? 'block' : 'none';
     });
-    if (tabId === 'multiplayer') {
+
+    if (pillar === 'social' || tabId === 'multiplayer') {
       if (this.unreadByChannel[this.chatChannel]) {
         this.unreadByChannel[this.chatChannel] = 0;
       }
       this._updateUnreadBadges();
       this._renderChatMessages();
     }
+  }
+
+  _renderSubNav(pillar, activeTargetId) {
+    const subNav = document.getElementById('deck-sub-nav');
+    if (!subNav) return;
+
+    const SUB_NAV_CONFIG = {
+      explore: [
+        { id: 'tab-actions', label: '📍 District Moves' },
+        { id: 'tab-commute', label: '🛣️ Corridors & Travel' }
+      ],
+      work: [
+        { id: 'tab-career', label: '💼 Careers & Tenders' }
+      ],
+      home: [
+        { id: 'tab-sims', label: '🪫 Motives & Compound' },
+        { id: 'tab-housing', label: '🏡 AGIS Land & Leases' }
+      ],
+      social: [
+        { id: 'tab-multiplayer', label: '💬 Multiplayer Chat' },
+        { id: 'tab-network', label: '🤝 Contacts & Tasks' },
+        { id: 'tab-court', label: '⚖️ FCT High Court' },
+        { id: 'tab-feed', label: '📰 Civic Feed' }
+      ],
+      lifestyle: [
+        { id: 'tab-shop', label: '🛍️ Market & Suya' },
+        { id: 'tab-games', label: '🎲 Whot & Ludo' }
+      ],
+      profile: [
+        { id: 'tab-profile', label: '👤 Citizen Passport & Civics' }
+      ]
+    };
+
+    const items = SUB_NAV_CONFIG[pillar] || [];
+    if (items.length <= 1) {
+      subNav.style.display = 'none';
+      subNav.innerHTML = '';
+      return;
+    }
+
+    subNav.style.display = 'flex';
+    subNav.innerHTML = items.map((item) => `
+      <button type="button" class="sub-tab-btn ${item.id === activeTargetId ? 'active' : ''}" data-sub-target="${item.id}">
+        ${item.label}
+      </button>
+    `).join('');
+
+    subNav.querySelectorAll('.sub-tab-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const targetId = btn.dataset.subTarget;
+        this.switchTab(pillar, targetId);
+      });
+    });
   }
 
   _promptDecisionModal(decision) {
