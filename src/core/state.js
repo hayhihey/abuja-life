@@ -176,6 +176,7 @@ export function newState({
     log: [],
     rngState: rng.s,
   };
+  s.stats.peakNet = netWorth(s);
   return s;
 }
 

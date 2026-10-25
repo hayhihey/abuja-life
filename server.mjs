@@ -704,7 +704,7 @@ export async function requestHandler(req, res, overridePath = null) {
         assigneeId: body.assigneeId || null,
         assigneeName: body.assigneeName || 'Open to Any FCT Player',
         taskType,
-        title: String(body.title || 'Run Abuja Protocol Errand').slice(0, 120),
+        title: String(body.title || body.note || 'Run Abuja Protocol Errand').slice(0, 120),
         district: body.district || 'cbd',
         reward,
         employerBenefit: benefitLabels[taskType] || '+5 Protocol Clout',
@@ -727,6 +727,7 @@ export async function requestHandler(req, res, overridePath = null) {
         isSystem: false,
       });
       chatHistory.push(announceMsg);
+      if (chatHistory.length > 250) chatHistory.shift();
       broadcastSSE('chat', announceMsg);
       broadcastSSE('tasks', playerTasks);
 
@@ -757,6 +758,7 @@ export async function requestHandler(req, res, overridePath = null) {
               isBot: true,
             });
             chatHistory.push(doneMsg);
+            if (chatHistory.length > 250) chatHistory.shift();
             broadcastSSE('chat', doneMsg);
             broadcastSSE('tasks', playerTasks);
             broadcastSSE('task_completed', newTask);
@@ -914,6 +916,7 @@ export async function requestHandler(req, res, overridePath = null) {
         verified: true,
       });
       chatHistory.push(sysMsg);
+      if (chatHistory.length > 250) chatHistory.shift();
       broadcastSSE('chat', sysMsg);
       broadcastSSE('court', courtCases);
 

@@ -283,8 +283,8 @@ export class AbujaWorld3D {
             ctx.fillStyle = aCol;
           }
         }
-      } else if (pattern === 'brocade') {
-        // Elegant Jacquard / Damask Brocade sheen
+      } else if (pattern === 'brocade' || pattern === 'senator') {
+        // Elegant Jacquard / Damask Senator Brocade sheen
         ctx.fillStyle = aCol;
         ctx.globalAlpha = 0.35;
         for (let i = 0; i < W; i += 16) {
@@ -1949,7 +1949,8 @@ export class AbujaWorld3D {
     hairstyle = 'fade',
     glasses = 'none',
     fabricPattern = 'solid',
-    agbadaDrape = false
+    agbadaDrape = false,
+    gender = 'male'
   } = {}) {
     const root = new THREE.Group();
 
@@ -2155,8 +2156,9 @@ export class AbujaWorld3D {
 
     // Optional Designer Sunglasses / Alhaji Aviators
     if (glasses && glasses !== 'none') {
+      const isGoldFrame = glasses === 'aviator' || glasses === 'gold_rims';
       const lensMat = new THREE.MeshStandardMaterial({
-        color: glasses === 'aviator' ? 0x1e293b : 0x020617,
+        color: isGoldFrame ? 0x1e293b : 0x020617,
         metalness: 0.85,
         roughness: 0.12
       });
@@ -2214,7 +2216,7 @@ export class AbujaWorld3D {
     nose.rotation.x = Math.PI * 0.38;
     headGroup.add(nose);
 
-    // Natural Lips & Clean Goatee/Mustache line
+    // Natural Lips & Clean Goatee/Mustache line (male characters only)
     const lips = new THREE.Mesh(
       new THREE.SphereGeometry(0.075, 10, 8),
       lipMat
@@ -2223,13 +2225,15 @@ export class AbujaWorld3D {
     lips.position.set(0, -0.17, 0.385);
     headGroup.add(lips);
 
-    const chinBeard = new THREE.Mesh(
-      new THREE.SphereGeometry(0.18, 12, 10),
-      hairMat
-    );
-    chinBeard.scale.set(0.95, 0.45, 0.85);
-    chinBeard.position.set(0, -0.29, 0.25);
-    headGroup.add(chinBeard);
+    if (gender !== 'female' && hairstyle !== 'gele' && hairstyle !== 'braids') {
+      const chinBeard = new THREE.Mesh(
+        new THREE.SphereGeometry(0.18, 12, 10),
+        hairMat
+      );
+      chinBeard.scale.set(0.95, 0.45, 0.85);
+      chinBeard.position.set(0, -0.29, 0.25);
+      headGroup.add(chinBeard);
+    }
 
     root.add(headGroup);
 
@@ -2937,11 +2941,30 @@ export class AbujaWorld3D {
     this.scene.add(this.playerGroup);
   }
 
+  _disposeObject3D(obj) {
+    if (!obj) return;
+    obj.traverse((child) => {
+      if (child.geometry && typeof child.geometry.dispose === 'function') {
+        child.geometry.dispose();
+      }
+      if (child.material) {
+        const mats = Array.isArray(child.material) ? child.material : [child.material];
+        for (const m of mats) {
+          if (m.map && typeof m.map.dispose === 'function') m.map.dispose();
+          if (typeof m.dispose === 'function') m.dispose();
+        }
+      }
+    });
+  }
+
   /** Rebuild the player's avatar with a new look (skin, hair, outfit colours). */
   setPlayerLook(look = {}) {
     this.playerLook = { ...(this.playerLook || {}), ...look };
     if (!this.playerGroup) return;
-    if (this.playerPedMesh) this.playerGroup.remove(this.playerPedMesh);
+    if (this.playerPedMesh) {
+      this.playerGroup.remove(this.playerPedMesh);
+      this._disposeObject3D(this.playerPedMesh);
+    }
     this.playerHuman = this._buildHumanoidRig(this.playerLook);
     this.playerPedMesh = this.playerHuman.root;
     this.playerPedMesh.position.y = 0.2;
@@ -3184,7 +3207,19 @@ export class AbujaWorld3D {
       for (const [id, rp] of this.remotePlayers.entries()) {
         const rHits = this.raycaster.intersectObject(rp.group, true);
         if (rHits.length > 0) {
-          return { type: 'npc', id, username: rp.name, point: rHits[0].point };
+          return { type: 'npc', id, username: rp.data?.name || rp.name || 'FCT Resident', point: rHits[0].point };
+        }
+      }
+    }
+
+    // 2B. Check street pedestrians
+    if (this.streetPedestrians && this.streetPedestrians.length > 0) {
+      for (let i = 0; i < this.streetPedestrians.length; i++) {
+        const npc = this.streetPedestrians[i];
+        if (!npc.rig?.root?.visible) continue;
+        const nHits = this.raycaster.intersectObject(npc.rig.root, true);
+        if (nHits.length > 0) {
+          return { type: 'npc', id: `ped_${i}`, username: 'Abuja Pedestrian', point: nHits[0].point };
         }
       }
     }
@@ -3322,8 +3357,11 @@ export class AbujaWorld3D {
   }
 
   spawnNairaRain(count = 28) {
+    const MAX_PARTICLES = 120;
+    const allowed = Math.max(0, Math.min(count, MAX_PARTICLES - this.nairaParticles.length));
+    if (allowed <= 0) return;
     const noteColors = [0x38bdf8, 0xa855f7, 0x10b981, 0xfacc15];
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < allowed; i++) {
       const geo = new THREE.PlaneGeometry(3.2, 1.5);
       const mat = new THREE.MeshBasicMaterial({
         color: noteColors[i % noteColors.length],
@@ -3424,7 +3462,9 @@ export class AbujaWorld3D {
 
     for (const [id, entry] of this.remotePlayers.entries()) {
       if (!seenIds.has(id)) {
+        clearTimeout(entry.bubbleTimeout);
         this.scene.remove(entry.group);
+        this._disposeObject3D(entry.group);
         entry.labelEl.remove();
         this.remotePlayers.delete(id);
       }
@@ -3571,6 +3611,7 @@ export class AbujaWorld3D {
       }
       if (p.life <= 0 || p.mesh.position.y <= 0.3) {
         this.scene.remove(p.mesh);
+        this._disposeObject3D(p.mesh);
         this.nairaParticles.splice(i, 1);
       }
     }
@@ -3851,6 +3892,7 @@ export class AbujaWorld3D {
 
       if (entry && entry.stage !== plot.stage) {
         this.scene.remove(entry.group);
+        this._disposeObject3D(entry.group);
         entry.labelEl.remove();
         this.playerHouseEntries.delete(plot.district);
         entry = null;
@@ -3962,6 +4004,7 @@ export class AbujaWorld3D {
     for (const [distId, entry] of this.playerHouseEntries.entries()) {
       if (!seen.has(distId)) {
         this.scene.remove(entry.group);
+        this._disposeObject3D(entry.group);
         entry.labelEl.remove();
         this.playerHouseEntries.delete(distId);
       }

@@ -12,7 +12,7 @@ import { RNG } from './rng.js';
 import { clamp, ngn } from './util.js';
 import * as Clock from './clock.js';
 import { DISTRICT_BY_ID, LANDMARK_INDEX } from '../data/world.js';
-import { newState, fundsOf, SAVE_VERSION } from './state.js';
+import { newState, fundsOf, netWorth, SAVE_VERSION } from './state.js';
 import { dailyTick, hourlyTick, startDay } from './economy.js';
 import { rollEvents } from './events.js';
 import { ACTIONS_BY_ID } from './actions.js';
@@ -111,6 +111,9 @@ export class Game {
     n = Math.round(n);
     if (n <= 0) return;
     if (cash) this.s.cash += n; else this.s.bank += n;
+    if (this.s.stats) {
+      this.s.stats.peakNet = Math.max(this.s.stats.peakNet || 0, netWorth(this.s));
+    }
     this.emit('hud');
   }
 
@@ -296,7 +299,7 @@ export class Game {
       await a.run(this, params);
       s.stats.actions++;
       if (!a.noEvents) await rollEvents(this, 'action', { action: a });
-      const net = Math.max(s.stats.peakNet, 0);
+      const net = Math.max(s.stats.peakNet || 0, netWorth(s), 0);
       s.stats.peakNet = net;
       this.emit('action', { id });
       return { ok: true };

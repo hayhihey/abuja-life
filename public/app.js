@@ -89,6 +89,7 @@ export function getPlayerLookFromState(s) {
 
   if (lifestyle === 'baddie' || gender === 'female') {
     return {
+      gender: 'female',
       skinColor: 0x6e432a,
       hairColor: 0x1c1917,
       hairstyle: 'braids',
@@ -103,6 +104,7 @@ export function getPlayerLookFromState(s) {
   }
   if (lifestyle === 'alhaji' || trackId === 'contractor') {
     return {
+      gender,
       skinColor: 0x593122,
       hairColor: 0x0a0a0a,
       hairstyle: 'fade',
@@ -117,6 +119,7 @@ export function getPlayerLookFromState(s) {
   }
   if (lifestyle === 'techbro' || trackId === 'tech') {
     return {
+      gender,
       skinColor: 0x4a2818,
       hairColor: 0x0f172a,
       hairstyle: 'fade',
@@ -130,6 +133,7 @@ export function getPlayerLookFromState(s) {
     };
   }
   return {
+    gender,
     skinColor: 0x502b1c,
     hairColor: 0x1f2937,
     hairstyle: 'fade',
@@ -475,59 +479,65 @@ class AbujaClientApp {
     const viewport = document.getElementById('world3d-viewport');
     if (!viewport) return;
 
-    this.world3d = new AbujaWorld3D(viewport, {
-      onEnterDistrict: (districtId) => {
-        if (districtId && districtId !== this.game.s.loc.district && !this.game.locked) {
-          this.game.arrive(districtId);
-          const dName = DISTRICT_BY_ID[districtId]?.name || districtId;
-          this.game.log(`Entered ${dName} street corridor.`, 'info', '🚶🏾');
+    try {
+      this.world3d = new AbujaWorld3D(viewport, {
+        onEnterDistrict: (districtId) => {
+          if (districtId && districtId !== this.game.s.loc.district && !this.game.locked) {
+            this.game.arrive(districtId);
+            const dName = DISTRICT_BY_ID[districtId]?.name || districtId;
+            this.game.log(`Entered ${dName} street corridor.`, 'info', '🚶🏾');
+          }
+        },
+        onSelectDistrict: (districtId) => {
+          if (!districtId) return;
+          if (districtId === this.game.s.loc.district) {
+            this.openDeckTab('actions');
+            this.showToast(`📍 Currently on ${DISTRICT_BY_ID[districtId].name} street`);
+          } else {
+            this.selectedCommuteDest = districtId;
+            this.openDeckTab('commute');
+            this._renderCommuteTab();
+            this.showToast(`🛣️ Route planner set to ${DISTRICT_BY_ID[districtId].name}`);
+          }
+        },
+        onSelectPlayer: (player) => {
+          if (!player) return;
+          this.openDeckTab('multiplayer');
+          this.openDirectMessage(player.id, player.name);
+        },
+        onStreetPunch: ({ hitNpc, districtId }) => {
+          if (hitNpc) {
+            const dropCash = 2500;
+            this.game.earn(dropCash, { cash: true });
+            this.game.stat('clout', 1);
+            this._renderHUD();
+            this.showToast(`👊🏾 Street Knockout in ${DISTRICT_BY_ID[districtId]?.short || 'FCT'}! Rival dropped ₦2,500 cash! (+1 Clout)`);
+          } else {
+            this.showToast('👊🏾 Street Punch! Walk up to any street rival on the walkway and press Space / Punch!');
+          }
+        },
+        onToggleVehicle: (inVehicle) => {
+          this._syncDriveButtons(inVehicle);
+        },
+        onCycleCamera: (camMode) => {
+          const camBtn = document.getElementById('btn-toggle-cam');
+          if (camBtn) {
+            camBtn.textContent = camMode === 'helicopter' ? '🚁 Chopper Cam (V)' : (camMode === 'dollhouse' ? '🏠 Dollhouse (V)' : '🎥 3rd-Person (V)');
+          }
+        },
+        onContextInteract: () => {
+          if (typeof this.currentContextAction === 'function') {
+            this.currentContextAction();
+            return true;
+          }
+          return false;
         }
-      },
-      onSelectDistrict: (districtId) => {
-        if (!districtId) return;
-        if (districtId === this.game.s.loc.district) {
-          this.openDeckTab('actions');
-          this.showToast(`📍 Currently on ${DISTRICT_BY_ID[districtId].name} street`);
-        } else {
-          this.selectedCommuteDest = districtId;
-          this.openDeckTab('commute');
-          this._renderCommuteTab();
-          this.showToast(`🛣️ Route planner set to ${DISTRICT_BY_ID[districtId].name}`);
-        }
-      },
-      onSelectPlayer: (player) => {
-        if (!player) return;
-        this.openDeckTab('multiplayer');
-        this.openDirectMessage(player.id, player.name);
-      },
-      onStreetPunch: ({ hitNpc, districtId }) => {
-        if (hitNpc) {
-          const dropCash = 2500;
-          this.game.earn(dropCash, { cash: true });
-          this.game.stat('clout', 1);
-          this._renderHUD();
-          this.showToast(`👊🏾 Street Knockout in ${DISTRICT_BY_ID[districtId]?.short || 'FCT'}! Rival dropped ₦2,500 cash! (+1 Clout)`);
-        } else {
-          this.showToast('👊🏾 Street Punch! Walk up to any street rival on the walkway and press Space / Punch!');
-        }
-      },
-      onToggleVehicle: (inVehicle) => {
-        this._syncDriveButtons(inVehicle);
-      },
-      onCycleCamera: (camMode) => {
-        const camBtn = document.getElementById('btn-toggle-cam');
-        if (camBtn) {
-          camBtn.textContent = camMode === 'helicopter' ? '🚁 Chopper Cam (V)' : (camMode === 'dollhouse' ? '🏠 Dollhouse (V)' : '🎥 3rd-Person (V)');
-        }
-      },
-      onContextInteract: () => {
-        if (typeof this.currentContextAction === 'function') {
-          this.currentContextAction();
-          return true;
-        }
-        return false;
-      }
-    });
+      });
+    } catch (err) {
+      console.warn('3D WebGL fallback active:', err);
+      this.world3d = null;
+      return;
+    }
 
     this.world3d.flyToDistrict(this.game.s.loc.district, true);
     this.world3d.setPlayerLook(getPlayerLookFromState(this.game.s));
@@ -3154,7 +3164,7 @@ class AbujaClientApp {
       box.innerHTML = `
         <p class="card-desc">Single in the FCT? Ask a connected player or Abuja socialite to be your Bae for couple clout & sanity dates:</p>
         <div style="display:flex; gap:6px; margin-top:6px;">
-          <select id="bae-candidate-select" style="flex:1; background:#060a12; color:#fff; border:1px solid var(--border-subtle); border-radius:6px; padding:6px;">
+          <select id="bae-candidate-select" aria-label="Select partner candidate" style="flex:1; background:#060a12; color:#fff; border:1px solid var(--border-subtle); border-radius:6px; padding:6px;">
             ${candidates.slice(0, 10).map((c) => `<option value="${c.name}">${c.name} (${c.role})</option>`).join('')}
           </select>
           <button id="btn-ask-bae" class="btn-primary">💍 Ask to be Bae (₦10,000 Gift)</button>
@@ -4592,10 +4602,12 @@ class AbujaClientApp {
 
       const defInput = document.getElementById('court-defendant-input');
       const chargeSel = document.getElementById('court-charge-select');
+      const lawyerSel = document.getElementById('court-lawyer-select');
       const claimInput = document.getElementById('court-claim-input');
 
       const defendant = defInput?.value.trim() || 'Abuja Landlord';
       const charge = chargeSel?.value || 'Illegal 2-Year Rent Hike';
+      const lawyer = lawyerSel?.value || 'Barr. Tunde Ogunleye (SAN)';
       const claimAmount = Number(claimInput?.value) || 250000;
       const filingFee = 5000;
 
@@ -4618,9 +4630,11 @@ class AbujaClientApp {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          plaintiffId: this.playerId,
           plaintiff: this.game.s.meta.name,
           defendant,
           charge,
+          lawyer,
           claimAmount,
           district: this.game.s.loc.district
         })
@@ -5072,7 +5086,7 @@ class AbujaClientApp {
       const assigneeSel = document.getElementById('task-assignee-select');
       const typeSel = document.getElementById('task-type-select');
       const rewardInp = document.getElementById('task-reward-input');
-      const noteInp = document.getElementById('task-note-input');
+      const noteInp = document.getElementById('task-title-input') || document.getElementById('task-note-input');
 
       const assigneeId = assigneeSel?.value || null;
       const assigneeName = assigneeSel?.selectedOptions[0]?.dataset.name || 'Open to Any FCT Player';
@@ -5110,6 +5124,7 @@ class AbujaClientApp {
           taskType,
           reward,
           district: this.game.s.loc.district,
+          title: note,
           note
         })
       })
@@ -5315,6 +5330,7 @@ class AbujaClientApp {
           localStorage.setItem('abuja_saved_citizen_profile', JSON.stringify({
             name, email, region, trackId, gender, lifeStage, lifestyle, prevProperty: propMode, password
           }));
+          localStorage.removeItem('abuja_life_look_v1');
         } catch (_) {}
 
         const chosenDistrict = (region && DISTRICT_BY_ID[region]) ? region : 'cbd';
@@ -5475,6 +5491,25 @@ class AbujaClientApp {
 
   _initQuickShortcuts(updateAfrobeatsStatus) {
     document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const modalIds = [
+          'education-modal',
+          'tax-modal',
+          'election-modal',
+          'mega-housing-modal',
+          'abuja-history-modal',
+          'nigeria-gps-modal',
+          'quick-cruise-modal',
+          'naira-vault-modal'
+        ];
+        for (const id of modalIds) {
+          const m = document.getElementById(id);
+          if (m && !m.hidden) {
+            m.hidden = true;
+          }
+        }
+        return;
+      }
       if (['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target?.tagName)) return;
       if (e.key === '1') {
         e.preventDefault();
@@ -5560,6 +5595,7 @@ class AbujaClientApp {
 
     try {
       localStorage.setItem('abuja_saved_citizen_profile', JSON.stringify(p));
+      localStorage.removeItem('abuja_life_look_v1');
     } catch (_) {}
 
     const stObj = LIFE_STAGES[p.lifeStage] || LIFE_STAGES.adult;
@@ -5800,6 +5836,9 @@ class AbujaClientApp {
       } else if (type === 'time') {
         this._ensureExtendedPlayerState();
         this._renderClockAndWeather();
+        if (this.world3d) {
+          this.world3d.setEnvironment(Clock.hourOf(this.game.s.t), this.game.s.market.today.weather);
+        }
       } else if (type === 'log') {
         if (data && data.text) this.showToast(`${data.icon || '📣'} ${data.text}`);
         this._renderFeedTab();
@@ -6453,6 +6492,9 @@ class AbujaClientApp {
   showToast(message) {
     const container = document.getElementById('toast-container');
     if (!container) return;
+    while (container.children.length >= 4) {
+      container.firstElementChild.remove();
+    }
     const el = document.createElement('div');
     el.className = 'toast';
     el.textContent = message;

@@ -75,35 +75,36 @@ const OUTFITS = [
   { id: 'corper', name: 'NYSC Corper', icon: '🎖️', jacketColor: 0x65a30d, shirtColor: 0xf8fafc, pantsColor: 0xf8fafc, shoeColor: 0xf8fafc }
 ];
 
-function loadLook() {
+function hasSavedLook() {
   try {
-    return JSON.parse(localStorage.getItem(LOOK_KEY)) || {
-      skin: 'brown',
-      hair: 'black',
-      outfit: 'street',
-      hairstyle: 'fade',
-      glasses: 'none',
-      fabricPattern: 'solid',
-      agbadaDrape: false,
-      carColor: '#f8fafc',
-      carFinish: 'metallic'
-    };
+    return Boolean(localStorage.getItem(LOOK_KEY));
   } catch {
-    return {
-      skin: 'brown',
-      hair: 'black',
-      outfit: 'street',
-      hairstyle: 'fade',
-      glasses: 'none',
-      fabricPattern: 'solid',
-      agbadaDrape: false,
-      carColor: '#f8fafc',
-      carFinish: 'metallic'
-    };
+    return false;
   }
 }
 
-function lookToRig(sel) {
+function loadLook(appState = null) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(LOOK_KEY));
+    if (saved) return saved;
+  } catch {}
+  const gender = appState?.meta?.gender || 'male';
+  const lifestyle = appState?.meta?.lifestyle || 'alhaji';
+  return {
+    skin: 'brown',
+    hair: 'black',
+    outfit: lifestyle === 'alhaji' ? 'agbada' : lifestyle === 'baddie' ? 'street' : lifestyle === 'techbro' ? 'corporate' : 'ankara',
+    hairstyle: gender === 'female' || lifestyle === 'baddie' ? 'braids' : 'fade',
+    glasses: lifestyle === 'alhaji' ? 'aviator' : lifestyle === 'baddie' ? 'shades' : 'none',
+    fabricPattern: lifestyle === 'alhaji' ? 'brocade' : lifestyle === 'hustler' ? 'ankara' : 'solid',
+    agbadaDrape: lifestyle === 'alhaji',
+    gender,
+    carColor: '#f8fafc',
+    carFinish: 'metallic'
+  };
+}
+
+function lookToRig(sel, fallbackGender = 'male') {
   const skin = SKIN_TONES.find((s) => s.id === sel.skin) || SKIN_TONES[2];
   const hair = HAIR_COLORS.find((h) => h.id === sel.hair) || HAIR_COLORS[0];
   const o = OUTFITS.find((x) => x.id === sel.outfit) || OUTFITS[4];
@@ -117,7 +118,8 @@ function lookToRig(sel) {
     hairstyle: sel.hairstyle || 'fade',
     glasses: sel.glasses || 'none',
     fabricPattern: sel.fabricPattern || 'solid',
-    agbadaDrape: Boolean(sel.agbadaDrape || sel.outfit === 'agbada')
+    agbadaDrape: Boolean(sel.agbadaDrape || sel.outfit === 'agbada'),
+    gender: sel.gender || fallbackGender
   };
 }
 
@@ -234,7 +236,11 @@ class AmbientCity {
   stop() {
     this.on = false;
     clearInterval(this.timer);
-    if (this.master) this.master.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 0.5);
+    if (this.master && this.ctx) {
+      try {
+        this.master.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 0.5);
+      } catch {}
+    }
     const nodes = this.nodes;
     setTimeout(() => nodes.forEach((n) => { try { n.stop(); } catch {} }), 600);
     this.nodes = [];
@@ -252,11 +258,12 @@ class AmbientCity {
 // ----------------------------------------------------------------------------
 export function initUIExtras(app) {
   const ambient = new AmbientCity();
-  let look = loadLook();
+  let look = loadLook(app?.game?.s);
 
   const applyLook = () => {
     if (app.world3d && typeof app.world3d.setPlayerLook === 'function') {
-      app.world3d.setPlayerLook(lookToRig(look));
+      const fallbackGender = app?.game?.s?.meta?.gender || 'male';
+      app.world3d.setPlayerLook(lookToRig(look, fallbackGender));
       if (typeof app.world3d.setCarWrap === 'function' && look.carColor) {
         app.world3d.setCarWrap(look.carColor, look.carFinish || 'metallic');
       }
@@ -265,10 +272,12 @@ export function initUIExtras(app) {
     return false;
   };
 
-  let tries = 0;
-  const wait = setInterval(() => {
-    if (applyLook() || ++tries > 40) clearInterval(wait);
-  }, 500);
+  if (hasSavedLook()) {
+    let tries = 0;
+    const wait = setInterval(() => {
+      if (applyLook() || ++tries > 40) clearInterval(wait);
+    }, 500);
+  }
 
   // ---- Styles ----
   const style = document.createElement('style');
@@ -309,8 +318,8 @@ export function initUIExtras(app) {
   let autopilotActive = false;
   let autopilotTimer = null;
 
-  const runAutopilotTick = () => {
-    if (!autopilotActive || !app.game) return;
+  const runAutopilotTick = async () => {
+    if (!autopilotActive || !app.game || app.game.locked) return;
     const s = app.game.s;
     if (!s) return;
 
@@ -339,7 +348,7 @@ export function initUIExtras(app) {
         app._renderAll();
       } else if (m.energy < 40) {
         if (app.world3d?.showThoughtBubble) app.world3d.showThoughtBubble('😴', 'Taking 1h Nap...', 3000);
-        app.game.advance(60);
+        await app.game.advance(60, { sleeping: true });
         app.game.stat('energy', 20);
         m.energy = Math.min(100, m.energy + 30);
         app.showToast('🤖 Autopilot: 1h Power Nap (+Energy)');
@@ -444,6 +453,9 @@ export function initUIExtras(app) {
   });
 
   const openStudio = () => {
+    if (!hasSavedLook()) {
+      look = loadLook(app?.game?.s);
+    }
     closePie();
     renderStudio();
     studio.classList.add('open');
@@ -496,7 +508,14 @@ export function initUIExtras(app) {
             app._renderAll();
           }
         },
-        { icon: '🎴', label: 'Whot Game', run: click('btn-top-whot') },
+        {
+          icon: '🎴',
+          label: 'Whot Game',
+          run: () => {
+            app.switchTab('lifestyle', 'tab-games');
+            app._startWhotGame?.();
+          }
+        },
         { icon: '💬', label: 'DM Chat', run: () => app.openDeckTab('multiplayer') },
         { icon: '🎨', label: 'Style', run: openStudio }
       ];
@@ -586,7 +605,7 @@ export function initUIExtras(app) {
           icon: '😴',
           label: 'Nap 1h',
           run: async () => {
-            await app.game.advance(60);
+            await app.game.advance(60, { sleeping: true });
             app.game.stat('energy', 18);
             if (app.game.s.sims?.motives) app.game.s.sims.motives.energy = Math.min(100, (app.game.s.sims.motives.energy || 50) + 25);
             if (app.world3d?.showThoughtBubble) app.world3d.showThoughtBubble('😴', 'Rested!');
@@ -657,6 +676,7 @@ export function initUIExtras(app) {
     });
 
     vp.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
       sx = e.clientX;
       sy = e.clientY;
       clearTimeout(pressTimer);
