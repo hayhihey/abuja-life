@@ -449,6 +449,15 @@ export async function requestHandler(req, res, overridePath = null) {
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
+  if (pathname === '/favicon.ico') {
+    res.writeHead(200, {
+      'Content-Type': 'image/svg+xml',
+      'Cache-Control': 'public, max-age=86400'
+    });
+    res.end(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🇳🇬</text></svg>`);
+    return;
+  }
+
   if (req.method === 'OPTIONS') {
     res.writeHead(204);
     res.end();

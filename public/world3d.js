@@ -68,7 +68,9 @@ export class AbujaWorld3D {
       `;
       throw err;
     }
-    this.renderer.setSize(containerEl.clientWidth, containerEl.clientHeight);
+    this._canvasW = Math.max(1, containerEl.clientWidth);
+    this._canvasH = Math.max(1, containerEl.clientHeight);
+    this.renderer.setSize(this._canvasW, this._canvasH);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -319,18 +321,19 @@ export class AbujaWorld3D {
 
   _initLights() {
     // Tropical sky hemisphere — warm Nigerian sun from above, green-earth bounce from below
-    this.ambientLight = new THREE.HemisphereLight(0x87ceeb, 0x4a7c40, 1.2);
+    this.ambientLight = new THREE.HemisphereLight(0x87ceeb, 0x4a7c40, 0.95);
     this.scene.add(this.ambientLight);
 
     // Main sun — warm golden Nigerian afternoon at ~2pm angle
-    this.sunLight = new THREE.DirectionalLight(0xfff5d0, 2.2);
+    this.sunLight = new THREE.DirectionalLight(0xfff5d0, 1.7);
     this.sunLight.position.set(160, 260, 90);
     this.sunLight.castShadow = true;
-    this.sunLight.shadow.mapSize.width = 512;
-    this.sunLight.shadow.mapSize.height = 512;
+    this.sunLight.shadow.mapSize.width = 1024;
+    this.sunLight.shadow.mapSize.height = 1024;
     this.sunLight.shadow.camera.near = 10;
     this.sunLight.shadow.camera.far = 700;
-    this.sunLight.shadow.bias = -0.0005;
+    this.sunLight.shadow.bias = -0.0004;
+    this.sunLight.shadow.normalBias = 0.02; // Prevents self-shadow acne on articulated human meshes
     const d = 160; // Focused on active neighborhood instead of entire map
     this.sunLight.shadow.camera.left = -d;
     this.sunLight.shadow.camera.right = d;
@@ -339,7 +342,7 @@ export class AbujaWorld3D {
     this.scene.add(this.sunLight);
 
     // Sky fill — blue atmospheric scatter from opposite side (softens harsh shadows)
-    this.skyFill = new THREE.DirectionalLight(0x94d0f5, 0.55);
+    this.skyFill = new THREE.DirectionalLight(0x94d0f5, 0.5);
     this.skyFill.position.set(-180, 200, -140);
     this.scene.add(this.skyFill);
 
@@ -3454,6 +3457,9 @@ export class AbujaWorld3D {
 
   _animate() {
     this.animFrameId = requestAnimationFrame(this._animate);
+    if (typeof document !== 'undefined' && document.hidden) {
+      return;
+    }
     const now = performance.now();
     const dt = Math.min(0.05, Math.max(0.001, (now - (this.lastTime || now)) / 1000));
     this.lastTime = now;
@@ -3972,6 +3978,11 @@ export class AbujaWorld3D {
     for (const [id, label] of this.districtLabels.entries()) {
       const node = this.districtNodes.get(id);
       if (!node) continue;
+      const distToPlayer = Math.hypot(node.pos.x - this.playerPos.x, node.pos.z - this.playerPos.z);
+      if (this.cameraMode !== 'helicopter' && distToPlayer > 380) {
+        label.style.display = 'none';
+        continue;
+      }
       tempV.set(node.pos.x, this.cameraMode === 'helicopter' ? 54 : 18, node.pos.z);
       tempV.project(this.camera);
 

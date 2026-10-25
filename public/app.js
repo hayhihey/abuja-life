@@ -81,6 +81,68 @@ const AVATAR_MAP = {
   trader: 'street_hustle'
 };
 
+export function getPlayerLookFromState(s) {
+  if (!s || !s.meta) return {};
+  const gender = s.meta.gender || 'male';
+  const lifestyle = s.meta.lifestyle || 'alhaji';
+  const trackId = s.career?.track || 'contractor';
+
+  if (lifestyle === 'baddie' || gender === 'female') {
+    return {
+      skinColor: 0x6e432a,
+      hairColor: 0x1c1917,
+      hairstyle: 'braids',
+      jacketColor: 0xf472b6,
+      shirtColor: 0xfdf2f8,
+      pantsColor: 0x1e1b4b,
+      shoeColor: 0xf43f5e,
+      glasses: 'sunglasses',
+      fabricPattern: 'solid',
+      agbadaDrape: false
+    };
+  }
+  if (lifestyle === 'alhaji' || trackId === 'contractor') {
+    return {
+      skinColor: 0x593122,
+      hairColor: 0x0a0a0a,
+      hairstyle: 'fade',
+      jacketColor: 0xffffff,
+      shirtColor: 0xf8fafc,
+      pantsColor: 0xffffff,
+      shoeColor: 0x854d0e,
+      glasses: 'gold_rims',
+      fabricPattern: 'senator',
+      agbadaDrape: true
+    };
+  }
+  if (lifestyle === 'techbro' || trackId === 'tech') {
+    return {
+      skinColor: 0x4a2818,
+      hairColor: 0x0f172a,
+      hairstyle: 'fade',
+      jacketColor: 0x3b82f6,
+      shirtColor: 0x0f172a,
+      pantsColor: 0x334155,
+      shoeColor: 0xffffff,
+      glasses: 'none',
+      fabricPattern: 'solid',
+      agbadaDrape: false
+    };
+  }
+  return {
+    skinColor: 0x502b1c,
+    hairColor: 0x1f2937,
+    hairstyle: 'fade',
+    jacketColor: 0x15803d,
+    shirtColor: 0xf0fdf4,
+    pantsColor: 0x166534,
+    shoeColor: 0x78350f,
+    glasses: 'none',
+    fabricPattern: 'ankara',
+    agbadaDrape: trackId === 'civil'
+  };
+}
+
 class AbujaClientApp {
   constructor() {
     this.playerId = LOCAL_PLAYER_ID;
@@ -468,6 +530,7 @@ class AbujaClientApp {
     });
 
     this.world3d.flyToDistrict(this.game.s.loc.district, true);
+    this.world3d.setPlayerLook(getPlayerLookFromState(this.game.s));
     this.world3d.setEnvironment(Clock.hourOf(this.game.s.t), this.game.s.market.today.weather);
     if (this.game.s.social?.plots) {
       this.world3d.syncPlayerHouses(Object.values(this.game.s.social.plots));
@@ -691,7 +754,8 @@ class AbujaClientApp {
     let lastRadarTime = 0;
     const drawRadar = (time) => {
       requestAnimationFrame(drawRadar);
-      if (time - lastRadarTime < 80) return;
+      if (typeof document !== 'undefined' && document.hidden) return;
+      if (time - lastRadarTime < 100) return;
       lastRadarTime = time;
       const w = canvas.width;
       const h = canvas.height;
@@ -3745,6 +3809,15 @@ class AbujaClientApp {
       this.reconnectTimer = null;
     }
 
+    // On Vercel serverless deployments, SSE connections are forcibly terminated by serverless timeouts.
+    // Operating in resilient polling mode prevents stream reconnection storms.
+    const isVercel = typeof window !== 'undefined' && window.location.hostname.includes('vercel.app');
+    if (isVercel) {
+      this._setNetworkState('live');
+      this._fetchInitialMultiplayerState();
+      return;
+    }
+
     try {
       if (this.eventSource) {
         this.eventSource.close();
@@ -3947,12 +4020,21 @@ class AbujaClientApp {
     return [selfUser, ...defaultBots];
   }
 
-  _sendHeartbeat() {
+  _sendHeartbeat(force = false) {
+    if (!this.game || !this.game.s) return;
+    const now = Date.now();
     const s = this.game.s;
     const curD = DISTRICT_BY_ID[s.loc.district] || DISTRICT_BY_ID.cbd;
     const coords = this.world3d
       ? this.world3d.getPlayer2DCoords()
       : { x: curD.x, y: curD.y };
+
+    const hash = `${s.loc.district}_${Math.round(coords.x)}_${Math.round(coords.y)}_${s.funds}_${s.clout}`;
+    if (!force && this._lastHeartbeatHash === hash && (now - (this._lastHeartbeatTime || 0)) < 15000) {
+      return;
+    }
+    this._lastHeartbeatTime = now;
+    this._lastHeartbeatHash = hash;
 
     fetch('/api/heartbeat', {
       method: 'POST',
@@ -5257,6 +5339,7 @@ class AbujaClientApp {
           try {
             this.world3d.resize();
             this.world3d.flyToDistrict(this.game.s.loc.district);
+            this.world3d.setPlayerLook(getPlayerLookFromState(this.game.s));
             this.world3d.syncPlayerHouses(Object.values(this.game.s.social.plots || {}));
             if (this.game.s.social.car && typeof this.world3d.setPlayerVehicleAppearance === 'function') {
               this.world3d.setPlayerVehicleAppearance(this.game.s.social.car);
@@ -5504,6 +5587,7 @@ class AbujaClientApp {
       try {
         this.world3d.resize();
         this.world3d.flyToDistrict(this.game.s.loc.district);
+        this.world3d.setPlayerLook(getPlayerLookFromState(this.game.s));
         this.world3d.syncPlayerHouses(Object.values(this.game.s.social.plots || {}));
         if (typeof this.world3d.setPlayerVehicleAppearance === 'function') {
           this.world3d.setPlayerVehicleAppearance(this.game.s.social.car || 'along');
@@ -6009,6 +6093,26 @@ class AbujaClientApp {
             "${ls.slangTag}"
           </div>
         `;
+      }
+
+      // Update Live Character Avatar Hero Box
+      const heroSvgCont = document.getElementById('char-avatar-svg-container');
+      const heroName = document.getElementById('char-hero-name');
+      const heroTrack = document.getElementById('char-hero-track');
+      const heroVibe = document.getElementById('char-hero-vibe');
+      if (heroSvgCont) {
+        heroSvgCont.innerHTML = renderCharacterAvatarSVG(tr.id, g.id, 80);
+      }
+      if (heroName) heroName.textContent = name;
+      if (heroTrack) heroTrack.textContent = `${tr.icon} ${tr.name} • ${st.label}`;
+      if (heroVibe) heroVibe.textContent = `Caliber: ${ls.caliber} • ${ls.slangTag}`;
+
+      // Update 3D Character Rig in Real-Time behind the card
+      if (this.world3d) {
+        this.world3d.setPlayerLook(getPlayerLookFromState({
+          meta: { gender: g.id, lifestyle: lifestyleSel?.value || ls.id },
+          career: { track: tr.id }
+        }));
       }
 
       // Auto-save selections to browser localStorage so choices persist across refresh

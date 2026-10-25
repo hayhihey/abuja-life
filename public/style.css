@@ -3739,6 +3739,28 @@ html, body {
   z-index: 100;
 }
 
+/* Character Avatar Hero Box & Historical Header in Sign-Up Modal */
+.char-avatar-hero-box {
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+}
+
+.char-avatar-hero-box:hover {
+  border-color: #38bdf8 !important;
+  box-shadow: 0 6px 18px rgba(56, 189, 248, 0.15);
+}
+
+.modal-backdrop.sims-backdrop {
+  z-index: 10000;
+  pointer-events: auto;
+}
+
+body.has-open-modal .gta-floating-icon-dock,
+body.has-open-modal .gta-drive-pad,
+body.has-open-modal .gta-radar-dock {
+  pointer-events: none;
+}
+
 
 
 

@@ -940,14 +940,24 @@
 
         <div class="or-divider">Or customize your profile</div>
 
-        <!-- 📜 Thematic Brief History Chronicles (Collapsible) -->
-        <div class="sims-history-box" style="margin-bottom: 16px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 10px 14px; text-align: left;">
+        <!-- 📜 Thematic Brief History Chronicles (Visible at Start) -->
+        <div class="sims-history-box" style="margin-bottom: 16px; background: linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%); border: 1.5px solid #0284c7; border-radius: 14px; padding: 12px 14px; text-align: left;">
           <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" id="btn-toggle-history-details">
-            <span style="font-size: 0.84rem; font-weight: 700; color: #1e293b;">📜 The Genesis of Abuja (1976 - Present)</span>
-            <span id="btn-history-text" style="font-size: 0.8rem; font-weight: 700; color: #2563eb;">Chronicles ▾</span>
+            <span style="font-size: 0.86rem; font-weight: 800; color: #0369a1;">📜 The Genesis of Abuja (1976 - Present)</span>
+            <span id="btn-history-text" style="font-size: 0.78rem; font-weight: 700; color: #0284c7;">Historical Archive ▾</span>
           </div>
-          <div id="abuja-history-expanded" style="display: none; margin-top: 8px; font-size: 0.82rem; color: #475569; line-height: 1.45; border-top: 1px dashed #cbd5e1; padding-top: 8px;">
-            In <strong>1976</strong>, the Justice Aguda panel designated Abuja as Nigeria's neutral Federal Capital Territory to unite all 36 states in the nation's heart. Master-planned by Japanese architect <strong>Kenzo Tange</strong> facing sacred <strong>Aso Rock</strong>, the capital moved from Lagos on <strong>Dec 12, 1991</strong>. Register your identity below to move in!
+          <div id="abuja-history-expanded" style="display: block; margin-top: 8px; font-size: 0.82rem; color: #334155; line-height: 1.5; border-top: 1px dashed #93c5fd; padding-top: 8px;">
+            In <strong>1976</strong>, the Justice Akinola Aguda panel designated Abuja as Nigeria's neutral Federal Capital Territory to unite all 36 states in the nation's heart. Master-planned by Japanese architect <strong>Kenzo Tange</strong> facing sacred <strong>Aso Rock</strong>, the capital officially moved from Lagos on <strong>Dec 12, 1991</strong>. Register your citizen below to start living in the FCT!
+          </div>
+        </div>
+
+        <!-- 🎭 Live Character Avatar Hero Preview -->
+        <div id="char-avatar-hero-preview" class="char-avatar-hero-box" style="display: flex; align-items: center; justify-content: center; gap: 14px; background: #f8fafc; border: 2px solid #cbd5e1; border-radius: 16px; padding: 12px; margin-bottom: 16px;">
+          <div id="char-avatar-svg-container" style="width: 80px; height: 80px; flex-shrink: 0;"></div>
+          <div style="text-align: left;">
+            <div id="char-hero-name" style="font-size: 15px; font-weight: 800; color: #0f172a;">Citizen Avatar</div>
+            <div id="char-hero-track" style="font-size: 12px; font-weight: 600; color: #0284c7;">Contractor • Maitama</div>
+            <div id="char-hero-vibe" style="font-size: 11px; color: #64748b; margin-top: 2px;">Authentic 3D Citizen Mesh Ready</div>
           </div>
         </div>
 
@@ -1005,7 +1015,7 @@
 
           <div class="form-group">
             <label for="char-password-input">Password</label>
-            <input type="password" id="char-password-input" placeholder="••••••••" value="abujalife2026" required>
+            <input type="password" id="char-password-input" placeholder="••••••••" value="abujalife2026" autocomplete="current-password" required>
           </div>
 
           <!-- Reactive Citizen Passport / Demographic Preview Card -->

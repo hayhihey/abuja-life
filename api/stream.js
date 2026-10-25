@@ -1,5 +1,6 @@
-import { requestHandler } from '../server.mjs';
+import serverHandler, { requestHandler } from '../server.mjs';
 
 export default async function handler(req, res) {
-  return requestHandler(req, res, '/api/stream');
+  const fn = requestHandler || serverHandler;
+  return fn(req, res, '/api/stream');
 }
