@@ -3757,9 +3757,809 @@ html, body {
 
 body.has-open-modal .gta-floating-icon-dock,
 body.has-open-modal .gta-drive-pad,
-body.has-open-modal .gta-radar-dock {
+body.has-open-modal .gta-radar-dock,
+body.has-open-modal .psp-bottom-bar,
+body.has-open-modal .psp-diamond-cluster {
   pointer-events: none;
 }
+
+/* ========================================================================== */
+/* PLAYSTATION PORTABLE (PSP) HANDHELD CONSOLE UI & UNIFIED SUB-SUB (SUPSUB)  */
+/* ========================================================================== */
+
+/* 1. PSP Top Shoulder & LCD Status Bezel */
+.gta-topbar.psp-top-bezel {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 44px !important;
+  padding: 0 6px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 6px !important;
+  background: linear-gradient(180deg, #1e293b 0%, #090d16 55%, #05080f 100%) !important;
+  border-bottom: 1.5px solid rgba(148, 163, 184, 0.32) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
+  z-index: 90 !important;
+}
+
+/* PSP L & R Shoulder Triggers */
+.psp-shoulder-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 10px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(30, 41, 59, 0.92) 45%, rgba(15, 23, 42, 0.98) 100%);
+  color: #f8fafc;
+  border: 1.5px solid rgba(203, 213, 225, 0.45);
+  font-family: var(--font-display, inherit);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.35);
+  transition: all 0.15s ease;
+  touch-action: manipulation;
+}
+
+.psp-shoulder-btn.psp-l-btn {
+  border-radius: 14px 6px 10px 6px;
+}
+
+.psp-shoulder-btn.psp-r-btn {
+  border-radius: 6px 14px 6px 10px;
+}
+
+.psp-shoulder-btn .psp-sh-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(56, 189, 248, 0.55);
+  color: #38bdf8;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.psp-shoulder-btn:active,
+.psp-shoulder-btn.active {
+  background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%);
+  border-color: #7dd3fc;
+  color: #fff;
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.55);
+  transform: translateY(1px);
+}
+
+/* Center PSP LCD Status Strip */
+.psp-lcd-status-strip {
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 0 8px;
+  background: rgba(2, 6, 14, 0.88);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 8px;
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.8);
+}
+
+.psp-lcd-status-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.psp-top-bezel .gta-badge-logo {
+  padding: 2px 6px !important;
+  border-radius: 5px !important;
+  flex-shrink: 0;
+}
+
+.psp-top-bezel .gta-badge-logo .badge-top {
+  font-size: 7.5px !important;
+}
+
+.psp-top-bezel .gta-badge-logo .badge-main {
+  font-size: 10px !important;
+}
+
+.psp-citizen-pill {
+  padding: 2px 7px !important;
+  height: 24px !important;
+  border-radius: 6px !important;
+  background: rgba(15, 23, 42, 0.9) !important;
+  border: 1px solid rgba(148, 163, 184, 0.25) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  flex-shrink: 0;
+}
+
+.psp-citizen-pill .hud-player-name {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  max-width: 82px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.psp-citizen-pill .hud-career-badge {
+  font-size: 9px !important;
+  padding: 1px 4px !important;
+}
+
+.psp-citizen-pill .hud-online-pill {
+  font-size: 9px !important;
+}
+
+/* Compact PSP Cash Pill */
+.psp-cash-pill {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  padding: 2px 7px !important;
+  height: 24px !important;
+  background: rgba(6, 78, 59, 0.35) !important;
+  border: 1px solid rgba(16, 185, 129, 0.45) !important;
+  border-radius: 6px !important;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.psp-cash-pill .ngta-cash-digits {
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  color: #4ade80 !important;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9) !important;
+}
+
+/* Compact PSP Vitals (Clock + Micro Health/Armor Bars + Wanted Stars) */
+.psp-vitals-cluster {
+  position: static !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  flex-shrink: 0;
+  background: transparent !important;
+  padding: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.psp-clock-bars {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.psp-vitals-cluster .ngta-clock-digits {
+  font-size: 11px !important;
+  padding: 1px 5px !important;
+  border-radius: 4px !important;
+  background: rgba(15, 23, 42, 0.9) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+.psp-micro-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 38px;
+}
+
+.psp-micro-bars .ngta-bar-outer {
+  width: 38px !important;
+  height: 4px !important;
+  border-radius: 2px !important;
+  border-width: 1px !important;
+}
+
+.psp-vitals-cluster .ngta-wanted-row {
+  padding: 0 3px !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+.psp-vitals-cluster .wanted-stars .star {
+  font-size: 10px !important;
+}
+
+/* 2. Unified PSP Sub-Sub (supsub) Quick Menu Drawer (#psp-supsub-drawer) */
+.psp-supsub-drawer {
+  position: fixed;
+  top: 48px;
+  left: 8px;
+  width: min(370px, calc(100vw - 16px));
+  max-height: calc(100dvh - 100px);
+  background: linear-gradient(165deg, rgba(15, 23, 42, 0.96) 0%, rgba(5, 8, 17, 0.98) 100%);
+  border: 1.5px solid rgba(56, 189, 248, 0.55);
+  border-radius: 14px;
+  padding: 10px;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.85), 0 0 24px rgba(56, 189, 248, 0.25);
+  backdrop-filter: blur(14px);
+  z-index: 95;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  animation: pspDrawerIn 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.psp-supsub-drawer[hidden] {
+  display: none !important;
+}
+
+@keyframes pspDrawerIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.psp-supsub-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.psp-supsub-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #e2e8f0;
+  letter-spacing: 0.04em;
+}
+
+.psp-badge-chip {
+  background: linear-gradient(135deg, #0284c7, #2563eb);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 900;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.06em;
+}
+
+.psp-supsub-close {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+  font-size: 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Level 1 Category Tabs inside #psp-supsub-drawer */
+.psp-cat-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+}
+
+.psp-cat-btn {
+  padding: 6px 4px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(15, 23, 42, 0.75);
+  color: #cbd5e1;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  touch-action: manipulation;
+}
+
+.psp-cat-btn.active {
+  background: linear-gradient(135deg, rgba(2, 132, 199, 0.35), rgba(37, 99, 235, 0.35));
+  border-color: #38bdf8;
+  color: #fff;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.28);
+}
+
+/* Level 2 Sub-Sub (supsub) Filter Pills inside #psp-supsub-drawer */
+.psp-supsub-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  background: rgba(2, 6, 15, 0.75);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.psp-supsub-pill {
+  flex: 1;
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(30, 41, 59, 0.55);
+  color: #94a3b8;
+  font-size: 10.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.14s ease;
+  touch-action: manipulation;
+}
+
+.psp-supsub-pill[hidden] {
+  display: none !important;
+}
+
+.psp-supsub-pill.active {
+  background: rgba(16, 185, 129, 0.22);
+  border-color: #34d399;
+  color: #ecfdf5;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.25);
+}
+
+/* Level 3 Unified Action Grid inside #psp-supsub-drawer */
+.psp-supsub-body {
+  position: static !important;
+  transform: none !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  width: 100% !important;
+  max-width: none !important;
+}
+
+.psp-supsub-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  width: 100%;
+}
+
+.psp-supsub-grid[hidden] {
+  display: none !important;
+}
+
+.psp-unified-btn {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 3px !important;
+  min-height: 54px !important;
+  padding: 6px 4px !important;
+  border-radius: 10px !important;
+  background: rgba(30, 41, 59, 0.85) !important;
+  border: 1px solid rgba(148, 163, 184, 0.28) !important;
+  color: #f8fafc !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  cursor: pointer;
+  transition: all 0.14s ease;
+  touch-action: manipulation;
+}
+
+.psp-unified-btn .nqd-ico {
+  font-size: 18px !important;
+  line-height: 1 !important;
+}
+
+.psp-unified-btn .nqd-lbl {
+  font-size: 9.5px !important;
+  line-height: 1.15 !important;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.psp-unified-btn.gold-accent {
+  border-color: rgba(250, 204, 21, 0.55) !important;
+  background: linear-gradient(160deg, rgba(113, 63, 18, 0.55), rgba(30, 41, 59, 0.9)) !important;
+}
+
+.psp-unified-btn:active,
+.psp-unified-btn.active,
+.psp-unified-btn.on {
+  border-color: #38bdf8 !important;
+  background: rgba(2, 132, 199, 0.35) !important;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.35) !important;
+  transform: scale(0.96);
+}
+
+/* 3. Top-Left Compact Circular Nigeria GPS Radar (Zero Collision with D-Pad) */
+.gta-radar-dock.psp-radar-top-left {
+  position: fixed !important;
+  top: 50px !important;
+  left: 8px !important;
+  bottom: auto !important;
+  z-index: 35 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 3px !important;
+}
+
+.psp-radar-top-left .circular-ngta-radar {
+  width: 96px !important;
+  height: 96px !important;
+  border-width: 2.5px !important;
+}
+
+.psp-radar-top-left .radar-gps-label {
+  font-size: 7.5px !important;
+  padding: 1px 5px !important;
+  bottom: 3px !important;
+}
+
+.psp-radar-top-left .radar-north-badge {
+  width: 18px !important;
+  height: 18px !important;
+  font-size: 9px !important;
+}
+
+.psp-radar-top-left .gta-radar-stats-legend {
+  font-size: 9px !important;
+  padding: 2px 6px !important;
+  gap: 5px !important;
+  border-radius: 6px !important;
+  background: rgba(7, 12, 23, 0.84) !important;
+}
+
+.stage-top-left-overlay {
+  top: 50px !important;
+  left: 114px !important;
+  z-index: 36 !important;
+}
+
+/* 4. Top-Center Contextual 3D Interaction Prompt (Never overlaps bottom controls) */
+.hud-context-prompt {
+  position: fixed !important;
+  top: 50px !important;
+  bottom: auto !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  z-index: 50 !important;
+}
+
+.hud-context-prompt .hcp-box {
+  padding: 4px 10px 4px 8px !important;
+  border-radius: 999px !important;
+  gap: 7px !important;
+}
+
+.hud-context-prompt .hcp-label {
+  font-size: 11px !important;
+}
+
+.hud-context-prompt .hcp-sub {
+  font-size: 9px !important;
+}
+
+/* 5. Bottom-Left PSP Matte D-Pad + Grooved Analog Nub */
+.gta-drive-pad.psp-left-pad {
+  position: fixed !important;
+  bottom: 46px !important;
+  left: 10px !important;
+  right: auto !important;
+  z-index: 42 !important;
+  padding: 6px !important;
+  border-radius: 50% !important;
+  background: radial-gradient(circle, rgba(30, 41, 59, 0.85) 0%, rgba(9, 13, 22, 0.92) 100%) !important;
+  border: 1.5px solid rgba(148, 163, 184, 0.32) !important;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.75), inset 0 1px 2px rgba(255, 255, 255, 0.15) !important;
+}
+
+.psp-left-pad .dpad-btn {
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 8px !important;
+  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%) !important;
+  border: 1px solid rgba(203, 213, 225, 0.35) !important;
+  color: #e2e8f0 !important;
+  font-size: 12px !important;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.6) !important;
+}
+
+.psp-left-pad .dpad-btn.active,
+.psp-left-pad .dpad-btn:active {
+  background: linear-gradient(180deg, #0284c7 0%, #1d4ed8 100%) !important;
+  border-color: #7dd3fc !important;
+  color: #fff !important;
+}
+
+.psp-left-pad .gta-analog-ring {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 50% !important;
+  background: repeating-radial-gradient(circle, #0f172a 0px, #0f172a 2px, #1e293b 3px, #1e293b 4px) !important;
+  border: 1.5px solid rgba(56, 189, 248, 0.45) !important;
+}
+
+.psp-left-pad .gta-analog-knob {
+  width: 28px !important;
+  height: 28px !important;
+}
+
+/* 6. Bottom-Right Authentic PSP △ ○ ✕ □ 4-Button Diamond Cluster */
+.gta-mobile-action-cluster.psp-diamond-cluster {
+  position: fixed !important;
+  bottom: 46px !important;
+  right: 10px !important;
+  left: auto !important;
+  z-index: 42 !important;
+  display: grid !important;
+  grid-template-columns: repeat(3, 40px) !important;
+  grid-template-rows: repeat(3, 40px) !important;
+  gap: 2px !important;
+  padding: 6px !important;
+  border-radius: 50% !important;
+  background: radial-gradient(circle, rgba(30, 41, 59, 0.85) 0%, rgba(9, 13, 22, 0.92) 100%) !important;
+  border: 1.5px solid rgba(148, 163, 184, 0.32) !important;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.75), inset 0 1px 2px rgba(255, 255, 255, 0.15) !important;
+}
+
+.psp-diamond-cluster .psp-face-btn {
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px !important;
+  min-height: 40px !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  background: radial-gradient(circle at 35% 30%, #334155 0%, #0f172a 75%, #090d16 100%) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0px !important;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.75), inset 0 1px 1px rgba(255, 255, 255, 0.28) !important;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+.psp-diamond-cluster .psp-triangle {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  border: 1.5px solid #34d399 !important;
+}
+
+.psp-diamond-cluster .psp-square {
+  grid-column: 1 !important;
+  grid-row: 2 !important;
+  border: 1.5px solid #f472b6 !important;
+}
+
+.psp-diamond-cluster .psp-circle {
+  grid-column: 3 !important;
+  grid-row: 2 !important;
+  border: 1.5px solid #f87171 !important;
+}
+
+.psp-diamond-cluster .psp-cross {
+  grid-column: 2 !important;
+  grid-row: 3 !important;
+  border: 1.5px solid #60a5fa !important;
+}
+
+.psp-diamond-cluster .psp-sym {
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.psp-diamond-cluster .sym-tri { color: #34d399; }
+.psp-diamond-cluster .sym-sq  { color: #f472b6; }
+.psp-diamond-cluster .sym-cir { color: #f87171; }
+.psp-diamond-cluster .sym-x   { color: #60a5fa; }
+
+.psp-diamond-cluster .gmac-ico {
+  font-size: 12px !important;
+  line-height: 1 !important;
+}
+
+.psp-diamond-cluster .gmac-lbl {
+  font-size: 7px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.02em !important;
+  color: #e2e8f0 !important;
+  line-height: 1 !important;
+}
+
+.psp-diamond-cluster .psp-face-btn:active,
+.psp-diamond-cluster .psp-face-btn.active {
+  transform: scale(0.92) !important;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.65) !important;
+}
+
+/* 7. PSP Bottom Console Hardware Bar (HOME • SUBS • FM • VIEW • START) */
+.psp-bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 38px;
+  padding: 0 8px;
+  background: linear-gradient(180deg, #111827 0%, #050811 100%);
+  border-top: 1.5px solid rgba(148, 163, 184, 0.28);
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  z-index: 88;
+}
+
+.psp-hw-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+  border: 1px solid rgba(148, 163, 184, 0.38);
+  color: #cbd5e1;
+  font-family: var(--font-display, inherit);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transition: all 0.14s ease;
+  touch-action: manipulation;
+}
+
+.psp-hw-btn .psp-hw-ico {
+  font-size: 11px;
+}
+
+.psp-hw-btn.psp-hw-accent {
+  border-color: rgba(56, 189, 248, 0.55);
+  color: #7dd3fc;
+}
+
+.psp-hw-btn.psp-hw-start {
+  background: linear-gradient(135deg, #10b981, #059669);
+  border-color: #6ee7b7;
+  color: #022c22;
+  font-weight: 900;
+  padding: 0 12px;
+}
+
+.psp-hw-btn:active,
+.psp-hw-btn.active {
+  background: linear-gradient(135deg, #0284c7, #2563eb);
+  border-color: #7dd3fc;
+  color: #fff;
+  transform: translateY(1px);
+}
+
+/* 8. Level-3 Sub-Sub (#deck-supsub-nav) inside Command Deck Panel */
+.deck-supsub-nav {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  background: rgba(2, 6, 15, 0.85);
+  border-bottom: 1px solid rgba(56, 189, 248, 0.18);
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none;
+}
+
+.deck-supsub-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.deck-supsub-nav .supsub-tag {
+  font-size: 9px;
+  font-weight: 900;
+  color: #38bdf8;
+  letter-spacing: 0.06em;
+  padding-right: 2px;
+  flex-shrink: 0;
+}
+
+.supsub-pill-btn {
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(30, 41, 59, 0.65);
+  color: #cbd5e1;
+  font-size: 10.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.14s ease;
+  flex-shrink: 0;
+  touch-action: manipulation;
+}
+
+.supsub-pill-btn:hover,
+.supsub-pill-btn.active {
+  background: rgba(56, 189, 248, 0.22);
+  border-color: #38bdf8;
+  color: #f8fafc;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.25);
+}
+
+/* 9. Mobile & Landscape PSP Ergonomic Overrides */
+@media (max-width: 900px) {
+  /* Hide the 6-icon floating dock on mobile so the PSP bottom bar & R/HOME triggers own the bottom edge cleanly */
+  .gta-floating-icon-dock {
+    display: none !important;
+  }
+
+  .psp-citizen-pill .hud-career-badge {
+    display: none !important;
+  }
+
+  .psp-radar-top-left .circular-ngta-radar {
+    width: 78px !important;
+    height: 78px !important;
+  }
+
+  .psp-radar-top-left .gta-radar-stats-legend {
+    display: none !important;
+  }
+
+  .stage-top-left-overlay {
+    left: 94px !important;
+  }
+
+  .command-deck-panel {
+    bottom: 38px !important;
+    max-height: calc(100dvh - 82px) !important;
+  }
+}
+
+@media (max-height: 540px) and (orientation: landscape) {
+  .psp-radar-top-left .circular-ngta-radar {
+    width: 68px !important;
+    height: 68px !important;
+  }
+
+  .gta-drive-pad.psp-left-pad {
+    bottom: 42px !important;
+    left: 8px !important;
+    transform: scale(0.9);
+    transform-origin: bottom left;
+  }
+
+  .gta-mobile-action-cluster.psp-diamond-cluster {
+    bottom: 42px !important;
+    right: 8px !important;
+    transform: scale(0.9);
+    transform-origin: bottom right;
+  }
+}
+
+@media (min-width: 901px) {
+  .gta-floating-icon-dock {
+    bottom: 44px !important;
+  }
+}
+
 
 
 

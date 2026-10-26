@@ -441,7 +441,7 @@ class AbujaClientApp {
   _syncDriveButtons(inCar) {
     const topBtn = document.getElementById('btn-toggle-drive');
     if (topBtn) {
-      topBtn.textContent = inCar ? '🏎️ Sports Car (F)' : '🚶🏾 Walk Mode (F)';
+      topBtn.innerHTML = `<span class="nqd-ico">${inCar ? '🚶🏾' : '🏎️'}</span><span class="nqd-lbl">${inCar ? 'Step Out' : 'Drive Car'}</span>`;
       topBtn.classList.toggle('active', inCar);
     }
     const mobBtn = document.getElementById('btn-mobile-drive');
@@ -449,7 +449,7 @@ class AbujaClientApp {
     const mobLbl = document.getElementById('gmac-drive-lbl');
     if (mobBtn) mobBtn.classList.toggle('active', inCar);
     if (mobIco) mobIco.textContent = inCar ? '🚶🏾' : '🏎️';
-    if (mobLbl) mobLbl.textContent = inCar ? 'EXIT CAR' : 'ENTER CAR';
+    if (mobLbl) mobLbl.textContent = inCar ? 'EXIT' : 'CAR';
   }
 
   startRealTime(speed = 1) {
@@ -5485,8 +5485,136 @@ class AbujaClientApp {
       });
     });
 
-    // Ergonomic Global Keyboard Shortcuts (Keys 1 - 7)
+    // Ergonomic Global Keyboard Shortcuts (Keys 1 - 7) & PSP Console UI
     this._initQuickShortcuts(updateAfrobeatsStatus);
+    this._initPSPConsoleUI();
+  }
+
+  _initPSPConsoleUI() {
+    const supsubDrawer = document.getElementById('psp-supsub-drawer');
+    const lTrigger = document.getElementById('btn-psp-l-trigger');
+    const rTrigger = document.getElementById('btn-psp-r-trigger');
+    const selectBtn = document.getElementById('btn-psp-select');
+    const homeBtn = document.getElementById('btn-psp-home');
+    const viewBtn = document.getElementById('btn-psp-view');
+    const startBtn = document.getElementById('btn-psp-start');
+    const closeSupsubBtn = document.getElementById('btn-close-psp-supsub');
+
+    const toggleSupsubDrawer = (forceOpen) => {
+      if (!supsubDrawer) return;
+      const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : supsubDrawer.hidden;
+      supsubDrawer.hidden = !shouldOpen;
+      lTrigger?.classList.toggle('active', shouldOpen);
+      selectBtn?.classList.toggle('active', shouldOpen);
+    };
+
+    lTrigger?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleSupsubDrawer();
+    });
+    selectBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleSupsubDrawer();
+    });
+    closeSupsubBtn?.addEventListener('click', () => toggleSupsubDrawer(false));
+
+    // Close supsub drawer when tapping outside on 3D viewport
+    document.getElementById('world3d-viewport')?.addEventListener('pointerdown', () => {
+      if (supsubDrawer && !supsubDrawer.hidden) toggleSupsubDrawer(false);
+    });
+
+    // Switch Main Category -> Sub-Sub (supsub) Tabs inside #psp-supsub-drawer
+    const activateSupsubPane = (supsubKey) => {
+      if (!supsubDrawer) return;
+      supsubDrawer.querySelectorAll('.psp-supsub-pill').forEach((pill) => {
+        pill.classList.toggle('active', pill.dataset.supsub === supsubKey);
+      });
+      supsubDrawer.querySelectorAll('.psp-supsub-grid').forEach((pane) => {
+        const isMatch = pane.dataset.supsubPane === supsubKey;
+        pane.classList.toggle('active', isMatch);
+        pane.hidden = !isMatch;
+      });
+    };
+
+    supsubDrawer?.querySelectorAll('.psp-cat-btn').forEach((catBtn) => {
+      catBtn.addEventListener('click', () => {
+        const cat = catBtn.dataset.pspCat;
+        supsubDrawer.querySelectorAll('.psp-cat-btn').forEach((b) => {
+          b.classList.toggle('active', b === catBtn);
+        });
+        let firstSupsubKey = null;
+        supsubDrawer.querySelectorAll('.psp-supsub-pill').forEach((pill) => {
+          const belongs = pill.dataset.parentCat === cat;
+          pill.hidden = !belongs;
+          if (belongs && !firstSupsubKey) firstSupsubKey = pill.dataset.supsub;
+        });
+        if (firstSupsubKey) activateSupsubPane(firstSupsubKey);
+      });
+    });
+
+    supsubDrawer?.querySelectorAll('.psp-supsub-pill').forEach((pill) => {
+      pill.addEventListener('click', () => {
+        activateSupsubPane(pill.dataset.supsub);
+      });
+    });
+
+    // Full GPS button inside supsub
+    document.getElementById('btn-sub-gps')?.addEventListener('click', () => {
+      toggleSupsubDrawer(false);
+      this.openNigeriaGPSModal();
+    });
+
+    // Auto-close supsub drawer when clicking modal-opening buttons inside it
+    [
+      'ux-btn-style',
+      'ux-btn-pie',
+      'btn-open-sims-deck',
+      'btn-open-vault',
+      'btn-top-edu',
+      'btn-top-tax',
+      'btn-top-election',
+      'btn-top-mega-housing',
+      'btn-top-history',
+      'nqd-btn-cruise'
+    ].forEach((id) => {
+      document.getElementById(id)?.addEventListener('click', () => toggleSupsubDrawer(false));
+    });
+
+    // R Shoulder Trigger & PSP HOME Button -> Toggle PSP XMB Command Deck Drawer
+    const toggleCommandDeck = () => {
+      const deck = document.getElementById('command-deck-panel');
+      if (!deck) return;
+      toggleSupsubDrawer(false);
+      if (deck.classList.contains('is-drawer-closed')) {
+        this.openDeckTab(this.activeTab || 'explore');
+        rTrigger?.classList.add('active');
+        homeBtn?.classList.add('active');
+      } else {
+        this.closeDeckDrawer();
+        rTrigger?.classList.remove('active');
+        homeBtn?.classList.remove('active');
+      }
+    };
+
+    rTrigger?.addEventListener('click', toggleCommandDeck);
+    homeBtn?.addEventListener('click', toggleCommandDeck);
+
+    // PSP VIEW button -> Cycle 3D Camera
+    viewBtn?.addEventListener('click', () => {
+      if (!this.world3d) return;
+      const mode = this.world3d.cycleCameraMode();
+      const label = mode === 'helicopter' ? '🚁 Chopper Cam' : (mode === 'dollhouse' ? '🏠 Sims Dollhouse' : '🎥 3rd-Person');
+      this.showToast(`${label} Active!`);
+    });
+
+    // PSP START button -> Trigger Contextual Action or Open District Moves
+    startBtn?.addEventListener('click', () => {
+      if (typeof this.currentContextAction === 'function') {
+        this.currentContextAction();
+      } else {
+        this.openDeckTab('explore');
+      }
+    });
   }
 
   _initQuickShortcuts(updateAfrobeatsStatus) {
@@ -5959,12 +6087,6 @@ class AbujaClientApp {
     };
 
     const items = SUB_NAV_CONFIG[pillar] || [];
-    if (items.length <= 1) {
-      subNav.style.display = 'none';
-      subNav.innerHTML = '';
-      return;
-    }
-
     subNav.style.display = 'flex';
     subNav.innerHTML = items.map((item) => `
       <button type="button" class="sub-tab-btn ${item.id === activeTargetId ? 'active' : ''}" data-sub-target="${item.id}">
@@ -5976,6 +6098,114 @@ class AbujaClientApp {
       btn.addEventListener('click', () => {
         const targetId = btn.dataset.subTarget;
         this.switchTab(pillar, targetId);
+      });
+    });
+
+    this._renderSupSubNav(pillar, activeTargetId);
+  }
+
+  _renderSupSubNav(pillar, activeTargetId) {
+    const supsubNav = document.getElementById('deck-supsub-nav');
+    if (!supsubNav) return;
+
+    const SUPSUB_CONFIG = {
+      'tab-actions': [
+        { label: '🎯 Daily Hustle', scrollId: 'daily-hustle-box' },
+        { label: '⚡ Street Moves', scrollId: 'actions-list' },
+        { label: '🗺️ Full GPS Map', action: () => this.openNigeriaGPSModal() },
+        { label: '🚕 Hail Green Cab', action: () => this.openQuickCruiseModal() }
+      ],
+      'tab-commute': [
+        { label: '🛣️ Expressways', scrollId: 'commute-list' },
+        { label: '🚕 Instant Cab', action: () => this.openQuickCruiseModal() },
+        { label: '🗺️ GPS Radar', action: () => this.openNigeriaGPSModal() }
+      ],
+      'tab-career': [
+        { label: '📊 Track Status', scrollId: 'career-summary' },
+        { label: '📑 BPP Tenders', scrollId: 'contracts-list' },
+        { label: '🔄 Switch Track', scrollId: 'tracks-list' },
+        { label: '💰 Fast Hustle', action: () => this.quickHustle() }
+      ],
+      'tab-sims': [
+        { label: '🪫 8 Motives', scrollId: 'sims-motives-grid' },
+        { label: '⚡ NEPA & Water', scrollId: 'sims-utilities-row' },
+        { label: '🛋️ Smart Home', scrollId: 'sims-smart-objects-list' },
+        { label: '🛒 Build/Buy', scrollId: 'sims-catalog-grid' }
+      ],
+      'tab-housing': [
+        { label: '🏗️ AGIS Plots', scrollId: 'housing-plots-list' },
+        { label: '🏠 Rental Leases', scrollId: 'housing-list' },
+        { label: '🏙️ Mega Estates', action: () => this._openMegaHousingModal() }
+      ],
+      'tab-multiplayer': [
+        { label: '🌍 Global FCT', action: () => document.querySelector('.mp-chan-btn[data-channel="global"]')?.click() },
+        { label: '📍 District Chat', action: () => document.querySelector('.mp-chan-btn[data-channel="district"]')?.click() },
+        { label: '🔒 Private DMs', action: () => document.querySelector('.mp-chan-btn[data-channel="dm"]')?.click() },
+        { label: '👥 Online Roster', scrollId: 'mp-players-roster' }
+      ],
+      'tab-network': [
+        { label: '📋 Paid Tasks', scrollId: 'assign-task-form' },
+        { label: '🤝 VIP Rolodex', scrollId: 'network-list' },
+        { label: '💍 Romance & Bae', scrollId: 'family-spouse-box' }
+      ],
+      'tab-court': [
+        { label: '⚖️ File Lawsuit', scrollId: 'court-file-form' },
+        { label: '🏛️ Docket & Rulings', scrollId: 'court-cases-list' }
+      ],
+      'tab-feed': [
+        { label: '📰 Live FCT Feed', scrollId: 'feed-list' },
+        { label: '📖 Abuja History', action: () => { const m = document.getElementById('abuja-history-modal'); if (m) m.hidden = false; } }
+      ],
+      'tab-shop': [
+        { label: '🍗 Suya & Spots', scrollId: 'tourism-spots-list' },
+        { label: '🛍️ Luxury & Cars', scrollId: 'shop-items-list' },
+        { label: '🎨 Style Studio', action: () => document.getElementById('ux-btn-style')?.click() }
+      ],
+      'tab-games': [
+        { label: '🃏 Naija Whot', scrollId: 'whot-table-box' },
+        { label: '🎲 King Ludo', scrollId: 'ludo-table-box' }
+      ],
+      'tab-profile': [
+        { label: '🪪 Citizen ID', scrollId: 'btn-profile-edit-char' },
+        { label: '🏦 CBN Vault', action: () => this.openNairaVaultModal() },
+        { label: '🎓 UniAbuja', action: () => this._openEducationModal() },
+        { label: '📜 FIRS Tax', action: () => this._openTaxModal() },
+        { label: '🗳️ Elections', action: () => this._openElectionModal() }
+      ]
+    };
+
+    const supsubs = SUPSUB_CONFIG[activeTargetId] || [];
+    if (supsubs.length === 0) {
+      supsubNav.style.display = 'none';
+      supsubNav.innerHTML = '';
+      return;
+    }
+
+    supsubNav.style.display = 'flex';
+    supsubNav.innerHTML = `
+      <span class="supsub-tag">SUB-SUB ▸</span>
+      ${supsubs.map((item, idx) => `
+        <button type="button" class="supsub-pill-btn ${idx === 0 ? 'active' : ''}" data-supsub-idx="${idx}">
+          ${item.label}
+        </button>
+      `).join('')}
+    `;
+
+    supsubNav.querySelectorAll('.supsub-pill-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        supsubNav.querySelectorAll('.supsub-pill-btn').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        const idx = Number(btn.dataset.supsubIdx);
+        const cfg = supsubs[idx];
+        if (!cfg) return;
+        if (typeof cfg.action === 'function') {
+          cfg.action();
+        } else if (cfg.scrollId) {
+          const targetEl = document.getElementById(cfg.scrollId);
+          if (targetEl) {
+            targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }
       });
     });
   }

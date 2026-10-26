@@ -32,75 +32,88 @@
     </div>
 
     <!-- ================================================================== -->
-    <!-- COMPACT TOP BAR & STATUS INDICATORS                                -->
+    <!-- PSP HANDHELD CONSOLE TOP BEZEL (L SHOULDER + LCD STATUS + R MENU)  -->
     <!-- ================================================================== -->
-    <header class="gta-topbar gta-topbar-minimal">
-      <div class="brand-cluster" style="display:flex; align-items:center; gap:6px; overflow-x:auto; white-space:nowrap; max-width:calc(100vw - 190px); padding-bottom:2px; scrollbar-width:none; -ms-overflow-style:none;">
+    <header class="gta-topbar gta-topbar-minimal psp-top-bezel">
+      <!-- PSP Left Shoulder Trigger [ L • SUBS ] -->
+      <button type="button" class="psp-shoulder-btn psp-l-btn" id="btn-psp-l-trigger" title="Open Unified Sub-Sub Quick Menu (Shortcut: Tab or Q)">
+        <span class="psp-sh-key">L</span>
+        <span class="psp-sh-lbl">⚡ SUBS</span>
+      </button>
+
+      <!-- Center PSP LCD Status Strip -->
+      <div class="psp-lcd-status-strip">
         <div class="gta-badge-logo" id="btn-toggle-district-card" style="cursor:pointer;" title="Click to toggle District Postcard">
           <span class="badge-top">🇳🇬 FCT</span>
           <span class="badge-main">ABUJA</span>
         </div>
-        <button type="button" class="top-nav-icon-pill" id="btn-hud-profile" title="Configure Profile, Occupation & Lifestyle Caliber">
-          <div id="hud-avatar-slot" class="hud-avatar-slot" style="width:22px; height:22px;"></div>
-          <span id="hud-player-name" class="hud-player-name" style="font-size:11.5px; font-weight:700;">Citizen</span>
-          <span id="hud-career-badge" class="hud-career-badge" style="font-size:9.5px; padding:2px 5px;">Hustler</span>
+
+        <button type="button" class="top-nav-icon-pill psp-citizen-pill" id="btn-hud-profile" title="Configure Profile, Occupation &amp; Lifestyle Caliber">
+          <div id="hud-avatar-slot" class="hud-avatar-slot" style="width:20px; height:20px;"></div>
+          <span id="hud-player-name" class="hud-player-name">Citizen</span>
+          <span id="hud-career-badge" class="hud-career-badge">Hustler</span>
           <span id="hud-age-gender-pill" hidden>👨🏾 26y</span>
-          <span id="hud-online-pill" class="hud-online-pill">● Connecting…</span>
+          <span id="hud-online-pill" class="hud-online-pill">● Live</span>
           <span id="hud-bae-pill" hidden>💍 Bae</span>
           <span id="hud-caliber-pill" hidden>✨ Steeze 80%</span>
         </button>
-        <button type="button" class="top-nav-icon-pill" id="btn-top-music" title="Toggle Live Nigerian Afrobeats & Party Radio">
-          <span>📻</span>
-          <span id="top-music-label" style="font-size:10.5px; font-weight:700; color:#c7d2fe;">WAZOBIA FM</span>
-        </button>
 
-        <!-- Hidden Legacy Nav IDs for Full Backward Compatibility -->
-        <span style="display:none;">
-          <button type="button" id="btn-top-history"></button>
-          <button type="button" id="btn-top-edu"></button>
-          <button type="button" id="btn-top-tax"></button>
-          <button type="button" id="btn-top-election"></button>
-          <button type="button" id="btn-top-mega-housing"></button>
-        </span>
+        <!-- Compact PSP Naira Balance Pill (Click to open CBN Vault) -->
+        <div class="ngta-cash-row psp-cash-pill" id="btn-classic-cash-vault" title="Click to open CBN Physical Naira Vault &amp; Wire">
+          <span id="hud-funds-val" class="ngta-cash-digits">₦510,000</span>
+          <span id="hud-funds-delta" class="cash-delta-popup"></span>
+        </div>
+
+        <!-- Compact PSP Vitals (Clock + Health/Armor Micro-Bars + Wanted Stars) -->
+        <div class="psp-vitals-cluster" id="ngta-topright-hud">
+          <div class="psp-clock-bars">
+            <span id="gta-classic-clock" class="ngta-clock-digits">08:00</span>
+            <div class="psp-micro-bars">
+              <div class="ngta-bar-outer health" title="Energy / Stamina">
+                <div class="ngta-bar-fill health" id="hud-energy-bar" style="width:90%"></div>
+              </div>
+              <div class="ngta-bar-outer armor" title="Sanity / Composure &amp; Steeze">
+                <div class="ngta-bar-fill armor" id="hud-sanity-bar" style="width:70%"></div>
+              </div>
+            </div>
+          </div>
+          <div class="ngta-wanted-row" id="hud-wanted-box" title="VIO / FRSC / EFCC Heat Level">
+            <div class="wanted-stars" id="hud-wanted-stars">
+              <span class="star">★</span>
+              <span class="star">★</span>
+              <span class="star">★</span>
+              <span class="star">★</span>
+              <span class="star">★</span>
+            </div>
+            <span class="wanted-pct" id="hud-heat-val" hidden>0%</span>
+          </div>
+        </div>
       </div>
 
-      <!-- Hidden Legacy Top-Right Holders (Kept for DOM compatibility) -->
-      <div class="gta-center-hud" style="display:none;">
+      <!-- PSP Right Shoulder Trigger [ R • MENU ] -->
+      <button type="button" class="psp-shoulder-btn psp-r-btn" id="btn-psp-r-trigger" title="Open PSP XMB Command Deck (Explore, Work, Home, Social, Lifestyle, Profile)">
+        <span class="psp-sh-lbl">🎮 MENU</span>
+        <span class="psp-sh-key">R</span>
+      </button>
+
+      <!-- Hidden Legacy Top-Right Holders (Kept for 100% DOM compatibility) -->
+      <div style="display:none;">
+        <button type="button" id="btn-gta-fist"></button>
         <span id="hud-radio-station"></span>
         <span id="hud-radio-ticker"></span>
         <div id="btn-cycle-radio"></div>
-        <span id="hud-clock"></span>
-        <span id="hud-weather"></span>
-      </div>
-
-        <div class="clock-controls-cluster">
-          <div class="clock-readout" hidden>
-            <span id="hud-clock" class="clock-time">Day 1 • Mon • 08:00</span>
-            <span id="hud-weather" class="clock-weather">☀️ Clear FCT Sky</span>
-          </div>
-          <div class="sim-speed-btns">
-            <button id="btn-pause" class="speed-btn" title="Pause / Resume">⏸</button>
-            <button id="btn-speed-1" class="speed-btn active" data-speed="1">1×</button>
-            <button id="btn-speed-2" class="speed-btn" data-speed="2">2×</button>
-            <button id="btn-speed-4" class="speed-btn" data-speed="4">4×</button>
-            <button id="btn-advance-hr" class="speed-btn step-btn" title="Advance +1 Hour">+1h</button>
-          </div>
-        </div>
-
-      <!-- Hidden Legacy Top-Right Holders (Kept for DOM compatibility) -->
-      <div class="gta-right-hud" hidden>
-        <div class="naira-hud-wallet" id="btn-open-vault">
-          <div class="naira-mini-note-preview" id="hud-naira-note-art"></div>
-          <span id="hud-naira-bundles">Cash + Bank</span>
-        </div>
-        <button id="btn-new-char" class="gta-icon-btn">👤</button>
+        <span id="hud-clock">Day 1 • Mon • 08:00</span>
+        <span id="hud-weather">☀️ Clear FCT Sky</span>
+        <div id="hud-naira-note-art"></div>
+        <span id="hud-naira-bundles">Cash + Bank</span>
+        <button id="btn-new-char" type="button"></button>
       </div>
     </header>
 
     <!-- ================================================================== -->
-    <!-- MAIN WORKSPACE: 100% FULL-SCREEN 3D NIGERIA GTA + FLOATING ICONS   -->
+    <!-- MAIN WORKSPACE: PSP HANDHELD CONSOLE VIEWPORT + UNIFIED SUPSUB     -->
     <!-- ================================================================== -->
-    <main class="gta-main-stage">
+    <main class="gta-main-stage psp-console-stage">
 
       <!-- FULL-SCREEN INTERACTIVE 3D NIGERIA GTA WORLD -->
       <section class="world-stage-panel">
@@ -123,53 +136,315 @@
         </div>
 
         <!-- ============================================================== -->
-        <!-- CLASSIC NIGERIA GTA TOP-RIGHT HUD (Fist Box + Clock + ₦ + Bars)-->
+        <!-- UNIFIED PSP SUB-SUB (SUPSUB) QUICK MENU DRAWER                 -->
+        <!-- Unifies all 24 floating buttons into Main Category -> Sub-Sub  -->
         <!-- ============================================================== -->
-        <div class="ngta-topright-hud" id="ngta-topright-hud">
-          <!-- GTA Fist / Street Action Icon Box -->
-          <button type="button" id="btn-gta-fist" class="ngta-fist-box" title="Street Punch / Knockdown Rival (Shortcut: Space or E)">
-            <span class="ngta-fist-emoji">👊🏾</span>
-            <span class="ngta-fist-sub">PUNCH</span>
-          </button>
+        <aside id="psp-supsub-drawer" class="psp-supsub-drawer" hidden aria-label="PSP Unified Sub-Sub Quick Menu">
+          <div class="psp-supsub-header">
+            <div class="psp-supsub-title-wrap">
+              <span class="psp-badge-chip">PSP XMB</span>
+              <strong>UNIFIED SUB-SUB (SUPSUB) HUB</strong>
+            </div>
+            <button type="button" id="btn-close-psp-supsub" class="psp-supsub-close" aria-label="Close Sub-Sub Menu">✕</button>
+          </div>
 
-          <div class="ngta-stats-col">
-            <!-- Bold White-on-Black GTA Digital Clock -->
-            <div class="ngta-clock-row">
-              <span id="gta-classic-clock" class="ngta-clock-digits">08:00</span>
+          <!-- Level 1: Main Categories -->
+          <div class="psp-cat-tabs" role="tablist">
+            <button type="button" class="psp-cat-btn active" data-psp-cat="vibes">🔥 Naija Vibes</button>
+            <button type="button" class="psp-cat-btn" data-psp-cat="tools">🎥 3D &amp; Sims</button>
+            <button type="button" class="psp-cat-btn" data-psp-cat="time">⏱️ Time &amp; Civic</button>
+          </div>
+
+          <!-- Level 2: Sub-Sub (supsub) Filter Pills -->
+          <div class="psp-supsub-tabs" id="psp-supsub-tabs">
+            <button type="button" class="psp-supsub-pill active" data-parent-cat="vibes" data-supsub="flex">🍗 Flex &amp; Party</button>
+            <button type="button" class="psp-supsub-pill" data-parent-cat="vibes" data-supsub="hustle">🚕 Hustle &amp; Cruise</button>
+
+            <button type="button" class="psp-supsub-pill" data-parent-cat="tools" data-supsub="sims" hidden>🤖 Sims &amp; Style</button>
+            <button type="button" class="psp-supsub-pill" data-parent-cat="tools" data-supsub="cam" hidden>🎥 Camera &amp; View</button>
+
+            <button type="button" class="psp-supsub-pill" data-parent-cat="time" data-supsub="clock" hidden>⏱️ Game Speed</button>
+            <button type="button" class="psp-supsub-pill" data-parent-cat="time" data-supsub="civic" hidden>🏛️ Civic &amp; Vault</button>
+          </div>
+
+          <!-- Level 3: Unified Action Buttons Grid -->
+          <div class="psp-supsub-body" id="naija-quick-dock">
+            <!-- Sub-Sub Group: vibes -> flex -->
+            <div class="psp-supsub-grid active" data-supsub-pane="flex">
+              <button type="button" class="nqd-btn psp-unified-btn" id="nqd-btn-chop" title="🍗 Chop Life (Eat Suya &amp; Jollof) [Shortcut: 1]">
+                <span class="nqd-ico">🍗</span>
+                <span class="nqd-lbl">Chop Life</span>
+              </button>
+              <button type="button" class="nqd-btn psp-unified-btn gold-accent" id="nqd-btn-spray" title="💸 Spray Naira Notes in 3D (+Clout &amp; Steeze) [Shortcut: 2]">
+                <span class="nqd-ico">💸</span>
+                <span class="nqd-lbl">Spray ₦5k</span>
+              </button>
+              <button type="button" class="nqd-btn psp-unified-btn gold-accent" id="nqd-btn-party" title="🕺 Owambe Street Party (Live Afrobeats &amp; Horns) [Shortcut: 7]">
+                <span class="nqd-ico">🕺</span>
+                <span class="nqd-lbl">Owambe</span>
+              </button>
+              <button type="button" class="nqd-btn psp-unified-btn" id="nqd-btn-radio" title="📻 Switch Naija FM Radio Station [Shortcut: 5]">
+                <span class="nqd-ico">📻</span>
+                <span class="nqd-lbl">Naija FM</span>
+              </button>
             </div>
 
-            <!-- Red Health / Energy Bar -->
-            <div class="ngta-bar-outer health" title="Energy / Stamina">
-              <div class="ngta-bar-fill health" id="hud-energy-bar" style="width:90%"></div>
+            <!-- Sub-Sub Group: vibes -> hustle -->
+            <div class="psp-supsub-grid" data-supsub-pane="hustle" hidden>
+              <button type="button" class="nqd-btn psp-unified-btn" id="nqd-btn-hustle" title="💰 Fast Street Hustle (+₦ Cash Alert) [Shortcut: 3]">
+                <span class="nqd-ico">💰</span>
+                <span class="nqd-lbl">Quick Mula</span>
+              </button>
+              <button type="button" class="nqd-btn psp-unified-btn" id="nqd-btn-cruise" title="🚕 Hail Green Cab / Cruise Abuja [Shortcut: 4]">
+                <span class="nqd-ico">🚕</span>
+                <span class="nqd-lbl">Green Cab</span>
+              </button>
+              <button type="button" class="nqd-btn psp-unified-btn" id="nqd-btn-gen" title="⚡ UP NEPA! / Compound Generator [Shortcut: 6]">
+                <span class="nqd-ico">⚡</span>
+                <span class="nqd-lbl">Up NEPA!</span>
+              </button>
+              <button type="button" class="nqd-btn psp-unified-btn" id="btn-sub-gps" title="🗺️ Open Full Nigeria Street GPS Map">
+                <span class="nqd-ico">🗺️</span>
+                <span class="nqd-lbl">Full GPS</span>
+              </button>
             </div>
 
-            <!-- White Composure / Steeze Armor Bar -->
-            <div class="ngta-bar-outer armor" title="Sanity / Composure &amp; Steeze">
-              <div class="ngta-bar-fill armor" id="hud-sanity-bar" style="width:70%"></div>
+            <!-- Sub-Sub Group: tools -> sims -->
+            <div class="psp-supsub-grid" data-supsub-pane="sims" hidden>
+              <button type="button" class="psp-unified-btn" id="ux-btn-auto" title="🤖 Autopilot AI (Free-Will Mode)">
+                <span class="nqd-ico">🤖</span>
+                <span class="nqd-lbl">Autopilot AI</span>
+              </button>
+              <button type="button" class="psp-unified-btn" id="ux-btn-style" title="🎨 Style Studio &amp; Car Wrap">
+                <span class="nqd-ico">🎨</span>
+                <span class="nqd-lbl">Style Studio</span>
+              </button>
+              <button type="button" class="psp-unified-btn" id="ux-btn-cut" title="🏠 Cutaway Walls (Up/Half/Down)">
+                <span class="nqd-ico">🏠</span>
+                <span class="nqd-lbl">Wall Cutaway</span>
+              </button>
+              <button type="button" class="psp-unified-btn" id="btn-open-sims-deck" title="🍗 Open Sims 8 Motives, Smart Home &amp; Build Catalog">
+                <span class="nqd-ico">🪫</span>
+                <span class="nqd-lbl">Sims Needs</span>
+              </button>
             </div>
 
-            <!-- Bold Green GTA Naira Readout (Click to open CBN Vault) -->
-            <div class="ngta-cash-row" id="btn-classic-cash-vault" title="Click to open CBN Physical Naira Vault &amp; Wire">
-              <span id="hud-funds-val" class="ngta-cash-digits">₦510,000</span>
-              <span id="hud-funds-delta" class="cash-delta-popup"></span>
+            <!-- Sub-Sub Group: tools -> cam -->
+            <div class="psp-supsub-grid" data-supsub-pane="cam" hidden>
+              <button type="button" class="psp-unified-btn w3d-ctrl-btn" id="btn-toggle-drive" title="Toggle Walking vs SUV Driving (Shortcut: F)">
+                <span class="nqd-ico">🏎️</span>
+                <span class="nqd-lbl">Walk/Drive</span>
+              </button>
+              <button type="button" class="psp-unified-btn w3d-ctrl-btn" id="btn-toggle-cam" title="Switch 3rd-Person vs Helicopter Camera (Shortcut: V)">
+                <span class="nqd-ico">🎥</span>
+                <span class="nqd-lbl">Camera (V)</span>
+              </button>
+              <button type="button" class="psp-unified-btn w3d-ctrl-btn" id="btn-toggle-dollhouse" title="Switch to The Sims Isometric 45° Dollhouse View (Shortcut: C)">
+                <span class="nqd-ico">🏘️</span>
+                <span class="nqd-lbl">Dollhouse</span>
+              </button>
+              <button type="button" class="psp-unified-btn" id="ux-btn-pie" title="⭕ Radial Quick Pie Menu">
+                <span class="nqd-ico">⭕</span>
+                <span class="nqd-lbl">Pie Menu</span>
+              </button>
+              <button type="button" class="psp-unified-btn" id="ux-btn-amb" title="🔊 City Ambience (52Hz Gen, Traffic &amp; Crickets)">
+                <span class="nqd-ico">🔊</span>
+                <span class="nqd-lbl">Ambience</span>
+              </button>
+              <button type="button" class="psp-unified-btn w3d-ctrl-btn" id="btn-toggle-2dmap" title="Toggle 2D Blueprint Grid">
+                <span class="nqd-ico">📐</span>
+                <span class="nqd-lbl">2D Grid</span>
+              </button>
+              <button type="button" class="psp-unified-btn w3d-ctrl-btn" id="btn-toggle-lowpower" title="Cool Phone / Low-Power Mode">
+                <span class="nqd-ico">❄️</span>
+                <span class="nqd-lbl">Cool Mode</span>
+              </button>
+              <button type="button" class="psp-unified-btn w3d-ctrl-btn" id="btn-spray-naira" title="Spray Naira notes in 3D (+Clout)">
+                <span class="nqd-ico">💸</span>
+                <span class="nqd-lbl">3D Spray</span>
+              </button>
             </div>
 
-            <!-- 5-Star Wanted Heat Row -->
-            <div class="ngta-wanted-row" id="hud-wanted-box" title="VIO / FRSC / EFCC Heat Level">
-              <div class="wanted-stars" id="hud-wanted-stars">
-                <span class="star">★</span>
-                <span class="star">★</span>
-                <span class="star">★</span>
-                <span class="star">★</span>
-                <span class="star">★</span>
+            <!-- Sub-Sub Group: time -> clock -->
+            <div class="psp-supsub-grid" data-supsub-pane="clock" hidden>
+              <button type="button" id="btn-pause" class="psp-unified-btn speed-btn" title="Pause / Resume">
+                <span class="nqd-ico">⏸</span>
+                <span class="nqd-lbl">Pause/Play</span>
+              </button>
+              <button type="button" id="btn-speed-1" class="psp-unified-btn speed-btn active" data-speed="1">
+                <span class="nqd-ico">1×</span>
+                <span class="nqd-lbl">Normal</span>
+              </button>
+              <button type="button" id="btn-speed-2" class="psp-unified-btn speed-btn" data-speed="2">
+                <span class="nqd-ico">2×</span>
+                <span class="nqd-lbl">Fast</span>
+              </button>
+              <button type="button" id="btn-speed-4" class="psp-unified-btn speed-btn" data-speed="4">
+                <span class="nqd-ico">4×</span>
+                <span class="nqd-lbl">Turbo</span>
+              </button>
+              <button type="button" id="btn-advance-hr" class="psp-unified-btn speed-btn step-btn" title="Advance +1 Hour">
+                <span class="nqd-ico">+1h</span>
+                <span class="nqd-lbl">Skip Hour</span>
+              </button>
+            </div>
+
+            <!-- Sub-Sub Group: time -> civic -->
+            <div class="psp-supsub-grid" data-supsub-pane="civic" hidden>
+              <button type="button" class="psp-unified-btn" id="btn-open-vault" title="CBN Naira Vault &amp; Wire Transfer">
+                <span class="nqd-ico">🏦</span>
+                <span class="nqd-lbl">CBN Vault</span>
+              </button>
+              <button type="button" class="psp-unified-btn" id="btn-top-edu" title="University of Abuja Degrees">
+                <span class="nqd-ico">🎓</span>
+                <span class="nqd-lbl">UniAbuja</span>
+              </button>
+              <button type="button" class="psp-unified-btn" id="btn-top-tax" title="FIRS Tax Clearance Certificate">
+                <span class="nqd-ico">📜</span>
+                <span class="nqd-lbl">FIRS Tax</span>
+              </button>
+              <button type="button" class="psp-unified-btn" id="btn-top-election" title="INEC Elections &amp; Campaigns">
+                <span class="nqd-ico">🗳️</span>
+                <span class="nqd-lbl">Elections</span>
+              </button>
+              <button type="button" class="psp-unified-btn" id="btn-top-mega-housing" title="FCT Mega Housing Directory">
+                <span class="nqd-ico">🏘️</span>
+                <span class="nqd-lbl">Estates</span>
+              </button>
+              <button type="button" class="psp-unified-btn" id="btn-top-history" title="Chronicles of Abuja">
+                <span class="nqd-ico">📖</span>
+                <span class="nqd-lbl">History</span>
+              </button>
+            </div>
+          </div>
+        </aside>
+
+        <!-- ============================================================== -->
+        <!-- TOP-LEFT COMPACT GPS RADAR & COLLAPSIBLE DISTRICT POSTCARD     -->
+        <!-- ============================================================== -->
+        <div class="gta-radar-dock psp-radar-top-left">
+          <div class="gta-radar-frame circular-ngta-radar" id="btn-expand-gps-radar" title="Tap N badge or double-tap radar to open Full Nigeria Street GPS Map">
+            <div id="gta-leaflet-radar" class="gta-leaflet-radar"></div>
+            <canvas id="gta-radar-canvas" width="184" height="184"></canvas>
+            <div class="radar-north-badge" id="btn-radar-north" title="Open Full Nigeria Street GPS Map">N</div>
+            <div class="radar-gps-label" id="radar-gps-label">GPS • SHEHU SHAGARI WAY</div>
+          </div>
+          <!-- Hidden Legacy Bars/Vals for JS Compatibility -->
+          <div class="gta-radar-bars" hidden>
+            <div class="radar-bar-slot"><div class="radar-bar-fill clout" id="hud-clout-bar" style="width:12%"></div></div>
+          </div>
+          <div class="gta-radar-stats-legend">
+            <span>🧠 <strong id="hud-sanity-val">70</strong></span>
+            <span>⚡ <strong id="hud-energy-val">90</strong></span>
+            <span>🏛️ <strong id="hud-clout-val">12</strong></span>
+            <span>🤝 <strong id="hud-network-val">3</strong></span>
+          </div>
+        </div>
+
+        <div class="stage-top-left-overlay">
+          <div class="district-postcard-card" id="district-postcard-card" hidden>
+            <div id="district-art-banner" class="district-art-banner"></div>
+            <div class="district-postcard-body">
+              <div class="dp-header">
+                <div>
+                  <span id="banner-sector-tag" class="sector-pill zone-2">Zone 2</span>
+                  <h2 id="banner-district-name">Central Area</h2>
+                </div>
               </div>
-              <span class="wanted-pct" id="hud-heat-val" hidden>0%</span>
+              <p id="banner-district-vibe" class="dp-vibe">Civil servants' starter homes, a train link into town and a restless young crowd.</p>
+              <div id="banner-landmarks" class="dp-landmarks"></div>
             </div>
           </div>
         </div>
 
         <!-- ============================================================== -->
-        <!-- CONSOLIDATED GAME NAVIGATION DOCK (6 CORE PILLARS)             -->
+        <!-- TOP-CENTER CONTEXTUAL 3D INTERACTION PROMPT (ZERO OVERLAP)     -->
+        <!-- ============================================================== -->
+        <div id="hud-context-prompt" class="hud-context-prompt" hidden>
+          <div class="hcp-box">
+            <span id="hcp-icon" class="hcp-icon">⚡</span>
+            <div class="hcp-info">
+              <span id="hcp-label" class="hcp-label">Explore Landmark</span>
+              <span id="hcp-sub" class="hcp-sub">Tap or Press E</span>
+            </div>
+            <button type="button" id="btn-context-act" class="hcp-act-btn">ACT</button>
+          </div>
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- BOTTOM-LEFT PSP MATTE D-PAD + ANALOG THUMB NUB                 -->
+        <!-- ============================================================== -->
+        <div class="gta-drive-pad psp-left-pad" id="gta-drive-pad" aria-label="PSP D-Pad and Analog Nub">
+          <button type="button" class="dpad-btn up" data-dir="w" title="Move Forward (W)">▲</button>
+          <div class="dpad-mid-row">
+            <button type="button" class="dpad-btn left" data-dir="a" title="Move Left (A)">◀</button>
+            <div class="gta-analog-ring" id="gta-analog-ring" title="Drag PSP analog nub 360° to walk or steer">
+              <div class="gta-analog-knob" id="gta-analog-knob">
+                <span>🕹️</span>
+              </div>
+            </div>
+            <button type="button" class="dpad-btn right" data-dir="d" title="Move Right (D)">▶</button>
+          </div>
+          <button type="button" class="dpad-btn down" data-dir="s" title="Move Back (S)">▼</button>
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- BOTTOM-RIGHT PSP PLAYSTATION △ ○ ✕ □ DIAMOND ACTION CLUSTER    -->
+        <!-- ============================================================== -->
+        <div class="gta-mobile-action-cluster psp-diamond-cluster" id="gta-mobile-action-cluster" aria-label="PSP Action Buttons">
+          <!-- Top Button: Triangle (△) — Enter / Exit Car -->
+          <button type="button" class="gmac-btn psp-face-btn psp-triangle gmac-drive" id="btn-mobile-drive" title="△ Enter / Exit Sports Car (Shortcut: F)">
+            <span class="psp-sym sym-tri">△</span>
+            <span class="gmac-ico" id="gmac-drive-ico">🏎️</span>
+            <span class="gmac-lbl" id="gmac-drive-lbl">CAR</span>
+          </button>
+          <!-- Left Button: Square (□) — Spray Naira -->
+          <button type="button" class="gmac-btn psp-face-btn psp-square gmac-spray" id="btn-mobile-spray" title="□ Spray ₦5,000 Cash in 3D (+Clout)">
+            <span class="psp-sym sym-sq">□</span>
+            <span class="gmac-ico">💸</span>
+            <span class="gmac-lbl">SPRAY</span>
+          </button>
+          <!-- Right Button: Circle (○) — Street Punch -->
+          <button type="button" class="gmac-btn psp-face-btn psp-circle gmac-punch" id="btn-mobile-punch" title="○ Throw Street Punch / Knockdown (Shortcut: Space)">
+            <span class="psp-sym sym-cir">○</span>
+            <span class="gmac-ico">👊🏾</span>
+            <span class="gmac-lbl">HIT</span>
+          </button>
+          <!-- Bottom Button: Cross (✕) — Turbo Boost / Sprint -->
+          <button type="button" class="gmac-btn psp-face-btn psp-cross gmac-sprint" id="btn-mobile-sprint" title="✕ Turbo Boost / Sprint (Shortcut: Shift)">
+            <span class="psp-sym sym-x">✕</span>
+            <span class="gmac-ico">⚡</span>
+            <span class="gmac-lbl">BOOST</span>
+          </button>
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- PSP BOTTOM HARDWARE CONSOLE STRIP (HOME • SELECT/SUBS • START) -->
+        <!-- ============================================================== -->
+        <div class="psp-bottom-bar" id="psp-bottom-bar" aria-label="PSP Console Hardware Controls">
+          <button type="button" class="psp-hw-btn" id="btn-psp-home" title="Open XMB Main Menu Drawer">
+            <span class="psp-hw-ico">🎮</span>
+            <span>HOME</span>
+          </button>
+          <button type="button" class="psp-hw-btn psp-hw-accent" id="btn-psp-select" title="Open Unified Sub-Sub (supsub) Quick Menu">
+            <span class="psp-hw-ico">⚡</span>
+            <span>SUBS</span>
+          </button>
+          <button type="button" class="psp-hw-btn" id="btn-top-music" title="Toggle Live Nigerian Afrobeats &amp; Wazobia FM">
+            <span class="psp-hw-ico">📻</span>
+            <span id="top-music-label">FM</span>
+          </button>
+          <button type="button" class="psp-hw-btn" id="btn-psp-view" title="Cycle 3D Camera (3rd-Person / Chopper / Dollhouse)">
+            <span class="psp-hw-ico">🎥</span>
+            <span>VIEW</span>
+          </button>
+          <button type="button" class="psp-hw-btn psp-hw-start" id="btn-psp-start" title="Execute Contextual Action or Open District Moves">
+            <span>START</span>
+          </button>
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- CONSOLIDATED 6-PILLAR XMB DOCK (VISIBLE ON DESKTOP / TABLET)   -->
         <!-- ============================================================== -->
         <nav class="gta-floating-icon-dock" id="gta-floating-icon-dock" aria-label="Game Menus Icon Dock">
           <button type="button" class="gta-dock-icon active" data-dock-tab="explore" title="🧭 Explore: Street Roaming, Commute &amp; GPS Map">
@@ -205,166 +480,18 @@
             <button id="btn-dock-profile"></button>
           </span>
         </nav>
-
-        <!-- ============================================================== -->
-        <!-- CONTEXTUAL 3D INTERACTION PROMPT                               -->
-        <!-- ============================================================== -->
-        <div id="hud-context-prompt" class="hud-context-prompt" hidden>
-          <div class="hcp-box">
-            <span id="hcp-icon" class="hcp-icon">⚡</span>
-            <div class="hcp-info">
-              <span id="hcp-label" class="hcp-label">Explore Landmark</span>
-              <span id="hcp-sub" class="hcp-sub">Press E or Tap to Interact</span>
-            </div>
-            <button type="button" id="btn-context-act" class="hcp-act-btn">ACT (E)</button>
-          </div>
-        </div>
-
-        <!-- Top-Left Compact Camera/Action Icon Pills + Collapsible District Postcard -->
-        <div class="stage-top-left-overlay">
-          <div class="world3d-control-pills">
-            <button id="btn-toggle-drive" class="w3d-ctrl-btn" title="Toggle Walking vs SUV Driving (Shortcut: F)">
-              🚶🏾 Walk Mode (F)
-            </button>
-            <button id="btn-toggle-cam" class="w3d-ctrl-btn" title="Switch 3rd-Person vs Helicopter Camera (Shortcut: V)">
-              🎥 3rd-Person (V)
-            </button>
-            <button id="btn-toggle-dollhouse" class="w3d-ctrl-btn" style="border-color:#38bdf8; color:#7dd3fc;" title="Switch to The Sims Isometric 45° Dollhouse View (Shortcut: C)">
-              🏠 Dollhouse (C)
-            </button>
-            <button id="btn-open-sims-deck" class="w3d-ctrl-btn" style="border-color:#facc15; color:#fde047;" title="Open Sims 8 Motives, Smart Home & Build Catalog">
-              🍗 Sims Needs
-            </button>
-            <button id="btn-spray-naira" class="w3d-ctrl-btn" style="border-color:#facc15; color:#fde047;" title="Spray Naira notes in 3D (+Clout)">
-              💸 Spray ₦5k
-            </button>
-            <button id="btn-toggle-2dmap" class="w3d-ctrl-btn" title="Toggle 2D Blueprint Grid">
-              📐 2D
-            </button>
-            <button id="btn-toggle-lowpower" class="w3d-ctrl-btn" title="Cool Phone / Low-Power Mode">
-              ❄️
-            </button>
-          </div>
-
-          <div class="district-postcard-card" id="district-postcard-card" hidden>
-            <div id="district-art-banner" class="district-art-banner"></div>
-            <div class="district-postcard-body">
-              <div class="dp-header">
-                <div>
-                  <span id="banner-sector-tag" class="sector-pill zone-2">Zone 2</span>
-                  <h2 id="banner-district-name">Central Area</h2>
-                </div>
-              </div>
-              <p id="banner-district-vibe" class="dp-vibe">Civil servants' starter homes, a train link into town and a restless young crowd.</p>
-              <div id="banner-landmarks" class="dp-landmarks"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- ============================================================== -->
-        <!-- BOTTOM-LEFT CIRCULAR NIGERIA GPS STREET RADAR (LEAFLET + GTA)  -->
-        <!-- ============================================================== -->
-        <div class="gta-radar-dock">
-          <div class="gta-radar-frame circular-ngta-radar" id="btn-expand-gps-radar" title="Click N badge or double-click radar to open Full Nigeria Street GPS Map">
-            <!-- Real Nigeria OpenStreetMap GPS Street Layer -->
-            <div id="gta-leaflet-radar" class="gta-leaflet-radar"></div>
-            <!-- Transparent Tactical Player/Blip Overlay Canvas -->
-            <canvas id="gta-radar-canvas" width="184" height="184"></canvas>
-            <div class="radar-north-badge" id="btn-radar-north" title="Open Full Nigeria Street GPS Map">N</div>
-            <div class="radar-gps-label" id="radar-gps-label">GPS • SHEHU SHAGARI WAY</div>
-          </div>
-          <!-- Hidden Legacy Bars/Vals for JS Compatibility -->
-          <div class="gta-radar-bars" hidden>
-            <div class="radar-bar-slot"><div class="radar-bar-fill clout" id="hud-clout-bar" style="width:12%"></div></div>
-          </div>
-          <div class="gta-radar-stats-legend">
-            <span>🧠 <strong id="hud-sanity-val">70</strong></span>
-            <span>⚡ <strong id="hud-energy-val">90</strong></span>
-            <span>🏛️ <strong id="hud-clout-val">12</strong></span>
-            <span>🤝 <strong id="hud-network-val">3</strong></span>
-          </div>
-        </div>
-
-        <!-- Bottom-Left / Right 360° Touch Virtual Analog Joystick + D-Pad -->
-        <div class="gta-drive-pad" id="gta-drive-pad" aria-label="360 Touch Joystick and Steering Pad">
-          <button type="button" class="dpad-btn up" data-dir="w" title="Move Forward (W)">▲</button>
-          <div class="dpad-mid-row">
-            <button type="button" class="dpad-btn left" data-dir="a" title="Move Left (A)">◀</button>
-            <div class="gta-analog-ring" id="gta-analog-ring" title="Drag thumbstick 360° to walk or steer">
-              <div class="gta-analog-knob" id="gta-analog-knob">
-                <span>🕹️</span>
-              </div>
-            </div>
-            <button type="button" class="dpad-btn right" data-dir="d" title="Move Right (D)">▶</button>
-          </div>
-          <button type="button" class="dpad-btn down" data-dir="s" title="Move Back (S)">▼</button>
-        </div>
-
-        <!-- Ergonomic 1-Tap Street & Sports Car Action Cluster (Thumb-Friendly for Mobile & Desktop) -->
-        <div class="gta-mobile-action-cluster" id="gta-mobile-action-cluster" aria-label="Quick Street Actions">
-          <button type="button" class="gmac-btn gmac-drive" id="btn-mobile-drive" title="Enter / Exit Widebody Sports Car (Shortcut: F)">
-            <span class="gmac-ico" id="gmac-drive-ico">🏎️</span>
-            <span class="gmac-lbl" id="gmac-drive-lbl">ENTER CAR</span>
-          </button>
-          <button type="button" class="gmac-btn gmac-punch" id="btn-mobile-punch" title="Throw Street Punch / Knockdown (Shortcut: Space)">
-            <span class="gmac-ico">👊🏾</span>
-            <span class="gmac-lbl">PUNCH</span>
-          </button>
-          <button type="button" class="gmac-btn gmac-sprint" id="btn-mobile-sprint" title="Hold or Tap for Turbo Boost / Sprint (Shortcut: Shift)">
-            <span class="gmac-ico">⚡</span>
-            <span class="gmac-lbl">BOOST</span>
-          </button>
-          <button type="button" class="gmac-btn gmac-spray" id="btn-mobile-spray" title="Spray ₦5,000 Cash in 3D (+Clout)">
-            <span class="gmac-ico">💸</span>
-            <span class="gmac-lbl">SPRAY ₦</span>
-          </button>
-        </div>
-
-        <!-- ============================================================== -->
-        <!-- NAIJA QUICK PLAY DOCK (VIBRANT 1-CLICK NIGERIAN ACTIONS)       -->
-        <!-- ============================================================== -->
-        <nav class="naija-quick-dock" id="naija-quick-dock" aria-label="Naija Quick Actions Dock">
-          <button type="button" class="nqd-btn" id="nqd-btn-chop" title="🍗 Chop Life (Eat Suya &amp; Jollof) [Shortcut: 1]">
-            <span class="nqd-ico">🍗</span>
-            <span class="nqd-lbl">Chop Life</span>
-          </button>
-          <button type="button" class="nqd-btn gold-accent" id="nqd-btn-spray" title="💸 Spray Naira Notes in 3D (+Clout &amp; Steeze) [Shortcut: 2]">
-            <span class="nqd-ico">💸</span>
-            <span class="nqd-lbl">Spray ₦</span>
-          </button>
-          <button type="button" class="nqd-btn" id="nqd-btn-hustle" title="💰 Fast Street Hustle (+₦ Cash Alert) [Shortcut: 3]">
-            <span class="nqd-ico">💰</span>
-            <span class="nqd-lbl">Quick Mula</span>
-          </button>
-          <button type="button" class="nqd-btn" id="nqd-btn-cruise" title="🚕 Hail Green Cab / Cruise Abuja [Shortcut: 4]">
-            <span class="nqd-ico">🚕</span>
-            <span class="nqd-lbl">Cruise/Cab</span>
-          </button>
-          <button type="button" class="nqd-btn" id="nqd-btn-radio" title="📻 Switch Naija FM Radio Station [Shortcut: 5]">
-            <span class="nqd-ico">📻</span>
-            <span class="nqd-lbl">Naija FM</span>
-          </button>
-          <button type="button" class="nqd-btn" id="nqd-btn-gen" title="⚡ UP NEPA! / Compound Generator [Shortcut: 6]">
-            <span class="nqd-ico">⚡</span>
-            <span class="nqd-lbl">Up NEPA!</span>
-          </button>
-          <button type="button" class="nqd-btn gold-accent" id="nqd-btn-party" title="🕺 Owambe Street Party (Live Afrobeats &amp; Horns) [Shortcut: 7]">
-            <span class="nqd-ico">🕺</span>
-            <span class="nqd-lbl">Owambe</span>
-          </button>
-        </nav>
       </section>
 
       <!-- Mobile Tap-Outside Backdrop to Dismiss Drawer Effortlessly -->
       <div class="mobile-drawer-backdrop" id="mobile-drawer-backdrop" hidden></div>
 
-      <!-- RIGHT / BOTTOM-SHEET: FLOATING COLLAPSIBLE COMMAND DECK DRAWER (Opens via Icon Dock) -->
+      <!-- RIGHT / BOTTOM-SHEET: FLOATING COLLAPSIBLE COMMAND DECK DRAWER (Opens via R / HOME / Icon Dock) -->
       <section class="command-deck-panel is-drawer-closed" id="command-deck-panel">
 
         <!-- Drawer Close Header + Visual Naira Cash Strip -->
         <div class="naira-visual-strip">
           <div class="nvs-left">
-            <span class="nvs-title">PHYSICAL NAIRA STACK (SIMULATION CURRENCY)</span>
+            <span class="nvs-title">PSP XMB • PHYSICAL NAIRA STACK</span>
             <span class="nvs-sub" id="nvs-breakdown-text">510 × ₦1,000 CBN Notes</span>
           </div>
           <div class="nvs-notes-fan" id="nvs-notes-fan"></div>
@@ -376,7 +503,7 @@
           </button>
         </div>
 
-        <!-- Consolidated 6-Pillar Navigation Tabs -->
+        <!-- Level 1: Consolidated 6-Pillar Navigation Tabs -->
         <nav class="deck-tabs deck-tabs-pillars" role="tablist">
           <button class="tab-btn active" data-tab="explore">🧭 Explore</button>
           <button class="tab-btn" data-tab="work">💼 Work</button>
@@ -388,8 +515,11 @@
           <button class="tab-btn" data-tab="profile">👤 Profile</button>
         </nav>
 
-        <!-- SUB-NAVIGATION FOR CONSOLIDATED PILLARS -->
+        <!-- Level 2: SUB-NAVIGATION FOR CONSOLIDATED PILLARS -->
         <div id="deck-sub-nav" class="deck-sub-nav"></div>
+
+        <!-- Level 3: SUB-SUB (SUPSUB) QUICK FILTER / SECTION NAVIGATION -->
+        <div id="deck-supsub-nav" class="deck-supsub-nav"></div>
 
         <!-- TAB 1: DISTRICT HUSTLE, DAILY MISSIONS & ACTIONS -->
         <div id="tab-actions" class="tab-pane active">

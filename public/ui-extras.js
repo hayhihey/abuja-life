@@ -380,17 +380,19 @@ export function initUIExtras(app) {
     return autopilotActive;
   };
 
-  // ---- Quick dock ----
-  const dock = document.createElement('div');
-  dock.className = 'ux-dock';
-  dock.innerHTML = `
-    <div class="wrap"><button id="ux-btn-pie" aria-label="Quick actions">⭕</button><span class="ux-tip">Quick Actions (tap / hold map)</span></div>
-    <div class="wrap"><button id="ux-btn-auto" aria-label="Autopilot AI">🤖</button><span class="ux-tip">Autopilot AI (Free-Will Mode)</span></div>
-    <div class="wrap"><button id="ux-btn-cut" aria-label="Cutaway Walls">🏠</button><span class="ux-tip">Cutaway Walls (Up/Half/Down)</span></div>
-    <div class="wrap"><button id="ux-btn-style" aria-label="Style Studio">🎨</button><span class="ux-tip">Style Studio & Car Wrap</span></div>
-    <div class="wrap"><button id="ux-btn-amb" aria-label="City ambience">🔊</button><span class="ux-tip">City Ambience</span></div>
-  `;
-  document.body.appendChild(dock);
+  // ---- Quick dock (only create if not already unified inside #psp-supsub-drawer) ----
+  if (!document.getElementById('ux-btn-pie')) {
+    const dock = document.createElement('div');
+    dock.className = 'ux-dock';
+    dock.innerHTML = `
+      <div class="wrap"><button id="ux-btn-pie" aria-label="Quick actions">⭕</button><span class="ux-tip">Quick Actions (tap / hold map)</span></div>
+      <div class="wrap"><button id="ux-btn-auto" aria-label="Autopilot AI">🤖</button><span class="ux-tip">Autopilot AI (Free-Will Mode)</span></div>
+      <div class="wrap"><button id="ux-btn-cut" aria-label="Cutaway Walls">🏠</button><span class="ux-tip">Cutaway Walls (Up/Half/Down)</span></div>
+      <div class="wrap"><button id="ux-btn-style" aria-label="Style Studio">🎨</button><span class="ux-tip">Style Studio & Car Wrap</span></div>
+      <div class="wrap"><button id="ux-btn-amb" aria-label="City ambience">🔊</button><span class="ux-tip">City Ambience</span></div>
+    `;
+    document.body.appendChild(dock);
+  }
 
   // ---- Style Studio modal ----
   const studio = document.createElement('div');
