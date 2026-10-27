@@ -685,14 +685,14 @@ export function initUIExtras(app) {
       pressTimer = setTimeout(() => {
         const ctx = app.world3d?.pickContextAtScreen ? app.world3d.pickContextAtScreen(sx, sy) : null;
         openPie(sx, sy, ctx);
-      }, 550);
+      }, 950);
     });
 
     const cancel = () => clearTimeout(pressTimer);
     vp.addEventListener('pointerup', cancel);
     vp.addEventListener('pointercancel', cancel);
     vp.addEventListener('pointermove', (e) => {
-      if (Math.hypot(e.clientX - sx, e.clientY - sy) > 10) cancel();
+      if (Math.hypot(e.clientX - sx, e.clientY - sy) > 6) cancel();
     });
   }
 }

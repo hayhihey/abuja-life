@@ -35,10 +35,10 @@
     <!-- PSP HANDHELD CONSOLE TOP BEZEL (L SHOULDER + LCD STATUS + R MENU)  -->
     <!-- ================================================================== -->
     <header class="gta-topbar gta-topbar-minimal psp-top-bezel">
-      <!-- PSP Left Shoulder Trigger [ L • SUBS ] -->
-      <button type="button" class="psp-shoulder-btn psp-l-btn" id="btn-psp-l-trigger" title="Open Unified Sub-Sub Quick Menu (Shortcut: Tab or Q)">
+      <!-- PSP Left Shoulder Trigger [ L • QUICK SUBS ] -->
+      <button type="button" class="psp-shoulder-btn psp-l-btn" id="btn-psp-l-trigger" title="Open Quick Action Menu">
         <span class="psp-sh-key">L</span>
-        <span class="psp-sh-lbl">⚡ SUBS</span>
+        <span class="psp-sh-lbl">⚡ QUICK SUBS</span>
       </button>
 
       <!-- Center PSP LCD Status Strip -->
@@ -90,9 +90,9 @@
         </div>
       </div>
 
-      <!-- PSP Right Shoulder Trigger [ R • MENU ] -->
-      <button type="button" class="psp-shoulder-btn psp-r-btn" id="btn-psp-r-trigger" title="Open PSP XMB Command Deck (Explore, Work, Home, Social, Lifestyle, Profile)">
-        <span class="psp-sh-lbl">🎮 MENU</span>
+      <!-- PSP Right Shoulder Trigger [ FULL MENU • R ] -->
+      <button type="button" class="psp-shoulder-btn psp-r-btn" id="btn-psp-r-trigger" title="Open Full Command Deck (6 Pillars)">
+        <span class="psp-sh-lbl">🎮 FULL MENU</span>
         <span class="psp-sh-key">R</span>
       </button>
 
@@ -358,6 +358,17 @@
         </div>
 
         <!-- ============================================================== -->
+        <!-- ON-SCREEN NEXT GOAL / MISSION HUD BANNER (PROBLEM 4 FIX)        -->
+        <!-- ============================================================== -->
+        <div id="hud-mission-banner" class="hud-mission-banner" title="Click to view current mission details">
+          <div class="hmb-inner">
+            <span class="hmb-badge">🎯 NEXT GOAL</span>
+            <span id="hmb-text" class="hmb-text">Chop Life: Eat roadside suya to restore energy</span>
+            <span id="hmb-reward" class="hmb-reward">+₦15,000</span>
+          </div>
+        </div>
+
+        <!-- ============================================================== -->
         <!-- TOP-CENTER CONTEXTUAL 3D INTERACTION PROMPT (ZERO OVERLAP)     -->
         <!-- ============================================================== -->
         <div id="hud-context-prompt" class="hud-context-prompt" hidden>
@@ -365,7 +376,7 @@
             <span id="hcp-icon" class="hcp-icon">⚡</span>
             <div class="hcp-info">
               <span id="hcp-label" class="hcp-label">Explore Landmark</span>
-              <span id="hcp-sub" class="hcp-sub">Tap or Press E</span>
+              <span id="hcp-sub" class="hcp-sub">Tap to Interact</span>
             </div>
             <button type="button" id="btn-context-act" class="hcp-act-btn">ACT</button>
           </div>
@@ -375,17 +386,17 @@
         <!-- BOTTOM-LEFT PSP MATTE D-PAD + ANALOG THUMB NUB                 -->
         <!-- ============================================================== -->
         <div class="gta-drive-pad psp-left-pad" id="gta-drive-pad" aria-label="PSP D-Pad and Analog Nub">
-          <button type="button" class="dpad-btn up" data-dir="w" title="Move Forward (W)">▲</button>
+          <button type="button" class="dpad-btn up" data-dir="w" title="Move Forward">▲</button>
           <div class="dpad-mid-row">
-            <button type="button" class="dpad-btn left" data-dir="a" title="Move Left (A)">◀</button>
+            <button type="button" class="dpad-btn left" data-dir="a" title="Move Left">◀</button>
             <div class="gta-analog-ring" id="gta-analog-ring" title="Drag PSP analog nub 360° to walk or steer">
               <div class="gta-analog-knob" id="gta-analog-knob">
                 <span>🕹️</span>
               </div>
             </div>
-            <button type="button" class="dpad-btn right" data-dir="d" title="Move Right (D)">▶</button>
+            <button type="button" class="dpad-btn right" data-dir="d" title="Move Right">▶</button>
           </div>
-          <button type="button" class="dpad-btn down" data-dir="s" title="Move Back (S)">▼</button>
+          <button type="button" class="dpad-btn down" data-dir="s" title="Move Back">▼</button>
         </div>
 
         <!-- ============================================================== -->
@@ -393,25 +404,25 @@
         <!-- ============================================================== -->
         <div class="gta-mobile-action-cluster psp-diamond-cluster" id="gta-mobile-action-cluster" aria-label="PSP Action Buttons">
           <!-- Top Button: Triangle (△) — Enter / Exit Car -->
-          <button type="button" class="gmac-btn psp-face-btn psp-triangle gmac-drive" id="btn-mobile-drive" title="△ Enter / Exit Sports Car (Shortcut: F)">
+          <button type="button" class="gmac-btn psp-face-btn psp-triangle gmac-drive" id="btn-mobile-drive" title="Enter or Exit Vehicle">
             <span class="psp-sym sym-tri">△</span>
             <span class="gmac-ico" id="gmac-drive-ico">🏎️</span>
             <span class="gmac-lbl" id="gmac-drive-lbl">CAR</span>
           </button>
           <!-- Left Button: Square (□) — Spray Naira -->
-          <button type="button" class="gmac-btn psp-face-btn psp-square gmac-spray" id="btn-mobile-spray" title="□ Spray ₦5,000 Cash in 3D (+Clout)">
+          <button type="button" class="gmac-btn psp-face-btn psp-square gmac-spray" id="btn-mobile-spray" title="Spray ₦5,000 Cash in 3D">
             <span class="psp-sym sym-sq">□</span>
             <span class="gmac-ico">💸</span>
             <span class="gmac-lbl">SPRAY</span>
           </button>
           <!-- Right Button: Circle (○) — Street Punch -->
-          <button type="button" class="gmac-btn psp-face-btn psp-circle gmac-punch" id="btn-mobile-punch" title="○ Throw Street Punch / Knockdown (Shortcut: Space)">
+          <button type="button" class="gmac-btn psp-face-btn psp-circle gmac-punch" id="btn-mobile-punch" title="Street Punch or Knockdown">
             <span class="psp-sym sym-cir">○</span>
             <span class="gmac-ico">👊🏾</span>
             <span class="gmac-lbl">HIT</span>
           </button>
           <!-- Bottom Button: Cross (✕) — Turbo Boost / Sprint -->
-          <button type="button" class="gmac-btn psp-face-btn psp-cross gmac-sprint" id="btn-mobile-sprint" title="✕ Turbo Boost / Sprint (Shortcut: Shift)">
+          <button type="button" class="gmac-btn psp-face-btn psp-cross gmac-sprint" id="btn-mobile-sprint" title="Sprint Boost Toggle">
             <span class="psp-sym sym-x">✕</span>
             <span class="gmac-ico">⚡</span>
             <span class="gmac-lbl">BOOST</span>
@@ -426,7 +437,7 @@
             <span class="psp-hw-ico">🎮</span>
             <span>HOME</span>
           </button>
-          <button type="button" class="psp-hw-btn psp-hw-accent" id="btn-psp-select" title="Open Unified Sub-Sub (supsub) Quick Menu">
+          <button type="button" class="psp-hw-btn psp-hw-accent" id="btn-psp-select" title="Open Unified Sub-Sub Quick Menu">
             <span class="psp-hw-ico">⚡</span>
             <span>SUBS</span>
           </button>
@@ -434,9 +445,13 @@
             <span class="psp-hw-ico">📻</span>
             <span id="top-music-label">FM</span>
           </button>
-          <button type="button" class="psp-hw-btn" id="btn-psp-view" title="Cycle 3D Camera (3rd-Person / Chopper / Dollhouse)">
+          <button type="button" class="psp-hw-btn" id="btn-psp-view" title="Cycle 3D Camera">
             <span class="psp-hw-ico">🎥</span>
             <span>VIEW</span>
+          </button>
+          <button type="button" class="psp-hw-btn" id="btn-psp-guide" title="How to Play Tutorial">
+            <span class="psp-hw-ico">❓</span>
+            <span>GUIDE</span>
           </button>
           <button type="button" class="psp-hw-btn psp-hw-start" id="btn-psp-start" title="Execute Contextual Action or Open District Moves">
             <span>START</span>
@@ -920,19 +935,28 @@
               </button>
             </div>
 
+            <!-- WhatsApp Viral Share Button (Problem 30 Fix) -->
+            <button type="button" id="btn-share-whatsapp" class="btn-primary" style="background:#25D366; color:#fff; border:none; padding:12px; font-weight:800; font-size:13px; border-radius:10px; display:flex; align-items:center; justify-content:center; gap:8px;">
+              <span>📲</span> Share Status to WhatsApp (Invite Friends)
+            </button>
+
             <!-- Save Game Backup & Recovery (Addresses Audit Phase 2) -->
             <div class="game-card" style="border-color: rgba(16, 185, 129, 0.4);">
               <div class="card-top">
                 <span class="card-badge" style="background:rgba(16,185,129,0.2); color:#4ade80; border-color:rgba(16,185,129,0.4);">💾 SAVE GAME BACKUP &amp; RECOVERY</span>
               </div>
               <p class="card-desc" style="margin:4px 0 10px;">
-                Your character auto-saves to your browser storage every minute. You can also download a local JSON backup file to prevent data loss or transfer your character to another computer.
+                Your character auto-saves to your browser storage continuously. You can export a backup file or reset your game cleanly.
               </p>
               <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                <button type="button" id="btn-export-save" class="btn-secondary" style="flex:1; border-color:#34d399; color:#6ee7b7;">📥 Export Save File</button>
+                <button type="button" id="btn-export-save" class="btn-secondary" style="flex:1; border-color:#34d399; color:#6ee7b7;">📥 Export Save</button>
                 <label class="btn-secondary" style="flex:1; text-align:center; cursor:pointer; border-color:#38bdf8; color:#7dd3fc; margin:0; display:flex; align-items:center; justify-content:center;">
-                  📤 Import Save File
+                  📤 Import Save
                   <input type="file" id="file-import-save" accept=".json" style="display:none;" />
+                </label>
+                <button type="button" id="btn-reset-save" class="btn-xs" style="border-color:#ef4444; color:#f87171;">⚠️ Reset Game</button>
+              </div>
+            </div>
                 </label>
                 <button type="button" id="btn-reset-save" class="btn-xs" style="border-color:#ef4444; color:#f87171;">⚠️ Reset Game</button>
               </div>
@@ -1028,6 +1052,49 @@
     </div>
 
     <!-- ================================================================== -->
+    <!-- MODAL 2B: HOW TO PLAY INTERACTIVE TUTORIAL (PROBLEM 1 FIX)          -->
+    <!-- ================================================================== -->
+    <div id="tutorial-modal" class="modal-backdrop" hidden>
+      <div class="modal-card" style="max-width: 500px; text-align: center; border-color: #38bdf8;">
+        <div style="font-size: 36px; margin-bottom: 6px;">🇳🇬 🎮</div>
+        <h2 style="color: #fff; margin-bottom: 4px;">Welcome to Abuja Life!</h2>
+        <p style="color: #94a3b8; font-size: 12px; margin-bottom: 16px;">
+          Your 3D open-world Nigerian life simulation and hustle adventure in the Federal Capital Territory.
+        </p>
+
+        <div style="display: flex; flex-direction: column; gap: 10px; text-align: left; margin-bottom: 20px;">
+          <div style="background: rgba(15,23,42,0.85); border: 1px solid rgba(56,189,248,0.3); border-radius: 10px; padding: 12px; display: flex; gap: 12px; align-items: center;">
+            <div style="font-size: 24px; width: 36px; text-align: center;">🕹️</div>
+            <div>
+              <strong style="color: #38bdf8; font-size: 13px;">1. Move &amp; Drive (Left Thumb)</strong>
+              <div style="font-size: 11.5px; color: #cbd5e1; margin-top: 2px;">Use the D-Pad and 360° Analog Nub on the left to walk or steer your sports car smoothly through Abuja.</div>
+            </div>
+          </div>
+
+          <div style="background: rgba(15,23,42,0.85); border: 1px solid rgba(16,185,129,0.3); border-radius: 10px; padding: 12px; display: flex; gap: 12px; align-items: center;">
+            <div style="font-size: 24px; width: 36px; text-align: center;">⚡</div>
+            <div>
+              <strong style="color: #34d399; font-size: 13px;">2. Quick Subs (Top-Left 'L')</strong>
+              <div style="font-size: 11.5px; color: #cbd5e1; margin-top: 2px;">Tap <strong>[ L • QUICK SUBS ]</strong> anytime to Chop Life (suya), Spray Naira, switch Wazobia FM, and do Quick Hustles.</div>
+            </div>
+          </div>
+
+          <div style="background: rgba(15,23,42,0.85); border: 1px solid rgba(245,158,11,0.3); border-radius: 10px; padding: 12px; display: flex; gap: 12px; align-items: center;">
+            <div style="font-size: 24px; width: 36px; text-align: center;">👑</div>
+            <div>
+              <strong style="color: #facc15; font-size: 13px;">3. Build Your Empire (Top-Right 'R')</strong>
+              <div style="font-size: 11.5px; color: #cbd5e1; margin-top: 2px;">Tap <strong>[ R • FULL MENU ]</strong> to purchase AGIS plots in Maitama, build duplexes, win tenders, and join elections!</div>
+            </div>
+          </div>
+        </div>
+
+        <button type="button" id="btn-close-tutorial" class="submit-btn" style="width: 100%; padding: 12px; font-weight: 800; font-size: 14px;">
+          🚀 Start Living in Abuja!
+        </button>
+      </div>
+    </div>
+
+    <!-- ================================================================== -->
     <!-- MODAL 3: NIGERIAN CITIZEN SIGN UP & LIFESTYLE CALIBER CREATOR       -->
     <!-- ================================================================== -->
     <div id="new-char-modal" class="modal-backdrop sims-backdrop">
@@ -1059,7 +1126,7 @@
             <div class="persona-card" data-modal-persona="tunde" title="Click to play as Tunde Ade">
               <div class="persona-header"><span>💻</span> Tunde Ade</div>
               <div class="persona-desc">Remote Tech Bro • Jabi Lake, Cyber Coupe &amp; FX USD</div>
-              <span class="persona-badge" style="background:#e0e7ff; color:#3730a3;">₦850k + $1,500 USD</span>
+              <span class="persona-badge" style="background:#e0e7ff; color:#3730a3;">₦850,000 Starting</span>
             </div>
 
             <div class="persona-card" data-modal-persona="musa" title="Click to play as Alhaji Musa">
@@ -1095,19 +1162,18 @@
 
         <form id="new-char-form">
           <div class="form-group">
-            <label for="char-name-input">Resident / Family Name</label>
-            <input type="text" id="char-name-input" placeholder="e.g., The Pleasant Household / Alhaji Musa" value="Alhaji Musa" autocomplete="username" required>
+            <label for="char-name-input">Citizen / Household Name</label>
+            <input type="text" id="char-name-input" placeholder="e.g. Alhaji Musa / Emeka Obi" value="Alhaji Musa" autocomplete="username" required>
           </div>
 
-          <div class="form-group">
-            <label for="char-email-input">Account Email</label>
-            <input type="email" id="char-email-input" placeholder="resident@abujalife.ng" value="resident@abujalife.ng" autocomplete="email" required>
-          </div>
+          <!-- Hidden legacy input slots to keep 100% DOM and JS backward compatibility without user friction -->
+          <input type="hidden" id="char-email-input" value="resident@abujalife.ng" />
+          <input type="hidden" id="char-password-input" value="abujalife2026" />
 
           <!-- Thematic breakdown elements common in life-sim profiles -->
           <div class="form-row">
             <div class="form-group">
-              <label for="char-region-select">Starting Server / Region</label>
+              <label for="char-region-select">Starting District / Region</label>
               <select id="char-region-select">
                 <option value="cbd">Central Business District (CBD)</option>
                 <option value="maitama">Maitama Luxury Heights</option>
@@ -1143,11 +1209,6 @@
               <label for="char-lifestage-select">Life Stage</label>
               <select id="char-lifestage-select"></select>
             </div>
-          </div>
-
-          <div class="form-group">
-            <label for="char-password-input">Password</label>
-            <input type="password" id="char-password-input" placeholder="••••••••" value="abujalife2026" autocomplete="current-password" required>
           </div>
 
           <!-- Reactive Citizen Passport / Demographic Preview Card -->

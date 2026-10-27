@@ -1674,28 +1674,41 @@ html, body {
   gap: 8px;
 }
 
-/* Toast Notifications */
+/* Toast Notifications (Positioned at Top-Center beneath bezel, never blocking controls) */
 .toast-container {
   position: fixed;
-  bottom: 18px;
-  right: 18px;
+  top: 48px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 150;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  align-items: center;
+  gap: 6px;
   pointer-events: none;
+  width: max-content;
+  max-width: calc(100vw - 24px);
 }
 
 .toast {
-  background: rgba(9, 14, 26, 0.96);
+  background: rgba(9, 14, 26, 0.95);
+  border: 1px solid rgba(250, 204, 21, 0.6);
   border-left: 4px solid var(--naira-gold);
   border-radius: 8px;
-  padding: 10px 14px;
+  padding: 8px 14px;
   color: #fff;
-  font-size: 12.5px;
-  font-weight: 600;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.75);
-  max-width: 340px;
+  font-size: 11.5px;
+  font-weight: 700;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  max-width: min(380px, 92vw);
+  text-align: center;
+  animation: toastSlideDown 0.18s ease-out;
+}
+
+@keyframes toastSlideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @media (max-width: 1024px) {
@@ -3955,13 +3968,13 @@ body.has-open-modal .psp-diamond-cluster {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  width: 38px;
+  width: 44px;
 }
 
 .psp-micro-bars .ngta-bar-outer {
-  width: 38px !important;
-  height: 4px !important;
-  border-radius: 2px !important;
+  width: 44px !important;
+  height: 6px !important;
+  border-radius: 3px !important;
   border-width: 1px !important;
 }
 
@@ -3973,6 +3986,66 @@ body.has-open-modal .psp-diamond-cluster {
 
 .psp-vitals-cluster .wanted-stars .star {
   font-size: 10px !important;
+}
+
+/* On-Screen Current Goal / Mission HUD Banner (Problem 4 Fix) */
+.hud-mission-banner {
+  position: fixed;
+  top: 48px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 48;
+  pointer-events: auto;
+  cursor: pointer;
+  width: max-content;
+  max-width: calc(100vw - 20px);
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.hmb-inner {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(15, 23, 42, 0.94);
+  border: 1.5px solid rgba(56, 189, 248, 0.5);
+  border-radius: 999px;
+  padding: 4px 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.65), 0 0 12px rgba(56, 189, 248, 0.25);
+  backdrop-filter: blur(8px);
+  transition: transform 0.14s ease;
+}
+
+.hud-mission-banner:active .hmb-inner {
+  transform: scale(0.97);
+}
+
+.hmb-badge {
+  background: linear-gradient(135deg, #0284c7, #2563eb);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 900;
+  padding: 2px 7px;
+  border-radius: 999px;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.hmb-text {
+  font-size: 11px;
+  font-weight: 700;
+  color: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 240px;
+}
+
+.hmb-reward {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #4ade80;
+  white-space: nowrap;
 }
 
 /* 2. Unified PSP Sub-Sub (supsub) Quick Menu Drawer (#psp-supsub-drawer) */
@@ -4270,14 +4343,15 @@ body.has-open-modal .psp-diamond-cluster {
 }
 
 .psp-left-pad .dpad-btn {
-  width: 34px !important;
-  height: 34px !important;
-  border-radius: 8px !important;
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 10px !important;
   background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%) !important;
-  border: 1px solid rgba(203, 213, 225, 0.35) !important;
+  border: 1px solid rgba(203, 213, 225, 0.45) !important;
   color: #e2e8f0 !important;
-  font-size: 12px !important;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.6) !important;
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.7) !important;
 }
 
 .psp-left-pad .dpad-btn.active,
@@ -4288,16 +4362,16 @@ body.has-open-modal .psp-diamond-cluster {
 }
 
 .psp-left-pad .gta-analog-ring {
-  width: 44px !important;
-  height: 44px !important;
+  width: 48px !important;
+  height: 48px !important;
   border-radius: 50% !important;
   background: repeating-radial-gradient(circle, #0f172a 0px, #0f172a 2px, #1e293b 3px, #1e293b 4px) !important;
   border: 1.5px solid rgba(56, 189, 248, 0.45) !important;
 }
 
 .psp-left-pad .gta-analog-knob {
-  width: 28px !important;
-  height: 28px !important;
+  width: 32px !important;
+  height: 32px !important;
 }
 
 /* 6. Bottom-Right Authentic PSP △ ○ ✕ □ 4-Button Diamond Cluster */
@@ -4308,8 +4382,8 @@ body.has-open-modal .psp-diamond-cluster {
   left: auto !important;
   z-index: 42 !important;
   display: grid !important;
-  grid-template-columns: repeat(3, 40px) !important;
-  grid-template-rows: repeat(3, 40px) !important;
+  grid-template-columns: repeat(3, 48px) !important;
+  grid-template-rows: repeat(3, 48px) !important;
   gap: 2px !important;
   padding: 6px !important;
   border-radius: 50% !important;
@@ -4319,10 +4393,10 @@ body.has-open-modal .psp-diamond-cluster {
 }
 
 .psp-diamond-cluster .psp-face-btn {
-  width: 40px !important;
-  height: 40px !important;
-  min-width: 40px !important;
-  min-height: 40px !important;
+  width: 48px !important;
+  height: 48px !important;
+  min-width: 48px !important;
+  min-height: 48px !important;
   padding: 0 !important;
   border-radius: 50% !important;
   background: radial-gradient(circle at 35% 30%, #334155 0%, #0f172a 75%, #090d16 100%) !important;
@@ -4330,7 +4404,7 @@ body.has-open-modal .psp-diamond-cluster {
   flex-direction: column !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 0px !important;
+  gap: 1px !important;
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.75), inset 0 1px 1px rgba(255, 255, 255, 0.28) !important;
   cursor: pointer;
   touch-action: manipulation;
@@ -4362,7 +4436,7 @@ body.has-open-modal .psp-diamond-cluster {
 }
 
 .psp-diamond-cluster .psp-sym {
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 900;
   line-height: 1;
 }
@@ -4373,14 +4447,14 @@ body.has-open-modal .psp-diamond-cluster {
 .psp-diamond-cluster .sym-x   { color: #60a5fa; }
 
 .psp-diamond-cluster .gmac-ico {
-  font-size: 12px !important;
+  font-size: 14px !important;
   line-height: 1 !important;
 }
 
 .psp-diamond-cluster .gmac-lbl {
-  font-size: 7px !important;
+  font-size: 9px !important;
   font-weight: 800 !important;
-  letter-spacing: 0.02em !important;
+  letter-spacing: 0.03em !important;
   color: #e2e8f0 !important;
   line-height: 1 !important;
 }
@@ -4534,22 +4608,59 @@ body.has-open-modal .psp-diamond-cluster {
 }
 
 @media (max-height: 540px) and (orientation: landscape) {
+  /* Problem 13 Fix: Ultra-compact bezels in landscape so 3D world has maximum screen space */
+  .psp-top-bezel {
+    height: 28px !important;
+    padding: 0 4px !important;
+  }
+
+  .psp-lcd-status-strip {
+    height: 24px !important;
+    gap: 4px !important;
+    padding: 0 4px !important;
+  }
+
+  .psp-trigger-btn {
+    height: 24px !important;
+    padding: 0 6px !important;
+    font-size: 8.5px !important;
+  }
+
+  .psp-bottom-bar {
+    height: 24px !important;
+    padding: 0 6px !important;
+  }
+
+  .psp-hardware-btn {
+    padding: 2px 4px !important;
+    font-size: 8px !important;
+  }
+
+  .hud-mission-banner {
+    top: 32px !important;
+    transform: translateX(-50%) scale(0.9);
+  }
+
+  .psp-radar-top-left {
+    top: 32px !important;
+  }
+
   .psp-radar-top-left .circular-ngta-radar {
-    width: 68px !important;
-    height: 68px !important;
+    width: 60px !important;
+    height: 60px !important;
   }
 
   .gta-drive-pad.psp-left-pad {
-    bottom: 42px !important;
-    left: 8px !important;
-    transform: scale(0.9);
+    bottom: 28px !important;
+    left: 6px !important;
+    transform: scale(0.85);
     transform-origin: bottom left;
   }
 
   .gta-mobile-action-cluster.psp-diamond-cluster {
-    bottom: 42px !important;
-    right: 8px !important;
-    transform: scale(0.9);
+    bottom: 28px !important;
+    right: 6px !important;
+    transform: scale(0.85);
     transform-origin: bottom right;
   }
 }

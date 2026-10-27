@@ -368,7 +368,11 @@ class AbujaClientApp {
         }
       } else if (type === 'log') {
         if (data && data.text) {
-          this.showToast(`${data.icon || '📣'} ${data.text}`);
+          // Problem 7 Fix: Filter ambient ticks so we don't flood the toast queue
+          const isHighPriority = data.level === 'alert' || data.level === 'good' || data.icon === '💰' || data.icon === '💸' || data.icon === '🎉' || data.icon === '🚨' || data.icon === '🔥';
+          if (isHighPriority) {
+            this.showToast(`${data.icon || '📣'} ${data.text}`);
+          }
         }
         this._renderFeedTab();
       } else if (type === 'action') {
@@ -419,7 +423,7 @@ class AbujaClientApp {
         setTimeout(() => window.location.reload(), 800);
       } catch (err) {
         console.error('Import save failed:', err);
-        alert('⚠️ Invalid or corrupted Abuja Life save file.');
+        this.showToast('⚠️ Invalid or corrupted Abuja Life save file.');
       }
     };
     reader.readAsText(file);
@@ -490,20 +494,34 @@ class AbujaClientApp {
         },
         onSelectDistrict: (districtId) => {
           if (!districtId) return;
+          this.selectedCommuteDest = districtId;
+          const dName = DISTRICT_BY_ID[districtId]?.name || districtId;
+          // Problem 10 Fix: Don't pop open the big drawer unexpectedly on casual 3D taps
+          const deck = document.getElementById('command-deck-drawer');
+          if (deck && deck.classList.contains('open')) {
+            if (districtId === this.game.s.loc.district) {
+              this.openDeckTab('actions');
+            } else {
+              this.openDeckTab('commute');
+              this._renderCommuteTab();
+            }
+          }
           if (districtId === this.game.s.loc.district) {
-            this.openDeckTab('actions');
-            this.showToast(`📍 Currently on ${DISTRICT_BY_ID[districtId].name} street`);
+            this.showToast(`📍 Currently in ${dName}`);
           } else {
-            this.selectedCommuteDest = districtId;
-            this.openDeckTab('commute');
-            this._renderCommuteTab();
-            this.showToast(`🛣️ Route planner set to ${DISTRICT_BY_ID[districtId].name}`);
+            this.showToast(`🛣️ Route set to ${dName}. Tap Corridors to travel.`);
           }
         },
         onSelectPlayer: (player) => {
           if (!player) return;
-          this.openDeckTab('multiplayer');
-          this.openDirectMessage(player.id, player.name);
+          // Problem 10 Fix: Show quick hint instead of forcefully opening drawer
+          const deck = document.getElementById('command-deck-drawer');
+          if (deck && deck.classList.contains('open')) {
+            this.openDeckTab('multiplayer');
+            this.openDirectMessage(player.id, player.name);
+          } else {
+            this.showToast(`👤 Citizen spotted: ${player.name}. Tap [L/SUBS] -> Chat to message.`);
+          }
         },
         onStreetPunch: ({ hitNpc, districtId }) => {
           if (hitNpc) {
@@ -511,9 +529,9 @@ class AbujaClientApp {
             this.game.earn(dropCash, { cash: true });
             this.game.stat('clout', 1);
             this._renderHUD();
-            this.showToast(`👊🏾 Street Knockout in ${DISTRICT_BY_ID[districtId]?.short || 'FCT'}! Rival dropped ₦2,500 cash! (+1 Clout)`);
+            this.showToast(`👊🏾 Street Challenge in ${DISTRICT_BY_ID[districtId]?.short || 'FCT'}! Settled dispute and earned ₦2,500! (+1 Clout)`);
           } else {
-            this.showToast('👊🏾 Street Punch! Walk up to any street rival on the walkway and press Space / Punch!');
+            this.showToast('👊🏾 Street Move: Tap [○] near rivals to challenge or clear the walkway!');
           }
         },
         onToggleVehicle: (inVehicle) => {
@@ -765,34 +783,35 @@ class AbujaClientApp {
     const drawRadar = (time) => {
       requestAnimationFrame(drawRadar);
       if (typeof document !== 'undefined' && document.hidden) return;
-      if (time - lastRadarTime < 100) return;
+      // Problem 25 Fix: Throttle radar render to save battery on budget devices
+      const isMobile = window.innerWidth <= 768;
+      const minInterval = isMobile ? 200 : 100;
+      if (time - lastRadarTime < minInterval) return;
       lastRadarTime = time;
       const w = canvas.width;
       const h = canvas.height;
       ctx.clearRect(0, 0, w, h);
 
+      // High-contrast authentic dark radar disc that matches 3D world offline (Problem 24/25)
+      ctx.fillStyle = '#060d1a';
+      ctx.beginPath();
+      ctx.arc(w / 2, h / 2, w / 2 - 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Radar range rings
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.2)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(w / 2, h / 2, (w / 2 - 2) * 0.5, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(w / 2, h / 2, w / 2 - 2, 0, Math.PI * 2);
+      ctx.stroke();
+
       const curD = this.game.district || DISTRICT_BY_ID.cbd;
       const pCoords = this.world3d
         ? this.world3d.getPlayer2DCoords()
         : { x: curD.x, y: curD.y };
-
-      // Pan live Leaflet Nigeria Street GPS map as player walks/drives in 3D
-      const baseGps = this._getNigeriaDistrictGPS(curD.id);
-      const dLon = (pCoords.x - curD.x) * 0.00055;
-      const dLat = -(pCoords.y - curD.y) * 0.00055;
-      const liveLat = baseGps.lat + dLat;
-      const liveLng = baseGps.lng + dLon;
-
-      if (this.leafletRadarReady && this.leafletRadarMap) {
-        if (!this._lastRadarPan || Math.hypot(liveLat - this._lastRadarPan.lat, liveLng - this._lastRadarPan.lng) > 0.00003) {
-          this.leafletRadarMap.setView([liveLat, liveLng], 16, { animate: false });
-          this._lastRadarPan = { lat: liveLat, lng: liveLng };
-        }
-      } else {
-        // Fallback street background if offline
-        ctx.fillStyle = '#e2e8f0';
-        ctx.fillRect(0, 0, w, h);
-      }
 
       const scale = 2.4;
       const toRadarX = (x) => w / 2 + (x - pCoords.x) * scale;
@@ -1078,6 +1097,13 @@ class AbujaClientApp {
       const minMotive = Math.min(...motives);
       const score = minMotive < 30 ? minMotive : avg;
       this.world3d.updatePlumbobMotive(score);
+    }
+
+    if (typeof this._renderMissionBanner === 'function') {
+      this._renderMissionBanner();
+    }
+    if (typeof netWorth === 'function' && netWorth(s) >= 1000000) {
+      this._checkMissionProgress('wealth');
     }
   }
 
@@ -3854,10 +3880,24 @@ class AbujaClientApp {
             this._connectEventStream();
           }, backoff);
         } else {
-          // Bounded retries: gracefully operate in Single-Player Simulation Mode
+          // Problem 23 Fix: Bounded retries -> gracefully operate with fallback polling for serverless (Vercel)
           this._setNetworkState('offline');
           if (!this.onlinePlayers || !this.onlinePlayers.length) {
             this._updateOnlinePlayers(this._getSimulatedCitizens());
+          }
+          if (!this._fallbackPollInterval) {
+            this._fallbackPollInterval = setInterval(async () => {
+              try {
+                const res = await fetch('/api/chat?limit=25');
+                if (res.ok) {
+                  const data = await res.json();
+                  if (Array.isArray(data) && data.length > 0) {
+                    this.chatMessages = data;
+                    this._renderChatMessages();
+                  }
+                }
+              } catch (_) {}
+            }, 10000);
           }
         }
       };
@@ -4795,10 +4835,37 @@ class AbujaClientApp {
     const sprintBtn = document.getElementById('btn-mobile-sprint');
     if (sprintBtn) {
       let sprintLocked = false;
-      sprintBtn.addEventListener('click', () => {
-        sprintLocked = !sprintLocked;
-        if (this.world3d) this.world3d.keys.shift = sprintLocked;
-        sprintBtn.classList.toggle('active', sprintLocked);
+      let pressStartTime = 0;
+
+      sprintBtn.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        pressStartTime = Date.now();
+        if (this.world3d) this.world3d.keys.shift = true;
+        sprintBtn.classList.add('active');
+      });
+
+      sprintBtn.addEventListener('pointerup', (e) => {
+        e.preventDefault();
+        const duration = Date.now() - pressStartTime;
+        if (duration < 280) {
+          // Problem 12 Fix: Quick tap toggles sprint lock
+          sprintLocked = !sprintLocked;
+          if (this.world3d) this.world3d.keys.shift = sprintLocked;
+          sprintBtn.classList.toggle('active', sprintLocked);
+          this.showToast(sprintLocked ? '⚡ Sprint Locked ON' : '🚶 Regular Walk Mode');
+        } else {
+          // Released after holding: return to normal walk
+          sprintLocked = false;
+          if (this.world3d) this.world3d.keys.shift = false;
+          sprintBtn.classList.remove('active');
+        }
+      });
+
+      sprintBtn.addEventListener('pointerleave', () => {
+        if (!sprintLocked) {
+          if (this.world3d) this.world3d.keys.shift = false;
+          sprintBtn.classList.remove('active');
+        }
       });
     }
 
@@ -5218,8 +5285,24 @@ class AbujaClientApp {
       const file = e.target.files?.[0];
       if (file) this.importSaveGame(file);
     });
-    document.getElementById('btn-reset-save')?.addEventListener('click', () => {
-      if (confirm('Are you sure you want to reset your Abuja Life simulation? This cannot be undone.')) {
+    let resetArmedTimer = null;
+    document.getElementById('btn-reset-save')?.addEventListener('click', (e) => {
+      const btn = e.currentTarget;
+      if (!btn.dataset.armed) {
+        btn.dataset.armed = 'true';
+        btn.textContent = '⚠️ Confirm Reset?';
+        btn.style.background = '#ef4444';
+        btn.style.color = '#fff';
+        this.showToast('⚠️ Tap Reset again within 5s to confirm resetting your simulation.');
+        clearTimeout(resetArmedTimer);
+        resetArmedTimer = setTimeout(() => {
+          delete btn.dataset.armed;
+          btn.textContent = '⚠️ Reset Game';
+          btn.style.background = '';
+          btn.style.color = '';
+        }, 5000);
+      } else {
+        clearTimeout(resetArmedTimer);
         this.resetSaveGame();
       }
     });
@@ -5615,6 +5698,172 @@ class AbujaClientApp {
         this.openDeckTab('explore');
       }
     });
+
+    // Problem 1 Fix: Tutorial Guide Button & Modal Handlers
+    document.getElementById('btn-psp-guide')?.addEventListener('click', () => {
+      this._openTutorialModal();
+    });
+    document.getElementById('btn-close-tutorial')?.addEventListener('click', () => {
+      this._closeTutorialModal();
+    });
+    document.getElementById('btn-skip-tutorial')?.addEventListener('click', () => {
+      this._closeTutorialModal();
+    });
+    document.getElementById('btn-start-playing-tutorial')?.addEventListener('click', () => {
+      this._closeTutorialModal();
+    });
+
+    // Problem 30 Fix: WhatsApp Viral Share Handler
+    document.getElementById('btn-share-whatsapp')?.addEventListener('click', () => {
+      const name = this.game?.s?.meta?.name || 'Citizen';
+      const nw = formatNairaFull(netWorth(this.game.s));
+      const dist = DISTRICT_BY_ID[this.game?.s?.loc?.district]?.name || 'Abuja';
+      const text = encodeURIComponent(`🎮 I am playing Abuja Life 3D as ${name} in ${dist}! My Net Worth is ${nw}. Can you become the biggest boss in FCT? Play free now: https://abuja-life-theta.vercel.app/`);
+      window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
+    });
+
+    // Problem 4 & 16 Fix: Initialize Mission Tracker & Touch Jargon Tooltips
+    this._initMissionTracker();
+    this._initJargonTooltips();
+  }
+
+  _openTutorialModal() {
+    const modal = document.getElementById('tutorial-modal');
+    if (modal) {
+      modal.hidden = false;
+      this.stopRealTime();
+    }
+  }
+
+  _closeTutorialModal() {
+    const modal = document.getElementById('tutorial-modal');
+    if (modal) {
+      modal.hidden = true;
+      try { localStorage.setItem('abuja_tutorial_done', '1'); } catch (_) {}
+      const deck = document.getElementById('command-deck-drawer');
+      if (!deck || !deck.classList.contains('open')) {
+        this.startRealTime(this.simSpeed);
+      }
+    }
+  }
+
+  _getMissionsList() {
+    return [
+      { id: 'chop', text: 'Chop Life: Eat roadside suya to restore energy', reward: 15000, target: 'actions', actionKey: 'food' },
+      { id: 'cruise', text: 'Cruise FCT: Travel along corridor to CBD or Maitama', reward: 25000, target: 'commute', actionKey: 'commute' },
+      { id: 'hustle', text: 'Daily Hustle: Tap [△ HUSTLE] to earn initial cash', reward: 35000, target: 'hustle', actionKey: 'hustle' },
+      { id: 'spray', text: 'Show Steeze: Tap [○ SPRAY] to gain clout & respect', reward: 50000, target: 'spray', actionKey: 'spray' },
+      { id: 'estate', text: 'Abuja Landlord: Check AGIS housing plots in SUBS', reward: 100000, target: 'housing', actionKey: 'estate' },
+      { id: 'wealth', text: 'FCT Big Boss: Accumulate ₦1,000,000 net worth', reward: 250000, target: 'profile', actionKey: 'wealth' }
+    ];
+  }
+
+  _initMissionTracker() {
+    if (!this.game?.s) return;
+    this._ensureExtendedPlayerState();
+    if (typeof this.game.s.social.missionIndex !== 'number') {
+      this.game.s.social.missionIndex = 0;
+    }
+
+    const banner = document.getElementById('hud-mission-banner');
+    if (banner && !banner._hasBound) {
+      banner._hasBound = true;
+      banner.addEventListener('click', () => this._handleMissionClick());
+    }
+    this._renderMissionBanner();
+  }
+
+  _renderMissionBanner() {
+    const missions = this._getMissionsList();
+    const idx = this.game?.s?.social?.missionIndex || 0;
+    const mission = missions[Math.min(idx, missions.length - 1)];
+    const textEl = document.getElementById('hmb-text');
+    const rewardEl = document.getElementById('hmb-reward');
+    if (textEl && mission) {
+      textEl.textContent = idx >= missions.length ? '🏆 Abuja Legend: You rule the FCT!' : mission.text;
+    }
+    if (rewardEl && mission) {
+      rewardEl.textContent = idx >= missions.length ? 'MAX' : `+₦${mission.reward.toLocaleString()}`;
+    }
+  }
+
+  _handleMissionClick() {
+    const missions = this._getMissionsList();
+    const idx = this.game?.s?.social?.missionIndex || 0;
+    if (idx >= missions.length) {
+      this.showToast('🏆 You have completed all onboarding missions! You are a true Abuja Boss.');
+      return;
+    }
+    const cur = missions[idx];
+    if (cur.target === 'actions') {
+      this.openDeckTab('actions');
+    } else if (cur.target === 'commute') {
+      this.openDeckTab('commute');
+    } else if (cur.target === 'hustle') {
+      this.quickHustle();
+    } else if (cur.target === 'spray') {
+      this.quickSprayCash();
+    } else if (cur.target === 'housing') {
+      this.openDeckTab('housing');
+    } else if (cur.target === 'profile') {
+      this.openDeckTab('profile');
+    }
+  }
+
+  _checkMissionProgress(actionId) {
+    if (!this.game?.s?.social) return;
+    const missions = this._getMissionsList();
+    let idx = this.game.s.social.missionIndex || 0;
+    if (idx >= missions.length) return;
+
+    const cur = missions[idx];
+    let matched = false;
+    if (cur.actionKey === actionId) {
+      matched = true;
+    } else if (cur.actionKey === 'wealth' && netWorth(this.game.s) >= 1000000) {
+      matched = true;
+    }
+
+    if (matched) {
+      this.game.s.social.missionIndex = idx + 1;
+      this.game.earn(cur.reward, { cash: true });
+      this.game.stat('clout', 5);
+      this.showToast(`🎯 GOAL COMPLETE! +₦${cur.reward.toLocaleString()} & +5 Clout!`);
+      if (this.world3d) this.world3d.spawnNairaRain(25);
+      this._renderMissionBanner();
+      this._renderHUD();
+      this._saveGame();
+    }
+  }
+
+  _initJargonTooltips() {
+    const GLOSSARY = {
+      'AGIS': 'Abuja Geographic Information Systems: Official FCT land registry & C-of-O estate titles.',
+      'BPP': 'Bureau of Public Procurement: Federal contractor bidding board for tenders.',
+      'FIRS': 'Federal Inland Revenue Service: Taxes, company levies & TCC issuance.',
+      'TCC': 'Tax Clearance Certificate: Proof of clean taxes required for elite contracts.',
+      'PAYE': 'Pay As You Earn: Personal monthly income tax deducted from civil wages.',
+      'VIO': 'Vehicle Inspection Officers: Roadworthiness and vehicle registration checks.',
+      'EFCC': 'Economic and Financial Crimes Commission: Anti-graft & AML monitoring.',
+      'Steeze': 'Steeze: Nigerian swagger, elegance and effortless fashion caliber.',
+      'Composure': 'Composure: Dignity, class, and unshakeable calm under Abuja stress.',
+      'Clout': 'Clout: Political weight, VIP protocol connections and social respect.'
+    };
+
+    document.addEventListener('click', (e) => {
+      const target = e.target.closest('[data-jargon], .jargon-help, .badge-abbr');
+      if (target) {
+        const key = target.dataset.jargon || target.textContent.trim().toUpperCase();
+        for (const [k, desc] of Object.entries(GLOSSARY)) {
+          if (key === k || key.startsWith(k)) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.showToast(`ℹ️ ${k}: ${desc}`);
+            return;
+          }
+        }
+      }
+    });
   }
 
   _initQuickShortcuts(updateAfrobeatsStatus) {
@@ -5794,6 +6043,7 @@ class AbujaClientApp {
     }
     this.game.log('Chopped spicy roadside Abuja suya & cold drink (+Hunger, +Energy).', 'good', '🍗');
     this.showToast('🍗 Chop life before life chop you! 🥩 (+Hunger, +18 Energy, +10 Sanity)');
+    this._checkMissionProgress('food');
     this._renderAll();
   }
 
@@ -5812,30 +6062,43 @@ class AbujaClientApp {
     if (this.world3d?.showThoughtBubble) {
       this.world3d.showThoughtBubble('💸', 'OPOR! E Choke!', 3200);
     }
-    this.game.stat('clout', 8);
+    this.game.stat('clout', 6);
     if (this.game.s.social) {
       this.game.s.social.steeze = Math.min(100, (this.game.s.social.steeze || 80) + 4);
     }
+    try { navigator.vibrate?.([30, 30]); } catch (_) {}
     this.game.log(`Sprayed ${formatNairaFull(amount)} in crisp CBN notes! People dey shout "Odogwu!"`, 'good', '💸');
-    this.showToast('💸 Opor! E choke! Cash dey rain for Abuja! 💸 (+8 Clout, +4 Steeze)');
+    this.showToast('💸 Opor! E choke! Cash dey rain for Abuja! 💸 (+6 Clout, +4 Steeze)');
+    this._checkMissionProgress('spray');
     this._renderAll();
   }
 
   quickHustle() {
+    const now = Date.now();
+    if (this._lastHustleTime && (now - this._lastHustleTime < 12000)) {
+      const waitSec = Math.ceil((12000 - (now - this._lastHustleTime)) / 1000);
+      return this.showToast(`⏳ Hustle in progress! Next gig ready in ${waitSec}s.`);
+    }
+
+    if (this.game.s.energy < 15) {
+      return this.showToast('⚠️ Body dey pain you! Chop Life suya or rest to restore energy first.');
+    }
+
+    this._lastHustleTime = now;
     const track = this.game.s.career.track || 'contractor';
-    let reward = 45000;
+    let reward = 25000;
     let label = 'Street Hustle';
     if (track === 'contractor') {
-      reward = 65000;
+      reward = 35000;
       label = 'Supplied building blocks to Maitama site';
     } else if (track === 'tech') {
-      reward = 70000;
+      reward = 38000;
       label = 'Delivered remote Flutter/Node API gig for Lagos startup';
     } else if (track === 'trader') {
-      reward = 50000;
+      reward = 28000;
       label = 'Sold 2 cartons of gadgets at Banex Plaza';
     } else {
-      reward = 40000;
+      reward = 22000;
       label = 'Processed official departmental clearance allowance';
     }
 
@@ -5846,10 +6109,12 @@ class AbujaClientApp {
     if (this.world3d?.showThoughtBubble) {
       this.world3d.showThoughtBubble('💰', `+${formatNairaFull(reward)} Alert!`, 3200);
     }
+    try { navigator.vibrate?.([40, 30, 40]); } catch (_) {}
     this.game.advance(30);
-    this.game.stat('energy', -10);
+    this.game.stat('energy', -12);
     this.game.log(`Completed quick hustle: ${label}! Earned ${formatNairaFull(reward)}.`, 'good', '💼');
-    this.showToast(`💰 CREDIT ALERT: +${formatNairaFull(reward)}! ${label}! Soft work!`);
+    this.showToast(`💰 CREDIT ALERT: +${formatNairaFull(reward)}! ${label}!`);
+    this._checkMissionProgress('hustle');
     this._renderAll();
   }
 
@@ -5888,6 +6153,7 @@ class AbujaClientApp {
     ];
     const b = banter[Math.floor(Math.random() * banter.length)];
     this.showToast(b);
+    this._checkMissionProgress('commute');
     this._renderAll();
   }
 
@@ -5982,6 +6248,7 @@ class AbujaClientApp {
     if (deck) deck.classList.remove('is-drawer-closed');
     const backdrop = document.getElementById('mobile-drawer-backdrop');
     if (backdrop) backdrop.hidden = window.innerWidth > 768;
+    this.stopRealTime();
     this.switchTab(tabId);
   }
 
@@ -5993,6 +6260,7 @@ class AbujaClientApp {
     document.querySelectorAll('.gta-dock-icon[data-dock-tab]').forEach((b) => {
       b.classList.remove('active');
     });
+    this.startRealTime(this.simSpeed);
   }
 
   switchTab(tabId, subTargetId = null) {
@@ -6133,7 +6401,7 @@ class AbujaClientApp {
         { label: '🛒 Build/Buy', scrollId: 'sims-catalog-grid' }
       ],
       'tab-housing': [
-        { label: '🏗️ AGIS Plots', scrollId: 'housing-plots-list' },
+        { label: '🏗️ AGIS Plots', scrollId: 'house-builder-section' },
         { label: '🏠 Rental Leases', scrollId: 'housing-list' },
         { label: '🏙️ Mega Estates', action: () => this._openMegaHousingModal() }
       ],
@@ -6141,36 +6409,38 @@ class AbujaClientApp {
         { label: '🌍 Global FCT', action: () => document.querySelector('.mp-chan-btn[data-channel="global"]')?.click() },
         { label: '📍 District Chat', action: () => document.querySelector('.mp-chan-btn[data-channel="district"]')?.click() },
         { label: '🔒 Private DMs', action: () => document.querySelector('.mp-chan-btn[data-channel="dm"]')?.click() },
-        { label: '👥 Online Roster', scrollId: 'mp-players-roster' }
+        { label: '👥 Online Roster', scrollId: 'mp-players-list' }
       ],
       'tab-network': [
         { label: '📋 Paid Tasks', scrollId: 'assign-task-form' },
-        { label: '🤝 VIP Rolodex', scrollId: 'network-list' },
-        { label: '💍 Romance & Bae', scrollId: 'family-spouse-box' }
+        { label: '🤝 VIP Contacts', scrollId: 'contacts-list' },
+        { label: '💍 Romance & Bae', scrollId: 'bae-relationship-box' }
       ],
       'tab-court': [
         { label: '⚖️ File Lawsuit', scrollId: 'court-file-form' },
         { label: '🏛️ Docket & Rulings', scrollId: 'court-cases-list' }
       ],
       'tab-feed': [
-        { label: '📰 Live FCT Feed', scrollId: 'feed-list' },
+        { label: '📰 Live FCT Feed', scrollId: 'feed-log-list' },
         { label: '📖 Abuja History', action: () => { const m = document.getElementById('abuja-history-modal'); if (m) m.hidden = false; } }
       ],
       'tab-shop': [
-        { label: '🍗 Suya & Spots', scrollId: 'tourism-spots-list' },
-        { label: '🛍️ Luxury & Cars', scrollId: 'shop-items-list' },
+        { label: '🍗 Suya & Spots', scrollId: 'nigeria-tourism-hub-box' },
+        { label: '🛍️ Market & Items', scrollId: 'marketwishes-hub-box' },
         { label: '🎨 Style Studio', action: () => document.getElementById('ux-btn-style')?.click() }
       ],
       'tab-games': [
-        { label: '🃏 Naija Whot', scrollId: 'whot-table-box' },
-        { label: '🎲 King Ludo', scrollId: 'ludo-table-box' }
+        { label: '🃏 Naija Whot', action: () => this._startWhotGame() },
+        { label: '🎲 King Ludo', action: () => this._startLudoGame() },
+        { label: '🏎️ Abuja Garage', scrollId: 'garage-list' }
       ],
       'tab-profile': [
-        { label: '🪪 Citizen ID', scrollId: 'btn-profile-edit-char' },
+        { label: '🪪 Citizen ID', scrollId: 'profile-pane-name' },
         { label: '🏦 CBN Vault', action: () => this.openNairaVaultModal() },
         { label: '🎓 UniAbuja', action: () => this._openEducationModal() },
         { label: '📜 FIRS Tax', action: () => this._openTaxModal() },
-        { label: '🗳️ Elections', action: () => this._openElectionModal() }
+        { label: '🗳️ Elections', action: () => this._openElectionModal() },
+        { label: '📲 Share WhatsApp', action: () => document.getElementById('btn-share-whatsapp')?.click() }
       ]
     };
 
@@ -6720,18 +6990,33 @@ class AbujaClientApp {
   }
 
   showToast(message) {
+    if (!message) return;
+    const now = Date.now();
+    this._recentToasts = this._recentToasts || new Map();
+    if (this._recentToasts.has(message) && now - this._recentToasts.get(message) < 2500) {
+      return; // Deduplicate toast spam
+    }
+    this._recentToasts.set(message, now);
+
     const container = document.getElementById('toast-container');
     if (!container) return;
-    while (container.children.length >= 4) {
+
+    // Keep at most 2 toasts at once so they never obstruct view
+    while (container.children.length >= 2) {
       container.firstElementChild.remove();
     }
     const el = document.createElement('div');
     el.className = 'toast';
     el.textContent = message;
     container.appendChild(el);
+
+    if (navigator.vibrate && (message.includes('💰') || message.includes('ALERT') || message.includes('🎉'))) {
+      try { navigator.vibrate([25, 20, 35]); } catch (_) {}
+    }
+
     setTimeout(() => {
       el.remove();
-    }, 3800);
+    }, 3200);
   }
 }
 
