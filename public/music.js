@@ -4,6 +4,19 @@
 // and procedural Nigerian street sound effects (UP NEPA, Gen, Suya, Horns, Cash Spray)
 // ============================================================================
 
+export function getSharedAudioContext() {
+  if (!window.__abujaSharedAudioCtx) {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (AudioCtx) {
+      window.__abujaSharedAudioCtx = new AudioCtx();
+    }
+  }
+  if (window.__abujaSharedAudioCtx && window.__abujaSharedAudioCtx.state === 'suspended') {
+    window.__abujaSharedAudioCtx.resume().catch(() => {});
+  }
+  return window.__abujaSharedAudioCtx;
+}
+
 export class AbujaAfrobeatsEngine {
   constructor() {
     this.ctx = null;
@@ -24,9 +37,8 @@ export class AbujaAfrobeatsEngine {
 
   _initContext() {
     if (!this.ctx) {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (AudioCtx) {
-        this.ctx = new AudioCtx();
+      this.ctx = getSharedAudioContext();
+      if (this.ctx) {
         this.masterGain = this.ctx.createGain();
         this.masterGain.gain.value = this.volume;
         this.masterGain.connect(this.ctx.destination);
@@ -37,8 +49,26 @@ export class AbujaAfrobeatsEngine {
       }
     }
     if (this.ctx && this.ctx.state === 'suspended') {
-      this.ctx.resume();
+      this.ctx.resume().catch(() => {});
     }
+  }
+
+  setVolume(vol = 0.28) {
+    this.volume = Math.max(0, Math.min(1, vol));
+    if (this.masterGain && this.ctx) {
+      this.masterGain.gain.setTargetAtTime(this.volume, this.ctx.currentTime, 0.05);
+    }
+  }
+
+  duckVolume(durationMs = 1400) {
+    if (!this.masterGain || !this.ctx) return;
+    const original = this.volume;
+    this.masterGain.gain.setTargetAtTime(original * 0.25, this.ctx.currentTime, 0.05);
+    setTimeout(() => {
+      if (this.masterGain && this.ctx) {
+        this.masterGain.gain.setTargetAtTime(original, this.ctx.currentTime, 0.15);
+      }
+    }, durationMs);
   }
 
   toggle() {

@@ -227,7 +227,31 @@ class AbujaClientApp {
     }
     this._initMultiplayerBridge();
     this._startRadarLoop();
+    this._checkOfflineProgression();
     this.startRealTime(1);
+  }
+
+  _checkOfflineProgression() {
+    try {
+      const now = Date.now();
+      const lastActive = parseInt(localStorage.getItem('abuja_last_active_time') || '0', 10);
+      localStorage.setItem('abuja_last_active_time', now.toString());
+
+      if (lastActive > 0) {
+        const elapsedMinutes = Math.floor((now - lastActive) / 60000);
+        if (elapsedMinutes >= 15 && this.game?.s) {
+          const energyRecovered = Math.min(45, Math.floor(elapsedMinutes / 5));
+          this.game.stat('energy', energyRecovered);
+          this.game.stat('sanity', Math.min(25, Math.floor(elapsedMinutes / 8)));
+          this.showToast(`🌅 Welcome back to Abuja! While you were resting: +${energyRecovered} Energy recovered!`);
+          this._renderHUD();
+        }
+      }
+
+      setInterval(() => {
+        try { localStorage.setItem('abuja_last_active_time', Date.now().toString()); } catch (_) {}
+      }, 30000);
+    } catch (_) {}
   }
 
   _ensureExtendedPlayerState() {
@@ -1124,9 +1148,14 @@ class AbujaClientApp {
         sunny: '☀️ Sunny FCT Sky',
         dry: '🌫️ Harmattan Haze',
         rain: '🌧️ Abuja Rain',
-        storm: '⛈️ Tropical Flash Storm'
+        storm: '⛈️ Heavy Downpour',
+        harmattan: '🌫️ Harmattan Haze',
+        hot: '🔥 Intense Heat'
       };
-      weatherEl.textContent = `${labels[w] || '☀️ Clear'} • Fuel ₦${s.market.fuel}/L`;
+      // Points 27 & 31 Fix: Real-time FX Bureau de Change rate & Fuel Pump ticker in HUD
+      const fxRate = s.market?.fx || 1530;
+      const fuelPump = s.market?.fuel || 900;
+      weatherEl.textContent = `${labels[w] || '☀️ Clear Sky'} • FX: ₦${fxRate}/$ • Fuel: ₦${fuelPump}/L`;
     }
   }
 
@@ -1587,9 +1616,14 @@ class AbujaClientApp {
                 <span class="meta-pill">📍 ${DISTRICT_BY_ID[plotDef.id]?.name}</span>
                 <span class="meta-pill">🧱 5-Stage 3D Build</span>
               </div>
-              <button class="btn-primary btn-buy-plot" data-id="${plotDef.id}" data-price="${plotDef.price}">
-                🛒 Purchase Plot (${formatNairaFull(plotDef.price)})
-              </button>
+              <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                <button class="btn-primary btn-buy-plot" data-id="${plotDef.id}" data-price="${plotDef.price}">
+                  🛒 Full Cash (${formatNairaFull(plotDef.price)})
+                </button>
+                <button class="btn-secondary btn-buy-plot-installment" data-id="${plotDef.id}" data-down="${Math.round(plotDef.price * 0.25)}" data-price="${plotDef.price}">
+                  🏗️ 25% Deposit Plan (${formatNairaFull(Math.round(plotDef.price * 0.25))})
+                </button>
+              </div>
             </div>
           </div>
         `;
@@ -1689,6 +1723,37 @@ class AbujaClientApp {
         this.game.log(`Purchased prime land plot in ${DISTRICT_BY_ID[id]?.name || id} for ${formatNairaFull(price)}!`, 'good', '📜');
         if (this.world3d) this.world3d.syncPlayerHouses(Object.values(plots));
         this.showToast(`🎉 Plot secured in ${DISTRICT_BY_ID[id]?.name || id}! Start construction now.`);
+        this._renderAll();
+      });
+    });
+
+    // Point 28 Fix: Bind plot 25% installment plan
+    container.querySelectorAll('.btn-buy-plot-installment').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.id;
+        const down = Number(btn.dataset.down);
+        const price = Number(btn.dataset.price);
+        if (!this.game.canAfford(down)) {
+          this.showToast(`⚠️ Need at least 25% initial deposit (${formatNairaFull(down)}) to start installment plan!`);
+          return;
+        }
+        this.game.pay(down);
+        this.game.stat('clout', 3);
+        plots[id] = {
+          district: id,
+          stage: 0,
+          name: DISTRICT_BY_ID[id]?.name || id,
+          cofo: false,
+          boughtDay: this.game.day,
+          installmentPlan: true,
+          remainingBalance: price - down,
+          lastRentCollection: 0,
+          lastShortletDay: 0
+        };
+        this.game.s.social.plots = plots;
+        this.game.log(`Enrolled in AGIS 25% installment plan for ${DISTRICT_BY_ID[id]?.name || id}! Paid ${formatNairaFull(down)} deposit.`, 'good', '🏗️');
+        if (this.world3d) this.world3d.syncPlayerHouses(Object.values(plots));
+        this.showToast(`🎉 Plot secured with 25% deposit in ${DISTRICT_BY_ID[id]?.name || id}!`);
         this._renderAll();
       });
     });
@@ -3029,55 +3094,69 @@ class AbujaClientApp {
     if (!stage) return;
     stage.hidden = false;
 
-    const pDie1 = 1 + Math.floor(Math.random() * 6);
-    const pDie2 = 1 + Math.floor(Math.random() * 6);
-    const bDie1 = 1 + Math.floor(Math.random() * 6);
-    const bDie2 = 1 + Math.floor(Math.random() * 6);
-
-    const pTotal = pDie1 + pDie2 + (pDie1 === 6 && pDie2 === 6 ? 4 : 0);
-    const bTotal = bDie1 + bDie2;
-    const won = pTotal >= bTotal;
-
-    if (won) {
-      this.game.earn(10000, { cash: true });
-      this.game.stat('sanity', 5);
-      this.game.stat('clout', 1);
-      this.game.log(`Won ₦10,000 in Abuja Ludo Dice Duel (${pDie1}+${pDie2} vs ${bDie1}+${bDie2})!`, 'good', '🎲');
-      if (this.world3d) this.world3d.spawnNairaRain(28);
-    } else {
-      this.game.log(`Lost ₦5,000 stake at the Jabi Ludo board (${pDie1}+${pDie2} vs ${bDie1}+${bDie2}).`, 'warn', '🎲');
-    }
-
+    // Point 37 Fix: Animated rolling suspense before revealing dice faces
     stage.innerHTML = `
       <div class="card-top">
-        <span class="card-title">🎲 Abuja Ludo High-Stakes Roll (Pot: ₦10,000)</span>
-        <span class="card-badge">${won ? '🏆 YOU WON ₦10,000!' : '😤 CHOPPED BY OPPONENT'}</span>
+        <span class="card-title">🎲 Abuja Ludo Cup Shaking...</span>
+        <span class="card-badge flashing">ROLLING CUP 🎲</span>
       </div>
-      <div class="ludo-dice-box">
-        <div style="text-align:center;">
-          <div style="font-size:10px; color:#6ee7b7; margin-bottom:4px;">YOUR ROLL (${pDie1 + pDie2})</div>
-          <div style="display:flex; gap:6px;">
-            <div class="ludo-die">${pDie1}</div>
-            <div class="ludo-die">${pDie2}</div>
-          </div>
-        </div>
-        <div style="font-family:var(--font-display); font-size:16px; color:#fde047;">VS</div>
-        <div style="text-align:center;">
-          <div style="font-size:10px; color:#f9a8d4; margin-bottom:4px;">CHIEF'S ROLL (${bDie1 + bDie2})</div>
-          <div style="display:flex; gap:6px;">
-            <div class="ludo-die">${bDie1}</div>
-            <div class="ludo-die">${bDie2}</div>
-          </div>
-        </div>
-      </div>
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <span style="font-size:11.5px; color:#e2e8f0;">${won ? 'Double-six protocol blessed your seeds! +₦10,000 paid.' : 'Your seed got sent back to yard! Roll again?'}</span>
-        <button id="btn-ludo-rematch" class="btn-primary">🎲 Roll Again (₦5,000)</button>
+      <div style="text-align:center; padding:18px 0;">
+        <div style="font-size:36px; animation:bounce 0.3s infinite alternate;">🎲 🎲</div>
+        <p style="font-size:12px; color:#38bdf8; margin-top:8px;">Shaking wooden cup on the board at Banex...</p>
       </div>
     `;
 
-    stage.querySelector('#btn-ludo-rematch')?.addEventListener('click', () => this._startLudoGame());
-    this._renderHUD();
+    setTimeout(() => {
+      const pDie1 = 1 + Math.floor(Math.random() * 6);
+      const pDie2 = 1 + Math.floor(Math.random() * 6);
+      const bDie1 = 1 + Math.floor(Math.random() * 6);
+      const bDie2 = 1 + Math.floor(Math.random() * 6);
+
+      const pTotal = pDie1 + pDie2 + (pDie1 === 6 && pDie2 === 6 ? 4 : 0);
+      const bTotal = bDie1 + bDie2;
+      const won = pTotal >= bTotal;
+
+      if (won) {
+        this.game.earn(10000, { cash: true });
+        this.game.stat('sanity', 5);
+        this.game.stat('clout', 1);
+        this.game.log(`Won ₦10,000 in Abuja Ludo Dice Duel (${pDie1}+${pDie2} vs ${bDie1}+${bDie2})!`, 'good', '🎲');
+        if (this.world3d) this.world3d.spawnNairaRain(28);
+      } else {
+        this.game.log(`Lost ₦5,000 stake at the Jabi Ludo board (${pDie1}+${pDie2} vs ${bDie1}+${bDie2}).`, 'warn', '🎲');
+      }
+
+      stage.innerHTML = `
+        <div class="card-top">
+          <span class="card-title">🎲 Abuja Ludo High-Stakes Roll (Pot: ₦10,000)</span>
+          <span class="card-badge">${won ? '🏆 YOU WON ₦10,000!' : '😤 CHOPPED BY OPPONENT'}</span>
+        </div>
+        <div class="ludo-dice-box">
+          <div style="text-align:center;">
+            <div style="font-size:10px; color:#6ee7b7; margin-bottom:4px;">YOUR ROLL (${pDie1 + pDie2})</div>
+            <div style="display:flex; gap:6px;">
+              <div class="ludo-die">${pDie1}</div>
+              <div class="ludo-die">${pDie2}</div>
+            </div>
+          </div>
+          <div style="font-family:var(--font-display); font-size:16px; color:#fde047;">VS</div>
+          <div style="text-align:center;">
+            <div style="font-size:10px; color:#f9a8d4; margin-bottom:4px;">CHIEF'S ROLL (${bDie1 + bDie2})</div>
+            <div style="display:flex; gap:6px;">
+              <div class="ludo-die opponent">${bDie1}</div>
+              <div class="ludo-die opponent">${bDie2}</div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:11.5px; color:#e2e8f0;">${won ? 'Double-six protocol blessed your seeds! +₦10,000 paid.' : 'Your seed got sent back to yard! Roll again?'}</span>
+          <button id="btn-ludo-rematch" class="btn-primary">🎲 Roll Again (₦5,000)</button>
+        </div>
+      `;
+
+      stage.querySelector('#btn-ludo-rematch')?.addEventListener('click', () => this._startLudoGame());
+      this._renderHUD();
+    }, 600);
   }
 
   _renderCoursesList() {
@@ -4587,8 +4666,38 @@ class AbujaClientApp {
       `).join('');
     }
 
+    // Point 30 Fix: Render recent statement & wire ledger in CBN vault
+    const ledger = document.getElementById('vault-ledger-list');
+    if (ledger) {
+      const history = this.game.s.bankHistory || [];
+      if (history.length === 0) {
+        ledger.innerHTML = '<div style="font-size:11px; color:#94a3b8; padding:8px; text-align:center;">No wire activity yet. Authorize wires or earn funds to view history.</div>';
+      } else {
+        ledger.innerHTML = history.slice(-5).reverse().map((tx) => `
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 8px; border-bottom:1px solid rgba(148,163,184,0.15); font-size:11.5px;">
+            <span>${tx.type === 'credit' ? '🟢' : '🔴'} ${tx.label}</span>
+            <strong style="color:${tx.type === 'credit' ? '#4ade80' : '#f87171'};">${tx.type === 'credit' ? '+' : '-'}${formatNairaFull(tx.amount)}</strong>
+          </div>
+        `).join('');
+      }
+    }
+
     this._populateWireRecipients(preselectPlayerId);
     modal.hidden = false;
+  }
+
+  _recordBankTransaction(type, amount, label) {
+    if (!this.game?.s) return;
+    if (!Array.isArray(this.game.s.bankHistory)) this.game.s.bankHistory = [];
+    this.game.s.bankHistory.push({
+      time: Date.now(),
+      type: type || 'credit',
+      amount: Math.round(amount || 0),
+      label: label || 'Transaction'
+    });
+    if (this.game.s.bankHistory.length > 20) {
+      this.game.s.bankHistory.shift();
+    }
   }
 
   _populateWireRecipients(preselectId = '') {

@@ -71,9 +71,10 @@ export class AbujaWorld3D {
     this._canvasW = Math.max(1, containerEl.clientWidth);
     this._canvasH = Math.max(1, containerEl.clientHeight);
     this.renderer.setSize(this._canvasW, this._canvasH);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
-    this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFShadowMap;
+    const isMobileDevice = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobileDevice ? 1.2 : 1.4));
+    this.renderer.shadowMap.enabled = !isMobileDevice;
+    this.renderer.shadowMap.type = THREE.BasicShadowMap;
     // PBR tone mapping & color space for GTA-quality visuals
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.08;
@@ -3050,14 +3051,41 @@ export class AbujaWorld3D {
 
     const canvas = this.renderer.domElement;
     let downPos = { x: 0, y: 0 };
+    const activePointers = new Map();
+    let initialPinchDist = null;
+    let initialCameraDist = null;
 
     canvas.addEventListener('pointerdown', (e) => {
-      this.isPointerDragging = true;
-      this.lastPointer = { x: e.clientX, y: e.clientY };
-      downPos = { x: e.clientX, y: e.clientY };
+      try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+      activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+      if (activePointers.size === 1) {
+        this.isPointerDragging = true;
+        this.lastPointer = { x: e.clientX, y: e.clientY };
+        downPos = { x: e.clientX, y: e.clientY };
+      } else if (activePointers.size === 2) {
+        // Point 1 Fix: Multi-touch pinch-to-zoom gesture for mobile
+        this.isPointerDragging = false;
+        const pts = Array.from(activePointers.values());
+        initialPinchDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+        initialCameraDist = this.cameraDistance;
+      }
     });
 
     window.addEventListener('pointermove', (e) => {
+      if (activePointers.has(e.pointerId)) {
+        activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      }
+
+      if (activePointers.size === 2 && initialPinchDist) {
+        // Compute pinch distance ratio and zoom smoothly
+        const pts = Array.from(activePointers.values());
+        const currentDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+        const factor = initialPinchDist / Math.max(1, currentDist);
+        this.cameraDistance = Math.max(10, Math.min(360, initialCameraDist * factor));
+        return;
+      }
+
       if (!this.isPointerDragging) return;
       const dx = e.clientX - this.lastPointer.x;
       const dy = e.clientY - this.lastPointer.y;
@@ -3066,14 +3094,25 @@ export class AbujaWorld3D {
       this.cameraPitch = Math.max(0.08, Math.min(1.15, this.cameraPitch + dy * 0.005));
     });
 
-    window.addEventListener('pointerup', (e) => {
-      if (!this.isPointerDragging) return;
-      this.isPointerDragging = false;
-      const moved = Math.hypot(e.clientX - downPos.x, e.clientY - downPos.y);
-      if (moved < 6) {
-        this._handleCanvasClick(e);
+    const onPointerEnd = (e) => {
+      try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+      activePointers.delete(e.pointerId);
+      if (activePointers.size < 2) {
+        initialPinchDist = null;
       }
-    });
+      if (activePointers.size === 0) {
+        if (this.isPointerDragging) {
+          this.isPointerDragging = false;
+          const moved = Math.hypot(e.clientX - downPos.x, e.clientY - downPos.y);
+          if (moved < 6) {
+            this._handleCanvasClick(e);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('pointerup', onPointerEnd);
+    window.addEventListener('pointercancel', onPointerEnd);
 
     canvas.addEventListener('wheel', (e) => {
       e.preventDefault();
@@ -3597,7 +3636,17 @@ export class AbujaWorld3D {
     }
 
     for (const entry of this.remotePlayers.values()) {
+      const dist = entry.group.position.distanceTo(entry.targetPos);
       entry.group.position.lerp(entry.targetPos, Math.min(1, dt * 4.5));
+      // Point 38 Fix: Animate remote player limbs while moving instead of sliding
+      if (entry.humanRig) {
+        const isMoving = dist > 0.08;
+        const swing = isMoving ? Math.sin(this.elapsedTime * 9) * 0.5 : 0;
+        if (entry.humanRig.leftLegPivot) entry.humanRig.leftLegPivot.rotation.x = swing;
+        if (entry.humanRig.rightLegPivot) entry.humanRig.rightLegPivot.rotation.x = -swing;
+        if (entry.humanRig.leftArmPivot) entry.humanRig.leftArmPivot.rotation.x = -swing * 0.7;
+        if (entry.humanRig.rightArmPivot) entry.humanRig.rightArmPivot.rotation.x = swing * 0.7;
+      }
     }
 
     for (let i = this.nairaParticles.length - 1; i >= 0; i--) {
@@ -3657,8 +3706,17 @@ export class AbujaWorld3D {
       const moveZ = fwdZ * forwardInput + rightZ * rightInput;
 
       const targetHeading = Math.atan2(moveX, moveZ);
-      this.playerHeading = targetHeading;
-      this.playerSpeed = maxSpeed * inputMag;
+      if (this.inVehicle) {
+        // Point 6 Fix: Smooth progressive acceleration, inertia, and realistic steering angle return
+        this.playerSpeed = THREE.MathUtils.lerp(this.playerSpeed || 0, maxSpeed * inputMag, dt * 5.2);
+        let diff = (targetHeading - (this.playerHeading || 0)) % (Math.PI * 2);
+        if (diff > Math.PI) diff -= Math.PI * 2;
+        if (diff < -Math.PI) diff += Math.PI * 2;
+        this.playerHeading = (this.playerHeading || 0) + diff * Math.min(1, dt * 8.5);
+      } else {
+        this.playerHeading = targetHeading;
+        this.playerSpeed = maxSpeed * inputMag;
+      }
 
       const stepX = Math.sin(this.playerHeading) * this.playerSpeed * dt;
       const stepZ = Math.cos(this.playerHeading) * this.playerSpeed * dt;

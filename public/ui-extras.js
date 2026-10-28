@@ -144,11 +144,11 @@ class AmbientCity {
   }
 
   start() {
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return false;
-    if (!this.ctx) this.ctx = new Ctx();
+    this.ctx = window.__abujaSharedAudioCtx || (window.AudioContext ? new (window.AudioContext || window.webkitAudioContext)() : null);
+    if (!this.ctx) return false;
+    window.__abujaSharedAudioCtx = this.ctx;
     const ctx = this.ctx;
-    if (ctx.state === 'suspended') ctx.resume();
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
 
     this.master = ctx.createGain();
     this.master.gain.value = 0.0;

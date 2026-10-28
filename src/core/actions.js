@@ -260,6 +260,39 @@ export const ACTIONS = [
     },
   },
   {
+    id: 'public_restroom', group: 'Needs', name: 'Use Plaza / Mosque Restroom', icon: '🚽',
+    desc: () => 'Relieve yourself in a clean facility and freshen up. Attendant fee ₦200.',
+    where: (g) => atKind(g, 'mosque', 'church', 'market', 'banex', 'recreation', 'crafts') || ['cbd', 'wuse2', 'maitama', 'garki', 'jabi'].includes(g.s.loc.district),
+    cost: () => ({ min: 10, cash: 200 }),
+    async run(g) {
+      if (g.s.sims?.motives) {
+        g.s.sims.motives.bladder = 100;
+        g.s.sims.motives.hygiene = Math.min(100, (g.s.sims.motives.hygiene || 50) + 15);
+      }
+      g.stat('sanity', 4);
+      g.log('Used clean public facility. Bladder 100% relieved and refreshed! 🚽', 'good', '✨');
+    }
+  },
+  {
+    id: 'date_hangout', group: 'Social', name: 'Evening Date & Lounge Chill', icon: '🥂',
+    desc: () => 'Enjoy romantic drinks, hot suya, and calm night breeze at a scenic Abuja lounge.',
+    where: (g) => atKind(g, 'lounge', 'club', 'recreation') || ['maitama', 'wuse2', 'jabi', 'cbd'].includes(g.s.loc.district),
+    cost: () => ({ min: 60, cash: 5000 }),
+    async run(g) {
+      if (g.s.sims?.motives) {
+        g.s.sims.motives.social = Math.min(100, (g.s.sims.motives.social || 50) + 35);
+        g.s.sims.motives.fun = Math.min(100, (g.s.sims.motives.fun || 50) + 30);
+      }
+      if (g.s.social) {
+        g.s.social.steeze = Math.min(100, (g.s.social.steeze || 80) + 4);
+        g.s.social.composure = Math.min(100, (g.s.social.composure || 80) + 4);
+      }
+      g.stat('sanity', 16);
+      g.stat('clout', 2);
+      g.log('Had a classy Abuja evening date! Steeze, Composure & Social motives refreshed! 🥂', 'good', '✨');
+    }
+  },
+  {
     id: 'banex_flip', group: 'Work', name: 'Flip UK-used iPhones & MacBooks at Banex (₦40k)', icon: '📱',
     desc: () => 'Hustle at Banex Plaza, Abuja\u2019s undisputed gadget capital. High daily turnover.',
     where: (g) => atKind(g, 'banex'),

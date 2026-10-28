@@ -30,13 +30,14 @@ export const EVENTS = [
       const s = g.s;
       const ok = docsValid(g);
       const amt = nice(g.rng.int(3000, 10000), 500);
+      const argueOdds = clamp(0.2 + s.clout * 0.008 + (g.isSharp() ? 0.1 : 0), 0.1, 0.75);
       const id = await g.ask({
         title: 'VIO / FRSC checkpoint', icon: '🚓',
         body: `Officers wave you down on ${edge.name}. "Oga, particulars!" ${ok ? 'Your papers are valid.' : 'Your vehicle papers have EXPIRED.'}`,
         options: [
-          { id: 'show', label: 'Show your papers', sub: ok ? 'Usually smooth. Sometimes they find a "problem"' : 'Fine and possible impound' },
-          { id: 'settle', label: `Settle ${ngn(amt)} cash`, sub: 'Fast. Adds heat and costs clout', disabled: s.cash < amt, reason: 'No cash on you' },
-          { id: 'argue', label: 'Name-drop and argue', sub: 'Clout-based roll' },
+          { id: 'show', label: 'Show your papers', sub: ok ? 'Smooth passage (90% clear)' : 'Fine and possible impound' },
+          { id: 'settle', label: `Settle ${ngn(amt)} cash`, sub: '100% immediate release. Small clout cost', disabled: s.cash < amt, reason: 'No cash on you' },
+          { id: 'argue', label: 'Name-drop and argue', sub: `~${Math.round(argueOdds * 100)}% success chance based on Clout & Protocol` },
         ],
       });
       if (id === 'settle') {

@@ -186,39 +186,46 @@ export class Game {
     const s = this.s;
     const away = s.loc.district !== s.home.district;
     let lost = 0;
-    if (away && this.rng.chance(0.25)) lost = Math.min(s.cash, Math.round(s.cash * 0.15));
+    // Point 14 Fix: Gentle recovery nap with minimal transit fare instead of wiping 15% cash
+    if (away && this.rng.chance(0.20)) lost = Math.min(s.cash, 1500);
     s.cash -= lost;
-    await this.notify('You slept off',
-      `Body say "enough". You dozed off in ${this.district.name} and woke up hours later.` +
-      (lost ? ` Somebody lifted ${ngn(lost)} from your pocket.` : ''), '😵');
-    await this.advance(300, { sleeping: true, restRate: 0.7 });
-    s.sanity = clamp(s.sanity - 8);
-    this.log('Collapsed from exhaustion. Five hours gone.', 'bad', '😵');
+    await this.notify('Power Nap Needed',
+      `Body say "I need small rest". You took a quick power nap in ${this.district.name} to recharge.` +
+      (lost ? ` Paid ₦${lost.toLocaleString()} for taxi fare & cold drink.` : ''), '😴');
+    await this.advance(60, { sleeping: true, restRate: 0.8 });
+    s.energy = Math.max(s.energy, 45);
+    s.sanity = clamp(s.sanity - 2);
+    this.log('Took a quick power nap to recover energy.', 'warn', '😴');
   }
 
   async _burnout() {
     const s = this.s;
     s.stats.burnouts++;
-    const cost = this.drain(s.bank * 0.03);
-    await this.notify('Burnout',
-      `Too much hold-up, too many files. You switch off the phone and stay down for two days. It costs you ${ngn(cost)}.`, '🪫');
+    // Point 15 Fix: Capped medical fee and 8-hour recovery instead of skipping 2 full days
+    const cost = Math.min(5000, Math.round(s.bank * 0.01));
+    s.bank = Math.max(0, s.bank - cost);
+    await this.notify('Stress Relief Break',
+      `Hold-up and work stress caught up with you. You took an 8-hour break to rest your mind.` +
+      (cost ? ` Spent ₦${cost.toLocaleString()} on pharmacy herbs & wellness.` : ''), '🪫');
     s.loc = { district: s.home.district, spot: null };
-    await this.advance(2 * 1440, { sleeping: true, restRate: 0.8 });
-    s.sanity = Math.max(s.sanity, 50);
-    s.energy = Math.max(s.energy, 80);
-    this.log('Burnout week. You are back, slower but intact.', 'warn', '🪫');
+    await this.advance(480, { sleeping: true, restRate: 0.85 });
+    s.sanity = Math.max(s.sanity, 55);
+    s.energy = Math.max(s.energy, 75);
+    this.log('Rested and recovered from stress. Sanity restored.', 'good', '✨');
   }
 
   async _detention() {
     const s = this.s;
     s.stats.detentions++;
-    const fine = this.drain(Math.max(20_000, this.funds() * 0.12));
-    await this.notify('Picked up by the task force',
-      `Too much attention. You spend a day at the station and pay ${ngn(fine)} before they let you go. Clout takes a knock.`, '🚓');
-    await this.advance(1440);
-    s.clout = clamp(s.clout - 6);
-    s.heat = 35;
-    this.log('Detained for a day. Heat reset, clout dented.', 'bad', '🚓');
+    // Point 32 Fix: Capped clearance fine (max ₦25,000 / 4%) and 4-hour processing instead of 24h wipe
+    const fine = Math.min(25_000, Math.round(this.funds() * 0.04));
+    this.drain(fine);
+    await this.notify('Task Force Clearance',
+      `Too much street heat. You spent 4 hours at the station, cleared your record, and paid ₦${fine.toLocaleString()} fine.`, '🚓');
+    await this.advance(240);
+    s.clout = clamp(s.clout - 2);
+    s.heat = 20;
+    this.log('Cleared task force detention. Heat reset, caution advised.', 'bad', '🚓');
   }
 
   // ------------------------------------------------------------ places
