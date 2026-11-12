@@ -236,6 +236,10 @@ export class AbujaWorld3D {
     }
   }
 
+  _triggerScreenShake(intensity = 0.5) {
+    this._screenShakeIntensity = Math.min(1.5, (this._screenShakeIntensity || 0) + intensity);
+  }
+
   // ── Procedural Texture Helpers ───────────────────────────────────────────────
   /**
    * Creates a THREE.CanvasTexture by drawing on a 2D canvas.
@@ -305,16 +309,25 @@ export class AbujaWorld3D {
   /**
    * Procedural Nigeria afternoon sky — deep cobalt zenith fading to warm tropical haze horizon.
    */
-  _makeSkyTexture() {
+  _makeSkyTexture(isDusk = false) {
     return this._makeCanvasTex(4, 512, (ctx, W, H) => {
       const grad = ctx.createLinearGradient(0, 0, 0, H);
-      grad.addColorStop(0.0,  '#1a3a6b');  // Deep cobalt zenith
-      grad.addColorStop(0.2,  '#2563be');  // Rich midday blue
-      grad.addColorStop(0.5,  '#5da8d8');  // Warm atmospheric blue
-      grad.addColorStop(0.72, '#a7cfe8');  // Hazy horizon mid-blue
-      grad.addColorStop(0.88, '#d4e8f4');  // Tropical horizon haze
-      grad.addColorStop(0.96, '#f0d8b0');  // Warm golden horizon glow
-      grad.addColorStop(1.0,  '#e8c87a');  // Hot horizon (Nigerian savanna heat)
+      if (isDusk) {
+        grad.addColorStop(0.0,  '#1e1b4b');  // Deep dusk indigo
+        grad.addColorStop(0.3,  '#431407');  // Deep ember violet
+        grad.addColorStop(0.55, '#c2410c');  // Fiery sunset orange
+        grad.addColorStop(0.75, '#ea580c');  // Vibrant amber
+        grad.addColorStop(0.9,  '#f59e0b');  // Golden hour horizon
+        grad.addColorStop(1.0,  '#fef08a');  // Sun haze glow
+      } else {
+        grad.addColorStop(0.0,  '#1a3a6b');  // Deep cobalt zenith
+        grad.addColorStop(0.2,  '#2563be');  // Rich midday blue
+        grad.addColorStop(0.5,  '#5da8d8');  // Warm atmospheric blue
+        grad.addColorStop(0.72, '#a7cfe8');  // Hazy horizon mid-blue
+        grad.addColorStop(0.88, '#d4e8f4');  // Tropical horizon haze
+        grad.addColorStop(0.96, '#f0d8b0');  // Warm golden horizon glow
+        grad.addColorStop(1.0,  '#e8c87a');  // Hot horizon (Nigerian savanna heat)
+      }
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, W, H);
     });
@@ -613,26 +626,42 @@ export class AbujaWorld3D {
   _buildRoadNetwork() {
     this.roadSegments = [];
 
-    // Canvas asphalt texture with aggregate speckle
-    const asphaltTex = this._makeCanvasTex(256, 256, (ctx, W, H) => {
-      ctx.fillStyle = '#1e2230';
+    // Canvas asphalt texture with realistic aggregate speckle & asphalt wear
+    const asphaltTex = this._makeCanvasTex(512, 512, (ctx, W, H) => {
+      ctx.fillStyle = '#1c202a';
       ctx.fillRect(0, 0, W, H);
-      for (let i = 0; i < 3000; i++) {
+      // Fine aggregate mineral speckles
+      for (let i = 0; i < 6000; i++) {
         const x = Math.random() * W;
         const y = Math.random() * H;
-        const v = 20 + Math.random() * 30 | 0;
-        ctx.fillStyle = `rgba(${v},${v},${v+5},0.6)`;
-        ctx.fillRect(x, y, 1 + Math.random() * 2, 1 + Math.random() * 2);
+        const v = 25 + (Math.random() * 45 | 0);
+        ctx.fillStyle = `rgba(${v},${v + 2},${v + 6},0.75)`;
+        ctx.fillRect(x, y, 1 + (Math.random() * 2 | 0), 1 + (Math.random() * 2 | 0));
+      }
+      // Road tar tar-seam bands and bitumen variations
+      for (let j = 0; j < 30; j++) {
+        const y = Math.random() * H;
+        ctx.fillStyle = 'rgba(10, 14, 20, 0.35)';
+        ctx.fillRect(0, y, W, 2 + Math.random() * 5);
+      }
+      // Faint oil drip stains down the center
+      for (let k = 0; k < 18; k++) {
+        const ox = (W * 0.5) + (Math.random() - 0.5) * 60;
+        const oy = Math.random() * H;
+        ctx.beginPath();
+        ctx.arc(ox, oy, 4 + Math.random() * 10, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(8, 10, 14, 0.45)';
+        ctx.fill();
       }
     });
     asphaltTex.wrapS = asphaltTex.wrapT = THREE.RepeatWrapping;
-    asphaltTex.repeat.set(2, 8);
+    asphaltTex.repeat.set(2, 12);
 
     const roadMat = new THREE.MeshStandardMaterial({
       map: asphaltTex,
-      color: 0x2a2e3a,
-      roughness: 0.88,
-      metalness: 0.05
+      color: 0x222630,
+      roughness: 0.82,
+      metalness: 0.08
     });
     this.roadMat = roadMat;
     const shoulderSandMat = new THREE.MeshStandardMaterial({
@@ -690,12 +719,63 @@ export class AbujaWorld3D {
 
       if (!isRail) {
         // Center lane divider + side edge white lines + subtle tire skid tracks (like Image 1)
-        const stripeGeo = new THREE.PlaneGeometry(0.42, len * 0.94);
+        const stripeGeo = new THREE.PlaneGeometry(0.48, len * 0.94);
         stripeGeo.rotateX(-Math.PI / 2);
         const stripe = new THREE.Mesh(stripeGeo, stripeMat);
         stripe.position.set(mid.x, 0.62, mid.z);
         stripe.rotation.y = angle;
         this.scene.add(stripe);
+
+        // Yellow lane boundary lines on expressways
+        if (isExp) {
+          const yellowStripeMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
+          for (const ySide of [-1, 1]) {
+            const yGeo = new THREE.PlaneGeometry(0.24, len * 0.92);
+            yGeo.rotateX(-Math.PI / 2);
+            const yLine = new THREE.Mesh(yGeo, yellowStripeMat);
+            const yOff = ySide * (width * 0.42);
+            yLine.position.set(
+              mid.x + Math.cos(angle) * yOff,
+              0.63,
+              mid.z - Math.sin(angle) * yOff
+            );
+            yLine.rotation.y = angle;
+            this.scene.add(yLine);
+          }
+        }
+
+        // Roadside Streetlights with Nighttime Emissive Cones
+        if (len > 50) {
+          const poleMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.4, metalness: 0.8 });
+          const lanternGlowMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+          for (const sFrac of [-0.35, 0.35]) {
+            const alongZ = sFrac * len;
+            const pSide = width * 0.5 + 1.8;
+            const streetLightGroup = new THREE.Group();
+            streetLightGroup.position.set(
+              mid.x + Math.sin(angle) * alongZ + Math.cos(angle) * pSide,
+              0,
+              mid.z + Math.cos(angle) * alongZ - Math.sin(angle) * pSide
+            );
+            // Steel pole
+            const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.24, 11, 8), poleMat);
+            pole.position.y = 5.5;
+            streetLightGroup.add(pole);
+            // Curved horizontal arm over the road
+            const arm = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.16, 0.16), poleMat);
+            arm.position.set(-1.0, 10.8, 0);
+            streetLightGroup.add(arm);
+            // Lamp head
+            const lampHead = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.22, 0.45), poleMat);
+            lampHead.position.set(-2.0, 10.7, 0);
+            streetLightGroup.add(lampHead);
+            const lampBulb = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.08, 0.35), lanternGlowMat);
+            lampBulb.position.set(-2.0, 10.55, 0);
+            streetLightGroup.add(lampBulb);
+
+            this.scene.add(streetLightGroup);
+          }
+        }
 
         for (const laneSide of [-1, 1]) {
           const skidGeo = new THREE.PlaneGeometry(0.9, len * 0.88);
@@ -1851,6 +1931,7 @@ export class AbujaWorld3D {
       { color: 0x10b981, cabin: 0x0f172a, trim: 0xf8fafc, w: 2.8, h: 1.75, l: 5.4, speed: 0.26, type: 'taxi' },
       { color: 0x0f172a, cabin: 0x020617, trim: 0x38bdf8, w: 3.4, h: 2.35, l: 6.5, speed: 0.35, type: 'vip_suv' },
       { color: 0xeab308, cabin: 0x1c1917, trim: 0x111827, w: 2.1, h: 1.95, l: 3.4, speed: 0.17, type: 'keke' },
+      { color: 0x1e3a8a, cabin: 0x0f172a, trim: 0xef4444, w: 3.2, h: 2.2, l: 6.8, speed: 0.38, type: 'police_patrol' },
       { color: 0x059669, cabin: 0x064e3b, trim: 0xfacc15, w: 4.2, h: 3.6, l: 18.0, speed: 0.42, type: 'train' }
     ];
 
@@ -1926,6 +2007,24 @@ export class AbujaWorld3D {
         );
         strobe.position.set(0, spec.h + 0.65, 0);
         carGroup.add(strobe);
+      }
+
+      if (spec.type === 'police_patrol') {
+        // Red & Blue flashing police lightbar
+        const beaconRed = new THREE.Mesh(
+          new THREE.BoxGeometry(0.85, 0.35, 0.55),
+          new THREE.MeshBasicMaterial({ color: 0xef4444 })
+        );
+        beaconRed.position.set(-0.48, spec.h + 0.65, 0);
+        carGroup.add(beaconRed);
+
+        const beaconBlue = new THREE.Mesh(
+          new THREE.BoxGeometry(0.85, 0.35, 0.55),
+          new THREE.MeshBasicMaterial({ color: 0x3b82f6 })
+        );
+        beaconBlue.position.set(0.48, spec.h + 0.65, 0);
+        carGroup.add(beaconBlue);
+        carGroup.userData.policeBeacons = { red: beaconRed, blue: beaconBlue };
       }
 
       this.scene.add(carGroup);
@@ -2999,6 +3098,11 @@ export class AbujaWorld3D {
       hitNpc.rig.root.position.x += Math.sin(this.playerHeading) * 2.4;
       hitNpc.rig.root.position.z += Math.cos(this.playerHeading) * 2.4;
       this.spawnNairaRain(10);
+      // Punch impact shake & haptic feedback
+      this._triggerScreenShake(0.5);
+      if (typeof navigator?.vibrate === 'function') {
+        try { navigator.vibrate(60); } catch (e) {}
+      }
     }
 
     if (this.callbacks.onStreetPunch) {
@@ -3354,22 +3458,23 @@ export class AbujaWorld3D {
       if (this.scene.fog?.color?.setHex) this.scene.fog.color.setHex(0x94a3b8);
       if (this.scene.fog) this.scene.fog.density = 0.00065;
     } else if (isNight) {
-      setBgColor(0x1e293b);
-      if (this.scene.fog?.color?.setHex) this.scene.fog.color.setHex(0x1e293b);
+      setBgColor(0x0f172a);
+      if (this.scene.fog?.color?.setHex) this.scene.fog.color.setHex(0x0f172a);
       if (this.scene.fog) this.scene.fog.density = 0.00045;
     } else if (isDusk) {
-      setBgColor(0x7dd3fc);
-      if (this.scene.fog?.color?.setHex) this.scene.fog.color.setHex(0xfed7aa);
+      this.duskTexture = this._makeSkyTexture(true);
+      this.scene.background = this.duskTexture;
+      if (this.scene.fog?.color?.setHex) this.scene.fog.color.setHex(0xfb923c);
       if (this.scene.fog) this.scene.fog.density = 0.00038;
     } else {
-      if (!this.skyTexture) this.skyTexture = this._makeSkyTexture();
+      if (!this.skyTexture) this.skyTexture = this._makeSkyTexture(false);
       this.scene.background = this.skyTexture;
       if (this.scene.fog?.color?.setHex) this.scene.fog.color.setHex(0xbae6fd);
       if (this.scene.fog) this.scene.fog.density = 0.00032;
     }
 
-    this.sunLight.intensity = isNight ? 0.95 : isDusk ? 1.35 : 1.75;
-    this.sunLight.color.setHex(isDusk ? 0xfdba74 : isNight ? 0x93c5fd : 0xfffbeb);
+    this.sunLight.intensity = isNight ? 0.45 : isDusk ? 1.45 : 1.75;
+    this.sunLight.color.setHex(isDusk ? 0xf97316 : isNight ? 0x93c5fd : 0xfffbeb);
 
     if (this.roadMat) {
       this.roadMat.roughness = isWet ? 0.15 : 0.88;
@@ -3562,6 +3667,14 @@ export class AbujaWorld3D {
       // Distance culling for traffic cars
       const distCar = Math.hypot(car.group.position.x - this.playerPos.x, car.group.position.z - this.playerPos.z);
       car.group.visible = distCar < 220;
+
+      // Police / Security Patrol flashing lights animation
+      if (car.group.visible && car.group.userData?.policeBeacons) {
+        const flashPhase = (this.elapsedTime * 8) % 2;
+        const pb = car.group.userData.policeBeacons;
+        if (pb.red?.material) pb.red.material.color.setHex(flashPhase < 1 ? 0xff0000 : 0x450a0a);
+        if (pb.blue?.material) pb.blue.material.color.setHex(flashPhase >= 1 ? 0x0066ff : 0x082f49);
+      }
     }
 
     // Animate street pedestrians walking along compounds (or knocked down like Image 4)
@@ -3736,6 +3849,11 @@ export class AbujaWorld3D {
         if (this.inVehicle && this.playerSpeed > 14) {
           this.playerSpeed = -this.playerSpeed * 0.28;
           this._spawnCollisionSparks(this.playerPos.x, this.playerPos.z);
+          // GTA Crash Screen Shake & Haptic rumble
+          if (typeof navigator?.vibrate === 'function') {
+            try { navigator.vibrate([40, 30, 80]); } catch (e) {}
+          }
+          this._triggerScreenShake(0.8);
         } else {
           this.playerSpeed *= 0.45;
         }
@@ -3847,6 +3965,15 @@ export class AbujaWorld3D {
       Math.max(minCamHeight, vertDist + 1.5),
       this.playerPos.z + Math.cos(this.cameraYaw) * horizDist
     );
+
+    // Apply GTA Screen Shake offset if active
+    if (this._screenShakeIntensity > 0.001) {
+      desiredCam.x += (Math.random() - 0.5) * this._screenShakeIntensity * 1.5;
+      desiredCam.y += (Math.random() - 0.5) * this._screenShakeIntensity * 1.2;
+      desiredCam.z += (Math.random() - 0.5) * this._screenShakeIntensity * 1.5;
+      this._screenShakeIntensity = THREE.MathUtils.lerp(this._screenShakeIntensity, 0, dt * 6.5);
+    }
+
     this.camera.position.lerp(desiredCam, Math.min(1, dt * 10));
     this.camera.lookAt(this.playerPos.x, lookTargetY, this.playerPos.z);
   }
