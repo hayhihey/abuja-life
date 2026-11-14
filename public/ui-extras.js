@@ -310,7 +310,25 @@ export function initUIExtras(app) {
     .ux-chip.sel{border-color:#4ade80;background:rgba(16,185,129,.2);color:#fff}
     .ux-close{float:right;background:none;border:none;color:#94a3b8;font-size:22px;cursor:pointer}
     .ux-done{margin-top:16px;width:100%;padding:13px;border:none;border-radius:10px;background:#10b981;color:#fff;font-weight:800;font-size:14px;cursor:pointer}
-    @media(max-width:768px){.ux-dock{left:8px;top:auto;bottom:185px;transform:none}.ux-dock button{width:40px;height:40px;font-size:18px}.ux-tip{display:none}}
+    /* Feature #12: Diegetic 9jaPhone Smartphone UI */
+    .ux-phone-fab{position:fixed;right:16px;bottom:148px;z-index:85;width:50px;height:50px;border-radius:16px;border:2px solid #4ade80;background:linear-gradient(145deg,#0f172a,#064e3b);color:#fff;font-size:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.6);transition:transform .18s}
+    .ux-phone-fab:hover,.ux-phone-fab:active{transform:scale(1.08)}
+    .ux-phone{position:fixed;right:16px;bottom:14px;width:310px;height:510px;max-height:86vh;background:#060b14;border:4px solid #334155;border-radius:32px;z-index:220;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.85);transform:translateY(115%);transition:transform .28s cubic-bezier(.2,1,.3,1);color:#f8fafc;font-family:inherit}
+    .ux-phone.open{transform:translateY(0)}
+    .ux-phone-notch{background:#020617;padding:7px 14px;display:flex;justify-content:space-between;align-items:center;font-size:10px;font-weight:700;color:#94a3b8;border-bottom:1px solid rgba(255,255,255,.07)}
+    .ux-phone-nav{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:6px 8px;background:#0b1324;border-bottom:1px solid rgba(255,255,255,.08)}
+    .ux-phone-tab{padding:6px 2px;border-radius:9px;border:none;background:transparent;color:#94a3b8;font-size:10px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px}
+    .ux-phone-tab span{font-size:16px}
+    .ux-phone-tab.active{background:rgba(16,185,129,.22);color:#4ade80}
+    .ux-phone-body{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
+    .ux-phone-btn{padding:9px 11px;border-radius:10px;border:1px solid rgba(255,255,255,.14);background:#111c33;color:#fff;font-size:11.5px;font-weight:700;cursor:pointer;display:flex;justify-content:space-between;align-items:center;text-align:left}
+    .ux-phone-btn:hover,.ux-phone-btn:active{background:#1e293b;border-color:#4ade80}
+    /* Feature #3: 3D Build & Buy Grid Toolbar */
+    .ux-build-bar{position:fixed;top:54px;left:50%;transform:translateX(-50%);z-index:190;background:rgba(9,13,22,.94);border:1.5px solid #4ade80;border-radius:14px;padding:7px 10px;display:none;align-items:center;gap:6px;flex-wrap:wrap;box-shadow:0 12px 32px rgba(0,0,0,.65);max-width:96vw}
+    .ux-build-bar.open{display:flex}
+    .ux-build-bar button{padding:6px 9px;border-radius:8px;border:1px solid rgba(255,255,255,.18);background:#1e293b;color:#fff;font-size:11px;font-weight:700;cursor:pointer}
+    .ux-build-bar button.active{background:#059669;border-color:#4ade80}
+    @media(max-width:768px){.ux-dock{left:8px;top:auto;bottom:185px;transform:none}.ux-dock button{width:40px;height:40px;font-size:18px}.ux-tip{display:none}.ux-phone{right:8px;width:min(300px,94vw);height:460px}}
   `;
   document.head.appendChild(style);
 
@@ -486,27 +504,58 @@ export function initUIExtras(app) {
     let items = [];
 
     if (context?.type === 'npc') {
+      const npcId = context.id || null;
+      const npcName = context.username || 'FCT Resident';
       items = [
         {
-          icon: '👋',
-          label: 'Greet',
+          icon: '🗣️',
+          label: 'Banter',
           run: () => {
+            app.afrobeats?.playPidginChirp('greet');
+            const res = app.world3d?.interactWithPedestrian?.(npcId, 'banter');
             app.game.stat('clout', 3);
-            if (app.world3d?.showThoughtBubble) app.world3d.showThoughtBubble('👋', `How far, ${context.username || 'bro'}!`);
-            app.showToast(`👋 Greeted ${context.username || 'neighbor'} (+3 Clout)`);
+            app.game.stat('sanity', 4);
+            if (app.world3d?.showThoughtBubble) app.world3d.showThoughtBubble('🗣️', `How far, ${npcName}!`);
+            app.showToast(`🗣️ ${npcName}: "${res?.reply || 'Nothing spoil!'}" (❤️ ${res?.affinity || 58})`);
+            app._renderAll();
+          }
+        },
+        {
+          icon: '😍',
+          label: 'Flirt/Toast',
+          run: () => {
+            app.afrobeats?.playPidginChirp('flirt');
+            const res = app.world3d?.interactWithPedestrian?.(npcId, 'flirt');
+            app.game.stat('clout', 5);
+            if (app.game.s.sims?.motives) app.game.s.sims.motives.social = Math.min(100, (app.game.s.sims.motives.social || 50) + 22);
+            if (app.world3d?.showThoughtBubble) app.world3d.showThoughtBubble('😍', 'Steeze 100%!');
+            app.showToast(`😍 ${npcName}: "${res?.reply || 'Your steeze choke!'}" (❤️ ${res?.affinity || 64})`);
             app._renderAll();
           }
         },
         {
           icon: '💸',
-          label: 'Spray ₦',
+          label: 'Spray ₦2k',
           run: () => {
-            if (!app.game.canAfford(1000)) return app.showToast('⚠️ Need ₦1,000 cash to spray!');
-            app.game.pay(1000);
-            app.game.stat('clout', 8);
+            if (!app.game.canAfford(2000)) return app.showToast('⚠️ Need ₦2,000 cash to spray!');
+            app.game.pay(2000);
+            app.game.stat('clout', 10);
+            app.afrobeats?.playPidginChirp('steeze');
+            const res = app.world3d?.interactWithPedestrian?.(npcId, 'spray');
             if (app.world3d?.spawnNairaRain) app.world3d.spawnNairaRain(18);
-            if (app.world3d?.showThoughtBubble) app.world3d.showThoughtBubble('💸', 'Spraying Naira!');
-            app.showToast(`💸 Sprayed ₦1,000 on ${context.username || 'player'}! (+8 Clout)`);
+            if (app.world3d?.showThoughtBubble) app.world3d.showThoughtBubble('💸', 'Twale Odogwu!');
+            app.showToast(`💸 Sprayed ₦2,000 on ${npcName}! (+10 Clout • ❤️ ${res?.affinity || 75})`);
+            app._renderAll();
+          }
+        },
+        {
+          icon: '🤝',
+          label: 'Negotiate',
+          run: () => {
+            app.afrobeats?.playPidginChirp('omo');
+            const res = app.world3d?.interactWithPedestrian?.(npcId, 'negotiate');
+            app.game.stat('network', 6);
+            app.showToast(`🤝 ${npcName}: "${res?.reply || 'Make we run am!'}" (+6 Network)`);
             app._renderAll();
           }
         },
@@ -518,8 +567,7 @@ export function initUIExtras(app) {
             app._startWhotGame?.();
           }
         },
-        { icon: '💬', label: 'DM Chat', run: () => app.openDeckTab('multiplayer') },
-        { icon: '🎨', label: 'Style', run: openStudio }
+        { icon: '📱', label: '9jaPhone', run: () => openPhone('chat') }
       ];
     } else if (context?.type === 'house') {
       items = [
@@ -532,12 +580,9 @@ export function initUIExtras(app) {
           }
         },
         {
-          icon: '🛒',
-          label: 'Build/Buy',
-          run: () => {
-            document.querySelector('[data-subtab="catalog"]')?.click();
-            app.openDeckTab('sims');
-          }
+          icon: '📐',
+          label: '3D Grid',
+          run: () => toggleBuildGrid('generator')
         },
         {
           icon: '⚡',
@@ -549,16 +594,31 @@ export function initUIExtras(app) {
             const genObj = sims.installedObjects.find((id) => id.startsWith('gen_')) || 'gen_tiger';
             const actionId = sims.utilities.generatorRunning ? 'turn_off_gen' : 'turn_on_gen';
             const res = runSmartObjectAction(app.game, genObj, actionId);
+            app.world3d?.performSmartObjectAnimation?.('gen', 'Checking Compound Gen...', 2400);
             app.showToast(res.ok ? (sims.utilities.generatorRunning ? '⚡ Generator humming!' : 'Generator stopped.') : `⚠️ ${res.reason}`);
             app._renderAll();
           }
         },
         {
-          icon: '💧',
-          label: 'Pump Water',
+          icon: '🍜',
+          label: 'Cook Indomie',
           run: () => {
-            const res = runSmartObjectAction(app.game, 'overhead_tank_2000l', 'pump_borehole_water');
-            app.showToast(res.ok ? '💧 Borehole pumped 1,000L into Geepee tank!' : `⚠️ ${res.reason}`);
+            app.world3d?.performSmartObjectAnimation?.('cook', 'Cooking Indomie & Egg...', 3200);
+            app.game.stat('energy', 16);
+            if (app.game.s.sims?.motives) app.game.s.sims.motives.hunger = Math.min(100, (app.game.s.sims.motives.hunger || 50) + 40);
+            app.showToast('🍜 Cooked hot Indomie & Egg at compound stove! (+40 Hunger)');
+            app._renderAll();
+          }
+        },
+        {
+          icon: '😴',
+          label: 'Sleep Bed',
+          run: async () => {
+            app.world3d?.performSmartObjectAnimation?.('sleep', 'Sleeping in Royal Bed...', 3200);
+            await app.game.advance(60, { sleeping: true });
+            app.game.stat('energy', 25);
+            if (app.game.s.sims?.motives) app.game.s.sims.motives.energy = Math.min(100, (app.game.s.sims.motives.energy || 50) + 45);
+            app.showToast('😴 Slept in compound bed! (+25 Energy)');
             app._renderAll();
           }
         },
@@ -567,14 +627,15 @@ export function initUIExtras(app) {
     } else {
       // General simulation pie items
       items = [
-        { icon: '🏎️', label: 'Car / Walk', run: click('btn-toggle-drive') },
-        { icon: '🤖', label: 'Autopilot', run: toggleAutopilot },
+        { icon: '📱', label: '9jaPhone', run: () => openPhone('opay') },
+        { icon: '📻', label: 'Radio FM', run: () => openRadioWheel() },
+        { icon: '📐', label: '3D Build', run: () => toggleBuildGrid('generator') },
         {
           icon: '🏠',
-          label: 'Cutaway',
+          label: 'Dollhouse',
           run: () => {
             const mode = app.world3d ? app.world3d.cycleWallCutaway() : 'up';
-            app.showToast(`🏠 Wall Cutaway: ${mode.toUpperCase()}`);
+            app.showToast(`🏠 Sims Dollhouse Cutaway: ${mode.toUpperCase()}`);
           }
         },
         {
@@ -585,38 +646,23 @@ export function initUIExtras(app) {
             const cur = app.world3d?.weatherPreset || 'sunny';
             const next = presets[(presets.indexOf(cur) + 1) % presets.length];
             app.world3d?.setWeatherPreset(next);
-            app.showToast(`🌤️ Weather: ${next.toUpperCase()}`);
+            app.showToast(`🌤️ Abuja Weather: ${next.toUpperCase()}`);
           }
         },
         {
-          icon: '🥩',
-          label: 'Eat Suya',
+          icon: '🥨',
+          label: 'Hawker Game',
+          run: () => openTrafficHawkerGame()
+        },
+        {
+          icon: '🚕',
+          label: 'Hail Cab',
           run: () => {
-            const cost = 2500;
-            if (!app.game.canAfford(cost)) return app.showToast('⚠️ Need ₦2,500 for suya!');
-            app.game.pay(cost);
-            app.game.stat('energy', 12);
-            app.game.stat('sanity', 6);
-            if (app.game.s.sims?.motives) app.game.s.sims.motives.hunger = Math.min(100, (app.game.s.sims.motives.hunger || 50) + 35);
-            if (app.world3d?.showThoughtBubble) app.world3d.showThoughtBubble('🥩', 'Tasty Abuja Suya!');
-            app.showToast('🥩 Suya & pepper — +12 Energy, +6 Sanity');
-            app._renderAll();
+            app.world3d?.hailOrCommandeerVehicle?.(null, 'cab', app.selectedCommuteDest || 'wuse2');
+            app.showToast('🚕 Green Cab hailed! Cruising along GPS route.');
           }
         },
-        {
-          icon: '😴',
-          label: 'Nap 1h',
-          run: async () => {
-            await app.game.advance(60, { sleeping: true });
-            app.game.stat('energy', 18);
-            if (app.game.s.sims?.motives) app.game.s.sims.motives.energy = Math.min(100, (app.game.s.sims.motives.energy || 50) + 25);
-            if (app.world3d?.showThoughtBubble) app.world3d.showThoughtBubble('😴', 'Rested!');
-            app.showToast('😴 Quick nap — +18 Energy');
-            app._renderAll();
-          }
-        },
-        { icon: '🗺️', label: 'GPS Map', run: () => app.openNigeriaGPSModal() },
-        { icon: '🎨', label: 'Style', run: openStudio }
+        { icon: '🎨', label: 'Wardrobe', run: openStudio }
       ];
     }
 
@@ -640,13 +686,491 @@ export function initUIExtras(app) {
     pieOpen = true;
   }
 
+  // ---- Feature #10: In-Car Nigerian Radio Station Wheel ----
+  function openRadioWheel() {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const cx = w / 2;
+    const cy = h / 2;
+    const R = Math.min(w, h) < 520 ? 112 : 138;
+    const stations = app.afrobeats?.stations || [
+      { freq: '96.9 FM', name: 'Cool FM Abuja' },
+      { freq: '99.5 FM', name: 'Wazobia FM (Pidgin)' },
+      { freq: '98.3 FM', name: 'Hot FM Abuja' },
+      { freq: '96.5 FM', name: 'Soundcity Radio' },
+      { freq: '104.5 FM', name: 'Amapiano Log-Drum' }
+    ];
+    const icons = ['🎵', '🗣️', '🔥', '🎷', '🎹'];
+    const items = stations.map((st, idx) => ({
+      icon: icons[idx % icons.length],
+      label: st.freq,
+      run: () => {
+        if (app.afrobeats) {
+          const picked = app.afrobeats.selectStation(idx);
+          app.afrobeats.setExteriorMuffle(!app.world3d?.inVehicle);
+          const lbl = document.getElementById('hud-music-label');
+          if (lbl) lbl.textContent = picked.freq;
+          app.showToast(`📻 Tuned to ${picked.name} (${picked.freq}) — ${picked.dj}`);
+        }
+      }
+    }));
+    items.push({
+      icon: '🔇',
+      label: 'Radio OFF',
+      run: () => {
+        if (app.afrobeats?.isPlaying) app.afrobeats.stop();
+        const lbl = document.getElementById('hud-music-label');
+        if (lbl) lbl.textContent = 'Radio Off';
+        app.showToast('🔇 Car Radio Muted');
+      }
+    });
+
+    pie.innerHTML = `<div class="ux-pie-center" style="left:${cx}px;top:${cy}px">📻 FCT<br>RADIO</div>`;
+    items.forEach((it, i) => {
+      const a = (-Math.PI / 2) + (i / items.length) * Math.PI * 2;
+      const el = document.createElement('div');
+      el.className = 'ux-pie-item';
+      el.style.left = `${cx + Math.cos(a) * R}px`;
+      el.style.top = `${cy + Math.sin(a) * R}px`;
+      el.innerHTML = `<span>${it.icon}</span>${it.label}`;
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closePie();
+        it.run();
+      });
+      pie.appendChild(el);
+    });
+    pie.classList.add('open');
+    pieOpen = true;
+  }
+
+  // ---- Feature #3: Interactive 3D Build & Buy Placement Grid Toolbar ----
+  const buildBar = document.createElement('div');
+  buildBar.id = 'ux-build-bar';
+  buildBar.className = 'ux-build-bar';
+  document.body.appendChild(buildBar);
+
+  function renderBuildBar() {
+    const cur = app.world3d?.buildGridMode?.itemType || 'generator';
+    const catalog = [
+      { id: 'generator', label: '⚡ Mikano Gen (₦25k)' },
+      { id: 'solar', label: '☀️ Solar Array (₦25k)' },
+      { id: 'tank', label: '💧 Geepee Tank (₦25k)' },
+      { id: 'suya', label: '🔥 Suya Grill (₦25k)' },
+      { id: 'sofa', label: '🛋️ Royal Sofa (₦25k)' }
+    ];
+    buildBar.innerHTML = `
+      <span style="font-size:11px;font-weight:800;color:#4ade80;padding:0 4px">📐 1m×1m 3D LOT GRID:</span>
+      ${catalog.map((c) => `<button data-bitem="${c.id}" class="${cur === c.id ? 'active' : ''}">${c.label}</button>`).join('')}
+      <button id="ux-build-rot" style="background:#0284c7">🔄 Rotate (R)</button>
+      <button id="ux-build-place" style="background:#16a34a">✅ Place Here</button>
+      <button id="ux-build-exit" style="background:#dc2626">✕ Exit</button>
+    `;
+    buildBar.querySelectorAll('[data-bitem]').forEach((btn) => {
+      btn.onclick = () => {
+        app.world3d?.setBuildPreviewItem?.(btn.dataset.bitem);
+        renderBuildBar();
+      };
+    });
+    buildBar.querySelector('#ux-build-rot').onclick = () => app.world3d?.rotateBuildPreview?.();
+    buildBar.querySelector('#ux-build-place').onclick = () => {
+      if (!app.game.canAfford(25000)) return app.showToast('⚠️ Need ₦25,000 cash to place 3D compound item!');
+      app.game.pay(25000);
+      app.game.stat('clout', 6);
+      app.world3d?.placeBuildPreview?.();
+      app.afrobeats?.playSfx?.('cash');
+      app.showToast('✅ Placed 3D item on your compound lot! (+6 Clout)');
+      app._renderAll();
+    };
+    buildBar.querySelector('#ux-build-exit').onclick = () => toggleBuildGrid(null, false);
+  }
+
+  function toggleBuildGrid(itemType = 'generator', forceState = null) {
+    const active = app.world3d?.toggleBuildBuyGridMode?.(itemType, forceState);
+    buildBar.classList.toggle('open', Boolean(active));
+    if (active) {
+      renderBuildBar();
+      app.showToast('📐 3D Build Grid Active! Tap ground or [✅ Place Here] to drop furniture.');
+    }
+    return active;
+  }
+
+  // ---- Feature #14A: Go-Slow Traffic Hawker Mini-Game ----
+  const miniModal = document.createElement('div');
+  miniModal.className = 'ux-modal';
+  document.body.appendChild(miniModal);
+
+  function openTrafficHawkerGame() {
+    let lane = 1; // 0 = Left, 1 = Middle, 2 = Right
+    let earnings = 0;
+    let timeLeft = 18;
+    let active = true;
+    let entities = [];
+
+    const renderHawker = () => {
+      miniModal.innerHTML = `
+        <div class="ux-card" style="max-width:420px;text-align:center">
+          <button class="ux-close" id="ux-hawk-close">✕</button>
+          <h2>🥨 Go-Slow Traffic Hawker</h2>
+          <div style="font-size:12px;color:#94a3b8;margin-bottom:8px">Weave through Mararaba-Nyanya traffic! Tap buyers (✋🏾) for ₦5,000 & dodge speeding cars (🚘)!</div>
+          <div style="display:flex;justify-content:space-between;background:#111c33;padding:8px 12px;border-radius:10px;font-weight:800;font-size:13px;margin-bottom:10px">
+            <span>⏱️ <span id="hawk-time">${timeLeft}</span>s</span>
+            <span style="color:#4ade80">💰 Earned: ₦<span id="hawk-cash">${earnings.toLocaleString()}</span></span>
+          </div>
+          <div id="hawk-road" style="position:relative;height:230px;background:#1e293b;border:2px solid #475569;border-radius:12px;overflow:hidden;display:grid;grid-template-columns:repeat(3,1fr)">
+            <div style="border-right:2px dashed rgba(255,255,255,.2)"></div>
+            <div style="border-right:2px dashed rgba(255,255,255,.2)"></div>
+            <div></div>
+            <div id="hawk-entities" style="position:absolute;inset:0;pointer-events:none"></div>
+            <div id="hawk-player" style="position:absolute;bottom:12px;left:${lane * 33.3 + 11}%;font-size:28px;transition:left .12s">🏃🏾‍♂️🧺</div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px">
+            <button class="ux-chip" id="hawk-l" style="justify-content:center">⬅️ Left Lane</button>
+            <button class="ux-chip" id="hawk-m" style="justify-content:center">⬆️ Mid Lane</button>
+            <button class="ux-chip" id="hawk-r" style="justify-content:center">➡️ Right Lane</button>
+          </div>
+        </div>
+      `;
+    };
+
+    renderHawker();
+    miniModal.classList.add('open');
+
+    const setLane = (l) => {
+      lane = l;
+      const p = miniModal.querySelector('#hawk-player');
+      if (p) p.style.left = `${lane * 33.3 + 11}%`;
+    };
+    miniModal.querySelector('#hawk-l').onclick = () => setLane(0);
+    miniModal.querySelector('#hawk-m').onclick = () => setLane(1);
+    miniModal.querySelector('#hawk-r').onclick = () => setLane(2);
+
+    const stopGame = (msg) => {
+      if (!active) return;
+      active = false;
+      clearInterval(loop);
+      clearInterval(clock);
+      miniModal.classList.remove('open');
+      if (earnings > 0) {
+        app.game.earn(earnings);
+        app.game.stat('clout', 4);
+        app.afrobeats?.playSfx?.('cash');
+      }
+      app.showToast(msg || `🥨 Traffic Hawking finished! Pocketed ₦${earnings.toLocaleString()}`);
+      app._renderAll();
+    };
+    miniModal.querySelector('#ux-hawk-close').onclick = () => stopGame();
+
+    const loop = setInterval(() => {
+      if (!active) return;
+      if (Math.random() < 0.55) {
+        entities.push({
+          lane: Math.floor(Math.random() * 3),
+          y: 0,
+          type: Math.random() < 0.65 ? 'buyer' : 'car'
+        });
+      }
+      const box = miniModal.querySelector('#hawk-entities');
+      if (!box) return;
+      box.innerHTML = '';
+      for (let i = entities.length - 1; i >= 0; i--) {
+        const e = entities[i];
+        e.y += 18;
+        if (e.y >= 175 && e.y <= 215 && e.lane === lane) {
+          if (e.type === 'buyer') {
+            earnings += 5000;
+            app.afrobeats?.playSfx?.('cash');
+            const cEl = miniModal.querySelector('#hawk-cash');
+            if (cEl) cEl.textContent = earnings.toLocaleString();
+          } else {
+            earnings = Math.max(0, earnings - 2500);
+            app.afrobeats?.playPidginChirp?.('wahala');
+          }
+          entities.splice(i, 1);
+          continue;
+        }
+        if (e.y > 230) {
+          entities.splice(i, 1);
+          continue;
+        }
+        const d = document.createElement('div');
+        d.style.cssText = `position:absolute;top:${e.y}px;left:${e.lane * 33.3 + 11}%;font-size:24px`;
+        d.textContent = e.type === 'buyer' ? '✋🏾💵' : '🚘💨';
+        box.appendChild(d);
+      }
+    }, 180);
+
+    const clock = setInterval(() => {
+      timeLeft -= 1;
+      const tEl = miniModal.querySelector('#hawk-time');
+      if (tEl) tEl.textContent = String(timeLeft);
+      if (timeLeft <= 0) {
+        stopGame(`🥨 Sold Gala & La Casera in go-slow! Earned ₦${earnings.toLocaleString()}!`);
+      }
+    }, 1000);
+  }
+
+  // ---- Feature #14B: VIO / Police Checkpoint Bribe Timing Slider ----
+  function openBribeSliderGame() {
+    let pos = 50;
+    let dir = 1;
+    let active = true;
+
+    miniModal.innerHTML = `
+      <div class="ux-card" style="max-width:400px;text-align:center">
+        <button class="ux-close" id="ux-bribe-close">✕</button>
+        <h2>🚓 VIO / Checkpoint Negotiation</h2>
+        <div style="font-size:12px;color:#94a3b8;margin-bottom:12px">"Oga, wetin you carry for booth?" Hit the <b style="color:#4ade80">GREEN SWEET-MOUTH ZONE (40%–65%)</b> to settle checkpoint heat for ₦2,000!</div>
+        <div style="position:relative;height:32px;background:linear-gradient(90deg,#ef4444 0%,#f59e0b 38%,#22c55e 40%,#22c55e 65%,#f59e0b 67%,#ef4444 100%);border-radius:16px;border:2px solid #fff;overflow:hidden;margin:16px 0">
+          <div id="bribe-needle" style="position:absolute;top:0;bottom:0;left:50%;width:8px;background:#fff;box-shadow:0 0 10px #000"></div>
+        </div>
+        <button class="ux-done" id="ux-bribe-hit">🗣️ DROP "PURE WATER" SETTLEMENT (₦2,000)</button>
+      </div>
+    `;
+    miniModal.classList.add('open');
+
+    const anim = setInterval(() => {
+      if (!active) return;
+      pos += dir * 4.5;
+      if (pos >= 96) { pos = 96; dir = -1; }
+      if (pos <= 4) { pos = 4; dir = 1; }
+      const needle = miniModal.querySelector('#bribe-needle');
+      if (needle) needle.style.left = `${pos}%`;
+    }, 30);
+
+    const close = () => {
+      active = false;
+      clearInterval(anim);
+      miniModal.classList.remove('open');
+    };
+    miniModal.querySelector('#ux-bribe-close').onclick = close;
+    miniModal.querySelector('#ux-bribe-hit').onclick = () => {
+      const won = pos >= 38 && pos <= 67;
+      close();
+      if (won) {
+        if (app.game.canAfford(2000)) app.game.pay(2000);
+        app.game.s.heat = 0;
+        if (app.game.s.social) app.game.s.social.efccHeat = 0;
+        app.world3d?.updateWantedPursuitLevel?.(0);
+        app.afrobeats?.playPidginChirp?.('steeze');
+        app.showToast('🤝 "Oga pass with steeze!" — Wanted Heat cleared to 0★!');
+      } else {
+        app.afrobeats?.playPidginChirp?.('wahala');
+        app.showToast('🚨 Officer vexed! Missed the sweet-mouth zone (+10 Heat).');
+        app.game.stat('heat', 10);
+      }
+      app._renderAll();
+    };
+  }
+
+  // ---- Feature #12: Diegetic In-Game Smartphone (9jaPhone / Tecno Phantom) ----
+  const phoneFab = document.createElement('button');
+  phoneFab.id = 'ux-btn-phone';
+  phoneFab.className = 'ux-phone-fab';
+  phoneFab.title = 'Open 9jaPhone (OPay, 9jaChat, Bolt, CloutTok)';
+  phoneFab.innerHTML = '📱';
+  document.body.appendChild(phoneFab);
+
+  const phoneEl = document.createElement('div');
+  phoneEl.id = 'ux-9japhone';
+  phoneEl.className = 'ux-phone';
+  document.body.appendChild(phoneEl);
+
+  let activePhoneApp = 'opay';
+
+  function renderPhone(tab = activePhoneApp) {
+    activePhoneApp = tab;
+    const s = app.game?.s || {};
+    const cash = Math.round(s.cash || 0);
+    const bank = Math.round(s.bank || 0);
+    const contacts = s.contacts || [];
+
+    let bodyHtml = '';
+    if (tab === 'opay') {
+      bodyHtml = `
+        <div style="background:linear-gradient(135deg,#059669,#047857);padding:12px;border-radius:14px">
+          <div style="font-size:10px;opacity:.85">OPAY MICROFINANCE • ZERO FEE</div>
+          <div style="font-size:19px;font-weight:900;margin:3px 0">₦${bank.toLocaleString()}</div>
+          <div style="font-size:11px;opacity:.9">Pocket Cash: ₦${cash.toLocaleString()}</div>
+        </div>
+        <button class="ux-phone-btn" id="ph-dep-50k"><span>🏦 Save ₦50,000 to OPay</span><span>+Interest</span></button>
+        <button class="ux-phone-btn" id="ph-wit-50k"><span>💵 Withdraw ₦50,000 Cash</span><span>Instant</span></button>
+        <button class="ux-phone-btn" id="ph-dep-all"><span>🔒 Lock 50% Pocket Cash in Bank</span><span>Safe</span></button>
+        <button class="ux-phone-btn" id="ph-bribe"><span>🚓 Settle VIO/EFCC Heat Slider</span><span>Mini-Game</span></button>
+      `;
+    } else if (tab === 'chat') {
+      bodyHtml = `
+        <div style="font-size:11px;color:#94a3b8;font-weight:700">9JACHAT • FCT CONTACTS (${contacts.length})</div>
+        ${contacts.slice(0, 5).map((c) => `
+          <div style="background:#111c33;padding:8px 10px;border-radius:10px;display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div style="font-size:12px;font-weight:800">${c.name}</div>
+              <div style="font-size:10px;color:#94a3b8">${c.role || 'FCT Connect'} • ❤️ ${c.trust || 50}</div>
+            </div>
+            <button class="ux-chip" data-ph-checkin="${c.id}" style="padding:5px 8px;font-size:10px">📲 Ping</button>
+          </div>
+        `).join('') || '<div style="font-size:11px;color:#64748b">Walk up to Abuja pedestrians and tap Banter to build your network!</div>'}
+        <button class="ux-phone-btn" id="ph-open-mp"><span>🌍 Open Live FCT Multiplayer Chat</span><span>💬</span></button>
+      `;
+    } else if (tab === 'bolt') {
+      const dists = ['wuse2', 'maitama', 'asokoro', 'gwarinpa', 'jabi', 'cbd', 'lugbe', 'kubwa', 'nyanya'];
+      bodyHtml = `
+        <div style="font-size:11px;color:#4ade80;font-weight:800">🚕 BOLT FCT • GREEN CAB & GPS</div>
+        <div style="font-size:10.5px;color:#94a3b8">Tap any district to draw the 3D purple GPS route & hail an automated Green Cab:</div>
+        ${dists.map((dId) => `
+          <button class="ux-phone-btn" data-ph-bolt="${dId}">
+            <span>🚕 Ride to ${dId.toUpperCase()}</span>
+            <span style="color:#4ade80">₦1,500</span>
+          </button>
+        `).join('')}
+      `;
+    } else {
+      bodyHtml = `
+        <div style="font-size:11px;color:#facc15;font-weight:800">🔥 CLOUTTOK & STREET ARCADE</div>
+        <button class="ux-phone-btn" id="ph-clout-post"><span>📸 Post Abuja Lifestyle Flex</span><span>+Clout</span></button>
+        <button class="ux-phone-btn" id="ph-hawker"><span>🥨 Play Go-Slow Traffic Hawker</span><span>Earn ₦₦</span></button>
+        <button class="ux-phone-btn" id="ph-grid"><span>📐 Toggle 3D Lot Build Grid</span><span>Sims 3D</span></button>
+        <button class="ux-phone-btn" id="ph-radio"><span>📻 Open In-Car FM Radio Wheel</span><span>5 Stations</span></button>
+        <button class="ux-phone-btn" id="ph-wardrobe"><span>🎨 Open 3D Nigerian Wardrobe</span><span>Agbada/Fila</span></button>
+      `;
+    }
+
+    phoneEl.innerHTML = `
+      <div class="ux-phone-notch">
+        <span>MTN-NG 5G 📶</span>
+        <span>9jaPhone OS</span>
+        <span id="ph-close" style="cursor:pointer;color:#f87171;font-size:13px">✕</span>
+      </div>
+      <div class="ux-phone-nav">
+        <button class="ux-phone-tab ${tab === 'opay' ? 'active' : ''}" data-phtab="opay"><span>💚</span>OPay</button>
+        <button class="ux-phone-tab ${tab === 'chat' ? 'active' : ''}" data-phtab="chat"><span>💬</span>9jaChat</button>
+        <button class="ux-phone-tab ${tab === 'bolt' ? 'active' : ''}" data-phtab="bolt"><span>🚕</span>Bolt FCT</button>
+        <button class="ux-phone-tab ${tab === 'clout' ? 'active' : ''}" data-phtab="clout"><span>🔥</span>Arcade</button>
+      </div>
+      <div class="ux-phone-body">${bodyHtml}</div>
+    `;
+
+    phoneEl.querySelector('#ph-close').onclick = () => phoneEl.classList.remove('open');
+    phoneEl.querySelectorAll('[data-phtab]').forEach((b) => {
+      b.onclick = () => renderPhone(b.dataset.phtab);
+    });
+
+    phoneEl.querySelector('#ph-dep-50k')?.addEventListener('click', () => {
+      if (!app.game.canAfford(50000)) return app.showToast('⚠️ Need ₦50,000 pocket cash!');
+      app.game.pay(50000);
+      app.game.s.bank = (app.game.s.bank || 0) + 50000;
+      app.afrobeats?.playSfx?.('cash');
+      app.showToast('💚 Saved ₦50,000 into OPay Wallet!');
+      app._renderAll();
+      renderPhone('opay');
+    });
+    phoneEl.querySelector('#ph-wit-50k')?.addEventListener('click', () => {
+      if ((app.game.s.bank || 0) < 50000) return app.showToast('⚠️ Need ₦50,000 in OPay bank!');
+      app.game.s.bank -= 50000;
+      app.game.earn(50000);
+      app.afrobeats?.playSfx?.('cash');
+      app.showToast('💵 Withdrew ₦50,000 cash from OPay!');
+      app._renderAll();
+      renderPhone('opay');
+    });
+    phoneEl.querySelector('#ph-dep-all')?.addEventListener('click', () => {
+      const amt = Math.floor((app.game.s.cash || 0) * 0.5);
+      if (amt < 1000) return app.showToast('⚠️ Pocket cash too low!');
+      app.game.pay(amt);
+      app.game.s.bank = (app.game.s.bank || 0) + amt;
+      app.showToast(`🔒 Locked ₦${amt.toLocaleString()} safely in OPay!`);
+      app._renderAll();
+      renderPhone('opay');
+    });
+    phoneEl.querySelector('#ph-bribe')?.addEventListener('click', () => {
+      phoneEl.classList.remove('open');
+      openBribeSliderGame();
+    });
+
+    phoneEl.querySelectorAll('[data-ph-checkin]').forEach((btn) => {
+      btn.onclick = () => {
+        app.checkInContact?.(btn.dataset.phCheckin);
+        renderPhone('chat');
+      };
+    });
+    phoneEl.querySelector('#ph-open-mp')?.addEventListener('click', () => {
+      phoneEl.classList.remove('open');
+      app.openDeckTab?.('multiplayer');
+    });
+
+    phoneEl.querySelectorAll('[data-ph-bolt]').forEach((btn) => {
+      btn.onclick = () => {
+        const dest = btn.dataset.phBolt;
+        if (app.game.canAfford(1500)) app.game.pay(1500);
+        app.selectedCommuteDest = dest;
+        app.world3d?.setGPSRouteDestination?.(dest);
+        app.world3d?.hailOrCommandeerVehicle?.(null, 'cab', dest);
+        phoneEl.classList.remove('open');
+        app.showToast(`🚕 Bolt Green Cab dispatched to ${dest.toUpperCase()}!`);
+        app._renderAll();
+      };
+    });
+
+    phoneEl.querySelector('#ph-clout-post')?.addEventListener('click', () => {
+      app.game.stat('clout', 7);
+      if (app.game.s.social) app.game.s.social.steeze = Math.min(100, (app.game.s.social.steeze || 60) + 8);
+      app.afrobeats?.playPidginChirp?.('steeze');
+      app.world3d?.showThoughtBubble?.('📸', 'Trending on CloutTok! 🔥', 3000);
+      app.showToast('📸 CloutTok video went viral in Abuja! (+7 Clout, +8 Steeze)');
+      app._renderAll();
+    });
+    phoneEl.querySelector('#ph-hawker')?.addEventListener('click', () => {
+      phoneEl.classList.remove('open');
+      openTrafficHawkerGame();
+    });
+    phoneEl.querySelector('#ph-grid')?.addEventListener('click', () => {
+      phoneEl.classList.remove('open');
+      toggleBuildGrid('generator', true);
+    });
+    phoneEl.querySelector('#ph-radio')?.addEventListener('click', () => {
+      phoneEl.classList.remove('open');
+      openRadioWheel();
+    });
+    phoneEl.querySelector('#ph-wardrobe')?.addEventListener('click', () => {
+      phoneEl.classList.remove('open');
+      openStudio();
+    });
+  }
+
+  function openPhone(tab = 'opay') {
+    if (phoneEl.classList.contains('open') && activePhoneApp === tab) {
+      phoneEl.classList.remove('open');
+      return;
+    }
+    renderPhone(tab);
+    phoneEl.classList.add('open');
+  }
+
+  phoneFab.addEventListener('click', () => openPhone(activePhoneApp));
+
   pie.addEventListener('click', closePie);
   document.addEventListener('keydown', (e) => {
+    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return;
     if (e.key === 'Escape') {
       closePie();
       studio.classList.remove('open');
+      phoneEl.classList.remove('open');
+      miniModal.classList.remove('open');
+    } else if (e.key.toLowerCase() === 'p') {
+      openPhone(activePhoneApp);
     }
   });
+
+  // Expose UI Extras API on app instance for seamless integration
+  app.uiExtras = {
+    openPhone,
+    openRadioWheel,
+    openTrafficHawkerGame,
+    openBribeSliderGame,
+    toggleBuildGrid,
+    openPie,
+    openStudio
+  };
 
   document.getElementById('ux-btn-pie').addEventListener('click', () => {
     pieOpen ? closePie() : openPie(window.innerWidth / 2, window.innerHeight / 2);

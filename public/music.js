@@ -39,9 +39,15 @@ export class AbujaAfrobeatsEngine {
     if (!this.ctx) {
       this.ctx = getSharedAudioContext();
       if (this.ctx) {
+        this.radioFilter = this.ctx.createBiquadFilter();
+        this.radioFilter.type = 'lowpass';
+        this.radioFilter.frequency.value = 18000;
+        this.radioFilter.Q.value = 1.2;
+
         this.masterGain = this.ctx.createGain();
         this.masterGain.gain.value = this.volume;
-        this.masterGain.connect(this.ctx.destination);
+        this.masterGain.connect(this.radioFilter);
+        this.radioFilter.connect(this.ctx.destination);
 
         this.sfxGain = this.ctx.createGain();
         this.sfxGain.gain.value = 0.45;
@@ -51,6 +57,31 @@ export class AbujaAfrobeatsEngine {
     if (this.ctx && this.ctx.state === 'suspended') {
       this.ctx.resume().catch(() => {});
     }
+  }
+
+  setExteriorMuffle(isExterior = false) {
+    this._initContext();
+    if (!this.radioFilter || !this.ctx) return;
+    const targetFreq = isExterior ? 540 : 18000;
+    const targetVol = isExterior ? this.volume * 0.62 : this.volume;
+    this.radioFilter.frequency.setTargetAtTime(targetFreq, this.ctx.currentTime, 0.12);
+    if (this.masterGain) {
+      this.masterGain.gain.setTargetAtTime(targetVol, this.ctx.currentTime, 0.12);
+    }
+  }
+
+  selectStation(index) {
+    this.stationIndex = ((index % this.stations.length) + this.stations.length) % this.stations.length;
+    const st = this.stations[this.stationIndex];
+    this.tempo = st.tempo || 114;
+    if (this.isPlaying) {
+      this.stop();
+      this.play();
+    } else {
+      this.play();
+    }
+    this.playSfx('radio_tune');
+    return st;
   }
 
   setVolume(vol = 0.28) {
@@ -410,8 +441,98 @@ export class AbujaAfrobeatsEngine {
         break;
       }
 
+      // 9. Tire Screech (GTA Handbrake Drift)
+      case 'tire_screech': {
+        const osc = this.ctx.createOscillator();
+        const g = this.ctx.createGain();
+        const f = this.ctx.createBiquadFilter();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(980, now);
+        osc.frequency.linearRampToValueAtTime(1420, now + 0.14);
+        osc.frequency.linearRampToValueAtTime(860, now + 0.32);
+        f.type = 'bandpass';
+        f.frequency.value = 1200;
+        f.Q.value = 4.5;
+        g.gain.setValueAtTime(0.16, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+        osc.connect(f).connect(g).connect(this.sfxGain);
+        osc.start(now);
+        osc.stop(now + 0.36);
+        break;
+      }
+
+      // 10. VIO / Police Pursuit Siren Wail
+      case 'siren': {
+        const osc = this.ctx.createOscillator();
+        const g = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(640, now);
+        osc.frequency.linearRampToValueAtTime(960, now + 0.25);
+        osc.frequency.linearRampToValueAtTime(640, now + 0.5);
+        g.gain.setValueAtTime(0.18, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.52);
+        osc.connect(g).connect(this.sfxGain);
+        osc.start(now);
+        osc.stop(now + 0.54);
+        break;
+      }
+
       default:
         break;
     }
+  }
+
+  // Feature #4: Sims-Style Nigerian Pidgin Emote Chirp ("Omo!", "Wahala!", "Steeze!")
+  playPidginChirp(mood = 'omo') {
+    this._initContext();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const patterns = {
+      omo: [310, 420, 290],      // "O-mo!"
+      wahala: [380, 320, 250, 210], // "Wa-ha-la o!"
+      steeze: [280, 360, 480],   // "Steeze!"
+      greet: [320, 440, 380],    // "How far!"
+      flirt: [350, 480, 560]     // "Fine geh/boy!"
+    };
+    const notes = patterns[mood] || patterns.omo;
+    notes.forEach((freq, i) => {
+      const osc = this.ctx.createOscillator();
+      const formant = this.ctx.createBiquadFilter();
+      const g = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      const t = now + i * 0.095;
+      osc.frequency.setValueAtTime(freq, t);
+      osc.frequency.exponentialRampToValueAtTime(freq * 1.12, t + 0.07);
+      formant.type = 'bandpass';
+      formant.frequency.setValueAtTime(850 + i * 180, t);
+      formant.Q.value = 3.2;
+      g.gain.setValueAtTime(0.16, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.085);
+      osc.connect(formant).connect(g).connect(this.sfxGain);
+      osc.start(t);
+      osc.stop(t + 0.09);
+    });
+  }
+
+  // Feature #20: Distance-attenuated Spatial Multiplayer Horn & Chatter
+  playSpatialHorn(distance = 20) {
+    this._initContext();
+    if (!this.ctx) return;
+    const atten = Math.max(0.03, Math.min(0.35, 1 / (1 + distance * 0.05)));
+    const now = this.ctx.currentTime;
+    [420, 530].forEach((freq) => {
+      const osc = this.ctx.createOscillator();
+      const lp = this.ctx.createBiquadFilter();
+      const g = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(freq, now);
+      lp.type = 'lowpass';
+      lp.frequency.value = Math.max(350, 2200 - distance * 25);
+      g.gain.setValueAtTime(atten * 0.5, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+      osc.connect(lp).connect(g).connect(this.sfxGain);
+      osc.start(now);
+      osc.stop(now + 0.24);
+    });
   }
 }

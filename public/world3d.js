@@ -162,6 +162,24 @@ export class AbujaWorld3D {
     this.nairaParticles = [];
     this.spinningMeshes = [];
     this.windowMaterials = [];
+    this.streetLightBulbs = [];
+    this.swayingTrees = [];
+    this.roadPuddles = [];
+    this.streetVendors = [];
+    this.pursuitUnits = [];
+    this.skidDecals = [];
+    this.neonPulses = [];
+    this.placedGridMeshes = [];
+    this.gpsPathPoints = [];
+    this.wantedStars = 0;
+    this.gridPowerOnline = true;
+    this.playerGenActive = false;
+    this.driftSlip = 0;
+    this.ragdollState = { active: false, timer: 0, vx: 0, vy: 0, vz: 0 };
+    this.smartActionState = null;
+    this.autoCabRide = null;
+    this.buildGridMode = { active: false, group: null, ghost: null, tile: null, itemSpec: null, rotY: 0, snapX: 0, snapZ: 0 };
+    this.keys.handbrake = false;
     this.raycaster = new THREE.Raycaster();
     this.pointerNDC = new THREE.Vector2();
     this.collisionBoxes = [];
@@ -172,6 +190,10 @@ export class AbujaWorld3D {
     this._buildRoadNetwork();
     this._buildDistrictsAndSkyline();
     this._buildIconicLandmarks();
+    this._buildStreetVendors();
+    this._buildWuse2NightlifeNeons();
+    this._initWeatherParticles();
+    this._initGPSRouteRibbon();
     this._buildTrafficSwarm();
     this._buildStreetPedestrians();
     this._buildLocalPlayerRig();
@@ -772,9 +794,27 @@ export class AbujaWorld3D {
             const lampBulb = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.08, 0.35), lanternGlowMat);
             lampBulb.position.set(-2.0, 10.55, 0);
             streetLightGroup.add(lampBulb);
+            this.streetLightBulbs.push(lampBulb);
 
             this.scene.add(streetLightGroup);
           }
+
+          // Wet road reflective puddle decal (visible during Abuja downpours)
+          const puddleMat = new THREE.MeshStandardMaterial({
+            color: 0x0f172a,
+            roughness: 0.04,
+            metalness: 0.94,
+            transparent: true,
+            opacity: 0.78
+          });
+          const puddle = new THREE.Mesh(
+            new THREE.CircleGeometry(width * 0.32, 16).rotateX(-Math.PI / 2),
+            puddleMat
+          );
+          puddle.position.set(mid.x, 0.635, mid.z);
+          puddle.visible = false;
+          this.scene.add(puddle);
+          this.roadPuddles.push(puddle);
         }
 
         for (const laneSide of [-1, 1]) {
@@ -838,6 +878,7 @@ export class AbujaWorld3D {
             );
             tree.rotation.y = tFrac * 4;
             this.scene.add(tree);
+            this.swayingTrees.push(tree);
           }
         }
       }
@@ -1135,9 +1176,72 @@ export class AbujaWorld3D {
     dishGroup.add(dishPole, dishReflector);
     house.add(dishGroup);
 
-    return house;
+    // Feature #1: Furnished Interior Rooms (Revealed when Dollhouse / Wall Cutaway is active!)
+    const interior = this._buildDuplexInteriorFurniture(width, depth);
+    house.add(interior);
 
     return house;
+  }
+
+  _buildDuplexInteriorFurniture(width = 11, depth = 11) {
+    const interior = new THREE.Group();
+    interior.userData = { isInterior: true };
+
+    if (!this._sharedInteriorMats) {
+      this._sharedInteriorMats = {
+        floorTile: new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.25 }),
+        rug: new THREE.MeshStandardMaterial({ color: 0x991b1b, roughness: 0.85 }),
+        sofa: new THREE.MeshStandardMaterial({ color: 0x1e3a8a, roughness: 0.6 }),
+        wood: new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.55 }),
+        tvScreen: new THREE.MeshBasicMaterial({ color: 0x38bdf8 }),
+        bedSheet: new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.5 }),
+        pillow: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6 }),
+        stove: new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.3, metalness: 0.7 }),
+        burnerGlow: new THREE.MeshBasicMaterial({ color: 0xf97316 })
+      };
+    }
+    const im = this._sharedInteriorMats;
+
+    // 1. Polished Marble Living Room Floor
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(width - 0.8, depth - 0.8).rotateX(-Math.PI / 2), im.floorTile);
+    floor.position.y = 0.96;
+    interior.add(floor);
+
+    // 2. Center Persian Rug & L-Shaped Royal Sofa
+    const rug = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 3.2).rotateX(-Math.PI / 2), im.rug);
+    rug.position.set(-1.6, 0.99, 1.2);
+    interior.add(rug);
+
+    const sofaMain = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.9, 1.2), im.sofa);
+    sofaMain.position.set(-1.6, 1.45, 2.4);
+    const sofaSide = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.9, 2.4), im.sofa);
+    sofaSide.position.set(-3.1, 1.45, 1.4);
+    interior.add(sofaMain, sofaSide);
+
+    // 3. Flat-Screen TV Console & Glowing DSTV Screen
+    const tvStand = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.7, 0.6), im.wood);
+    tvStand.position.set(-1.6, 1.35, -0.4);
+    const tvPanel = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.25, 0.1), im.tvScreen);
+    tvPanel.position.set(-1.6, 2.35, -0.4);
+    interior.add(tvStand, tvPanel);
+
+    // 4. Master Bedroom King-Size Bed (Right Wing)
+    const bedFrame = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.75, 3.2), im.wood);
+    bedFrame.position.set(2.2, 1.35, -1.6);
+    const mattress = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.35, 2.9), im.bedSheet);
+    mattress.position.set(2.2, 1.85, -1.5);
+    const pillow = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.25, 0.65), im.pillow);
+    pillow.position.set(2.2, 2.08, -2.55);
+    interior.add(bedFrame, mattress, pillow);
+
+    // 5. Kitchen Gas Cooker & Counter (Front Right)
+    const stoveBox = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.2, 1.2), im.stove);
+    stoveBox.position.set(2.4, 1.55, 2.2);
+    const burner = new THREE.Mesh(new THREE.CircleGeometry(0.28, 12).rotateX(-Math.PI / 2), im.burnerGlow);
+    burner.position.set(2.4, 2.18, 2.2);
+    interior.add(stoveBox, burner);
+
+    return interior;
   }
 
   _buildParkedKoropeVan(colorHex = 0xe2e8f0) {
@@ -1922,6 +2026,254 @@ export class AbujaWorld3D {
     this._addCollisionBox(gateX, gateZ, 36, 12, 'city_gate');
   }
 
+  // Feature #13: 3D Street Vendors (Mai Suya Grill Spots, Roasted Corn Stands & OPay POS Kiosks)
+  _buildStreetVendors() {
+    this.streetVendors = [];
+    const vendorDistricts = [
+      { id: 'wuse2', type: 'suya', name: 'Maitama/Wuse 2 Yahuza Suya Spot', offset: { x: 14, z: 12 } },
+      { id: 'cbd', type: 'pos', name: 'OPay / FirstMonie Fast POS Kiosk', offset: { x: -15, z: 14 } },
+      { id: 'garki', type: 'corn', name: 'Mama Ngozi Roasted Corn & Ube Stand', offset: { x: 15, z: -12 } },
+      { id: 'maitama', type: 'suya', name: 'Alhaji Musa Pepper Suya & Kilishi', offset: { x: -14, z: 13 } },
+      { id: 'kubwa', type: 'pos', name: 'Kubwa Express POS & Airtime Kiosk', offset: { x: 14, z: 11 } },
+      { id: 'nyanya', type: 'corn', name: 'Nyanya Bridge Roasted Corn & Pear', offset: { x: -13, z: 12 } },
+      { id: 'jabi', type: 'suya', name: 'Jabi Waterfront Smoked Fish & Suya', offset: { x: 15, z: -13 } },
+      { id: 'lugbe', type: 'pos', name: 'Airport Road OPay POS Umbrella', offset: { x: -14, z: -11 } }
+    ];
+
+    const woodMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.75 });
+    const steelMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.4, metalness: 0.8 });
+    const emberMat = new THREE.MeshBasicMaterial({ color: 0xf97316 });
+    const posYellowMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.35 });
+    const opayGreenMat = new THREE.MeshBasicMaterial({ color: 0x10b981 });
+
+    for (const v of vendorDistricts) {
+      const d = DISTRICT_BY_ID[v.id];
+      if (!d) continue;
+      const basePos = map2DTo3D(d.x, d.y);
+      const vx = basePos.x + v.offset.x;
+      const vz = basePos.z + v.offset.z;
+      const group = new THREE.Group();
+      group.position.set(vx, 0, vz);
+
+      if (v.type === 'suya') {
+        // Charcoal drum grill + glowing orange embers + canopy
+        const table = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.3, 1.6), woodMat);
+        table.position.y = 0.65;
+        const drum = new THREE.Mesh(new THREE.CylinderGeometry(0.68, 0.68, 2.6, 12).rotateZ(Math.PI / 2), steelMat);
+        drum.position.set(0, 1.45, 0);
+        const embers = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.18, 1.1), emberMat);
+        embers.position.set(0, 1.78, 0);
+        const lantern = new THREE.Mesh(new THREE.SphereGeometry(0.28, 10, 10), new THREE.MeshBasicMaterial({ color: 0xfef08a }));
+        lantern.position.set(1.2, 2.7, 0);
+        group.add(table, drum, embers, lantern);
+      } else if (v.type === 'corn') {
+        // Colorful beach umbrella + roasting wire rack
+        const stand = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.2, 1.5), woodMat);
+        stand.position.y = 0.6;
+        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 3.6, 8), steelMat);
+        pole.position.y = 1.8;
+        const umbrella = new THREE.Mesh(
+          new THREE.ConeGeometry(2.4, 0.9, 12),
+          new THREE.MeshStandardMaterial({ color: 0xec4899, roughness: 0.5 })
+        );
+        umbrella.position.y = 3.6;
+        const emberTray = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.15, 0.9), emberMat);
+        emberTray.position.y = 1.28;
+        group.add(stand, pole, umbrella, emberTray);
+      } else {
+        // Yellow & Green Nigerian POS Kiosk Booth
+        const booth = new THREE.Mesh(new THREE.BoxGeometry(2.2, 2.6, 2.0), posYellowMat);
+        booth.position.y = 1.3;
+        const sign = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.55, 2.2), opayGreenMat);
+        sign.position.y = 2.75;
+        group.add(booth, sign);
+      }
+
+      this.scene.add(group);
+      this.streetVendors.push({
+        id: `${v.id}_${v.type}`,
+        districtId: v.id,
+        type: v.type,
+        name: v.name,
+        x: vx,
+        z: vz,
+        group
+      });
+    }
+  }
+
+  // Feature #17: Volumetric Neon Nightlife in Wuse 2, Maitama & CBD
+  _buildWuse2NightlifeNeons() {
+    const spots = [
+      { id: 'wuse2', title: '🪩 CLUB QUILOX ABUJA', sub: 'VIP LOUNGE & BOTTLE SERVICE', color: 0xec4899, glow: 0xf43f5e, dx: -16, dz: -12 },
+      { id: 'wuse2', title: '🔥 HUSTLE & BUSTLE', sub: 'AFROBEATS NIGHTLIFE', color: 0x06b6d4, glow: 0x38bdf8, dx: 18, dz: -15 },
+      { id: 'maitama', title: '🥂 TRANSCORP VIP CLUB', sub: 'EXECUTIVE LOUNGE', color: 0xfacc15, glow: 0xf59e0b, dx: 16, dz: 14 },
+      { id: 'cbd', title: '💎 CENTRAL SKY LOUNGE', sub: 'ROOFTOP COCKTAILS', color: 0xa855f7, glow: 0xc084fc, dx: -18, dz: -14 }
+    ];
+
+    for (const s of spots) {
+      const d = DISTRICT_BY_ID[s.id];
+      if (!d) continue;
+      const basePos = map2DTo3D(d.x, d.y);
+      const nx = basePos.x + s.dx;
+      const nz = basePos.z + s.dz;
+
+      const neonTex = this._makeCanvasTex(512, 160, (ctx, W, H) => {
+        ctx.fillStyle = '#090d16';
+        ctx.fillRect(0, 0, W, H);
+        ctx.strokeStyle = '#' + s.color.toString(16).padStart(6, '0');
+        ctx.lineWidth = 8;
+        ctx.strokeRect(8, 8, W - 16, H - 16);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 34px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(s.title, W / 2, 68);
+        ctx.fillStyle = '#' + s.glow.toString(16).padStart(6, '0');
+        ctx.font = 'bold 20px sans-serif';
+        ctx.fillText(s.sub, W / 2, 118);
+      });
+
+      const signGroup = new THREE.Group();
+      signGroup.position.set(nx, 0, nz);
+
+      const boardMat = new THREE.MeshBasicMaterial({ map: neonTex });
+      const board = new THREE.Mesh(new THREE.BoxGeometry(11, 3.6, 0.45), boardMat);
+      board.position.y = 7.5;
+      signGroup.add(board);
+
+      // Volumetric ground neon light pool on the asphalt
+      const poolMat = new THREE.MeshBasicMaterial({
+        color: s.color,
+        transparent: true,
+        opacity: 0.36,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+      const pool = new THREE.Mesh(new THREE.CircleGeometry(7.5, 20).rotateX(-Math.PI / 2), poolMat);
+      pool.position.y = 0.28;
+      signGroup.add(pool);
+
+      this.scene.add(signGroup);
+      this.neonPulses.push({ poolMat, baseColor: s.color, phase: Math.random() * Math.PI * 2 });
+    }
+  }
+
+  // Feature #15: Cinematic Abuja Weather (Falling Rain Streaks & Harmattan Dust Particles)
+  _initWeatherParticles() {
+    this.weatherGroup = new THREE.Group();
+    this.scene.add(this.weatherGroup);
+
+    // 1. Rain Streak Lines (450 streaks around camera/player)
+    const rainCount = 450;
+    const rainPos = new Float32Array(rainCount * 6);
+    for (let i = 0; i < rainCount; i++) {
+      const rx = (Math.random() - 0.5) * 140;
+      const ry = Math.random() * 55;
+      const rz = (Math.random() - 0.5) * 140;
+      const idx = i * 6;
+      rainPos[idx] = rx;
+      rainPos[idx + 1] = ry;
+      rainPos[idx + 2] = rz;
+      rainPos[idx + 3] = rx - 0.4;
+      rainPos[idx + 4] = ry - 2.6;
+      rainPos[idx + 5] = rz;
+    }
+    const rainGeo = new THREE.BufferGeometry();
+    rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
+    const rainMat = new THREE.LineBasicMaterial({ color: 0xbae6fd, transparent: true, opacity: 0.62 });
+    this.rainLines = new THREE.LineSegments(rainGeo, rainMat);
+    this.rainLines.visible = false;
+    this.weatherGroup.add(this.rainLines);
+
+    // 2. Harmattan Saharan Dust Motes
+    const dustCount = 260;
+    const dustPos = new Float32Array(dustCount * 3);
+    for (let i = 0; i < dustCount; i++) {
+      dustPos[i * 3] = (Math.random() - 0.5) * 150;
+      dustPos[i * 3 + 1] = 1 + Math.random() * 28;
+      dustPos[i * 3 + 2] = (Math.random() - 0.5) * 150;
+    }
+    const dustGeo = new THREE.BufferGeometry();
+    dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
+    const dustMat = new THREE.PointsMaterial({ color: 0xfde68a, size: 0.85, transparent: true, opacity: 0.55 });
+    this.harmattanPoints = new THREE.Points(dustGeo, dustMat);
+    this.harmattanPoints.visible = false;
+    this.weatherGroup.add(this.harmattanPoints);
+  }
+
+  // Feature #6: Dynamic 3D GPS Route Navigation Ribbon
+  _initGPSRouteRibbon() {
+    this.gpsRouteGroup = new THREE.Group();
+    this.scene.add(this.gpsRouteGroup);
+  }
+
+  setGPSRouteDestination(targetDistrictId) {
+    if (!this.gpsRouteGroup) return;
+    while (this.gpsRouteGroup.children.length > 0) {
+      const ch = this.gpsRouteGroup.children[0];
+      this.gpsRouteGroup.remove(ch);
+      this._disposeObject3D(ch);
+    }
+    this.gpsPathPoints = [];
+    if (!targetDistrictId || targetDistrictId === this.currentDistrictId) return;
+
+    // BFS shortest path across EDGES
+    const startId = this.currentDistrictId || 'cbd';
+    const queue = [[startId]];
+    const visited = new Set([startId]);
+    let bestPath = null;
+
+    while (queue.length > 0) {
+      const path = queue.shift();
+      const last = path[path.length - 1];
+      if (last === targetDistrictId) {
+        bestPath = path;
+        break;
+      }
+      for (const e of EDGES) {
+        const next = e.a === last ? e.b : (e.b === last ? e.a : null);
+        if (next && !visited.has(next)) {
+          visited.add(next);
+          queue.push([...path, next]);
+        }
+      }
+    }
+
+    if (!bestPath || bestPath.length < 2) {
+      bestPath = [startId, targetDistrictId];
+    }
+
+    const ribbonMat = new THREE.MeshBasicMaterial({
+      color: 0xa855f7,
+      transparent: true,
+      opacity: 0.78,
+      side: THREE.DoubleSide
+    });
+
+    for (let i = 0; i < bestPath.length; i++) {
+      const d = DISTRICT_BY_ID[bestPath[i]];
+      if (d) this.gpsPathPoints.push({ x: d.x, y: d.y, id: d.id });
+      if (i < bestPath.length - 1) {
+        const dA = DISTRICT_BY_ID[bestPath[i]];
+        const dB = DISTRICT_BY_ID[bestPath[i + 1]];
+        if (!dA || !dB) continue;
+        const pA = map2DTo3D(dA.x, dA.y);
+        const pB = map2DTo3D(dB.x, dB.y);
+        const dx = pB.x - pA.x;
+        const dz = pB.z - pA.z;
+        const len = Math.hypot(dx, dz);
+        const angle = Math.atan2(dx, dz);
+        const segMesh = new THREE.Mesh(
+          new THREE.PlaneGeometry(1.65, len).rotateX(-Math.PI / 2),
+          ribbonMat
+        );
+        segMesh.position.set((pA.x + pB.x) * 0.5, 0.72, (pA.z + pB.z) * 0.5);
+        segMesh.rotation.y = angle;
+        this.gpsRouteGroup.add(segMesh);
+      }
+    }
+  }
+
   _buildTrafficSwarm() {
     if (!this.roadSegments.length) return;
 
@@ -2034,6 +2386,8 @@ export class AbujaWorld3D {
         t: Math.random(),
         dir: i % 2 === 0 ? 1 : -1,
         speed: spec.speed,
+        type: spec.type,
+        color: spec.color,
         laneOffset: seg.isRail ? 0 : (i % 2 === 0 ? 3.2 : -3.2)
       });
     }
@@ -2469,16 +2823,23 @@ export class AbujaWorld3D {
 
   _buildStreetPedestrians() {
     const npcOutfits = [
-      { jacketColor: 0x16a34a, shirtColor: 0xffffff, pantsColor: 0x1e293b, shoeColor: 0xffffff },
-      { jacketColor: 0xeab308, shirtColor: 0x111827, pantsColor: 0x0f172a, shoeColor: 0xfacc15 },
-      { jacketColor: 0x2563eb, shirtColor: 0xf8fafc, pantsColor: 0x1e293b, shoeColor: 0xe2e8f0 },
-      { jacketColor: 0xdc2626, shirtColor: 0xfef08a, pantsColor: 0x111827, shoeColor: 0xffffff }
+      { jacketColor: 0x16a34a, shirtColor: 0xffffff, pantsColor: 0x1e293b, shoeColor: 0xffffff, hairstyle: 'fila', fabricPattern: 'senator', agbadaDrape: true },
+      { jacketColor: 0xeab308, shirtColor: 0x111827, pantsColor: 0x0f172a, shoeColor: 0xfacc15, hairstyle: 'gele', fabricPattern: 'ankara', gender: 'female' },
+      { jacketColor: 0x2563eb, shirtColor: 0xf8fafc, pantsColor: 0x1e293b, shoeColor: 0xe2e8f0, hairstyle: 'fade', glasses: 'aviator' },
+      { jacketColor: 0xdc2626, shirtColor: 0xfef08a, pantsColor: 0x111827, shoeColor: 0xffffff, hairstyle: 'braids', glasses: 'shades', gender: 'female' }
+    ];
+    const npcNames = [
+      'Alhaji Musa', 'Amina Bello', 'Chinedu Okafor', 'Ngozi Eze',
+      'Tunde Bakare', 'Zainab Danjuma', 'Emeka Nwosu', 'Halima Sule',
+      'Sadiq Abubakar', 'Kemi Adeyemi', 'Umar Farouk', 'Bisi Balogun',
+      'Ibrahim Garba', 'Chioma Nnaji', 'Segun Obasanjo', 'Fatima Lawal'
     ];
 
     for (let dIdx = 0; dIdx < DISTRICTS.length; dIdx++) {
       const d = DISTRICTS[dIdx];
       const basePos = map2DTo3D(d.x, d.y);
       for (let n = 0; n < 2; n++) {
+        const idx = dIdx * 2 + n;
         const outfit = npcOutfits[(dIdx + n) % npcOutfits.length];
         const rig = this._buildHumanoidRig(outfit);
         const startX = basePos.x + (n === 0 ? 0 : -8);
@@ -2486,8 +2847,23 @@ export class AbujaWorld3D {
         rig.root.position.set(startX, 0.2, startZ);
         this.scene.add(rig.root);
 
-        this.streetPedestrians.push({
+        const npcName = npcNames[idx % npcNames.length];
+        const labelEl = document.createElement('div');
+        labelEl.className = 'world3d-player-label npc-affinity-tag';
+        labelEl.style.display = 'none';
+        labelEl.style.pointerEvents = 'auto';
+        labelEl.style.cursor = 'pointer';
+        labelEl.innerHTML = `<span class="w3d-pl-name">🤝 ${npcName}</span><span class="w3d-pl-dist" style="color:#4ade80;">❤️ 50</span>`;
+        this.labelLayer.appendChild(labelEl);
+
+        const npcObj = {
+          id: `ped_${idx}`,
+          name: npcName,
+          affinity: 50,
+          banterText: '',
+          banterUntil: 0,
           rig,
+          labelEl,
           districtId: d.id,
           homeX: startX,
           homeZ: startZ,
@@ -2495,7 +2871,16 @@ export class AbujaWorld3D {
           phase: (dIdx * 1.3 + n * 2.1),
           speed: 0.75 + (n * 0.2),
           knockedTimer: 0
+        };
+
+        labelEl.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (this.callbacks.onSelectNpc) {
+            this.callbacks.onSelectNpc(npcObj, e.clientX, e.clientY);
+          }
         });
+
+        this.streetPedestrians.push(npcObj);
       }
     }
   }
@@ -3140,7 +3525,15 @@ export class AbujaWorld3D {
       }
       if (k === ' ') {
         e.preventDefault();
-        this.triggerStreetPunch();
+        if (this.inVehicle) {
+          this.keys.handbrake = true;
+        } else {
+          this.triggerStreetPunch();
+        }
+      }
+      if (k === 'r' && this.buildGridMode?.active) {
+        e.preventDefault();
+        this.rotateBuildPreview();
       }
     });
 
@@ -3151,6 +3544,7 @@ export class AbujaWorld3D {
       if (k === 'a' || e.key === 'ArrowLeft') this.keys.a = false;
       if (k === 'd' || e.key === 'ArrowRight') this.keys.d = false;
       if (k === 'shift') this.keys.shift = false;
+      if (e.key === ' ') this.keys.handbrake = false;
     });
 
     const canvas = this.renderer.domElement;
@@ -3179,6 +3573,26 @@ export class AbujaWorld3D {
     window.addEventListener('pointermove', (e) => {
       if (activePointers.has(e.pointerId)) {
         activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      }
+
+      // Feature #3: Interactive 1m x 1m Build & Buy Grid raycast snapping
+      if (this.buildGridMode?.active && this.buildGridMode.ghost && !this.isPointerDragging) {
+        const rect = canvas.getBoundingClientRect();
+        this.pointerNDC.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        this.pointerNDC.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        this.raycaster.setFromCamera(this.pointerNDC, this.camera);
+        const ray = this.raycaster.ray;
+        if (Math.abs(ray.direction.y) > 0.001) {
+          const t = -ray.origin.y / ray.direction.y;
+          if (t > 0 && t < 400) {
+            const gx = Math.round(ray.origin.x + ray.direction.x * t);
+            const gz = Math.round(ray.origin.z + ray.direction.z * t);
+            this.buildGridMode.ghost.position.set(gx, 0.25, gz);
+            if (this.buildGridMode.tile) {
+              this.buildGridMode.tile.position.set(gx, 0.22, gz);
+            }
+          }
+        }
       }
 
       if (activePointers.size === 2 && initialPinchDist) {
@@ -3232,6 +3646,23 @@ export class AbujaWorld3D {
     this.pointerNDC.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
     this.raycaster.setFromCamera(this.pointerNDC, this.camera);
+
+    // Feature #3: If 3D Build & Buy Grid Mode is active, tap places object at snapped grid tile
+    if (this.buildGridMode?.active) {
+      const ray = this.raycaster.ray;
+      if (Math.abs(ray.direction.y) > 0.001) {
+        const t = -ray.origin.y / ray.direction.y;
+        if (t > 0 && t < 400) {
+          const gx = Math.round(ray.origin.x + ray.direction.x * t);
+          const gz = Math.round(ray.origin.z + ray.direction.z * t);
+          if (this.buildGridMode.ghost) this.buildGridMode.ghost.position.set(gx, 0.25, gz);
+          if (this.buildGridMode.tile) this.buildGridMode.tile.position.set(gx, 0.22, gz);
+          this.placeBuildPreview();
+          return;
+        }
+      }
+    }
+
     const hits = this.raycaster.intersectObjects(this.clickableDistrictMeshes, false);
     if (hits.length > 0) {
       const districtId = hits[0].object.userData?.districtId;
@@ -3273,20 +3704,30 @@ export class AbujaWorld3D {
     return this.inVehicle;
   }
 
+  // Feature #18 & #1: Multi-Perspective Camera (Chase, Cockpit, Bumper, Sims Dollhouse Cutaway, Helicopter)
   cycleCameraMode() {
     if (this.cameraMode === 'chase') {
+      this.cameraMode = 'cockpit';
+      this.cycleWallCutaway('up');
+    } else if (this.cameraMode === 'cockpit') {
+      this.cameraMode = 'bumper';
+      this.cycleWallCutaway('up');
+    } else if (this.cameraMode === 'bumper') {
       this.cameraMode = 'dollhouse';
-      this.cameraDistance = 46;
-      this.cameraPitch = 0.62; // 45° classic Sims isometric angle
+      this.cameraDistance = 42;
+      this.cameraPitch = 0.64; // 45° classic Sims isometric cutaway angle
       this.cameraYaw = Math.PI / 4;
+      this.cycleWallCutaway('cutaway');
     } else if (this.cameraMode === 'dollhouse') {
       this.cameraMode = 'helicopter';
       this.cameraDistance = 195;
       this.cameraPitch = 0.78;
+      this.cycleWallCutaway('up');
     } else {
       this.cameraMode = 'chase';
       this.cameraDistance = this.inVehicle ? 26 : 15.5;
       this.cameraPitch = this.inVehicle ? 0.24 : 0.20;
+      this.cycleWallCutaway('up');
     }
     if (typeof this.options?.onCycleCamera === 'function') {
       this.options.onCycleCamera(this.cameraMode);
@@ -3481,8 +3922,504 @@ export class AbujaWorld3D {
       this.roadMat.metalness = isWet ? 0.55 : 0.05;
     }
 
+    // Feature #15: Toggle Falling Rain Streaks, Reflective Puddles & Harmattan Dust Particles
+    if (this.rainLines) this.rainLines.visible = isWet;
+    if (this.harmattanPoints) this.harmattanPoints.visible = (weather === 'harmattan' || weather === 'dry');
+    if (this.roadPuddles) {
+      for (const puddle of this.roadPuddles) {
+        puddle.visible = isWet;
+      }
+    }
+
+    const powerFactor = this.gridPowerOnline === false ? 0.04 : 1.0;
     for (const mat of this.windowMaterials) {
-      mat.emissiveIntensity = isNight ? 0.85 : 0.22;
+      mat.emissiveIntensity = (isNight ? 0.85 : 0.22) * powerFactor;
+    }
+    if (this.streetLightBulbs) {
+      for (const bulb of this.streetLightBulbs) {
+        if (bulb.material) {
+          bulb.material.color.setHex(this.gridPowerOnline === false ? 0x1e293b : (isNight || isDusk ? 0xfef08a : 0x94a3b8));
+        }
+      }
+    }
+  }
+
+  // Feature #16: NEPA / AEDC Power Blackouts & Compound Generator Switchover
+  setPowerGridState(gridOnline = true, playerGenRunning = false) {
+    const changed = this.gridPowerOnline !== gridOnline || this.playerGenActive !== playerGenRunning;
+    this.gridPowerOnline = Boolean(gridOnline);
+    this.playerGenActive = Boolean(playerGenRunning);
+    if (!changed) return;
+
+    const isNight = this.hourOfDay >= 20 || this.hourOfDay < 6;
+    const isDusk = (this.hourOfDay >= 18 && this.hourOfDay < 20) || (this.hourOfDay >= 6 && this.hourOfDay < 7);
+    const powerFactor = this.gridPowerOnline ? 1.0 : 0.04;
+
+    for (const mat of this.windowMaterials) {
+      mat.emissiveIntensity = (isNight ? 0.85 : 0.22) * powerFactor;
+    }
+    if (this.streetLightBulbs) {
+      for (const bulb of this.streetLightBulbs) {
+        if (bulb.material) {
+          bulb.material.color.setHex(!this.gridPowerOnline ? 0x1e293b : (isNight || isDusk ? 0xfef08a : 0x94a3b8));
+        }
+      }
+    }
+    // Keep player's owned compound glowing bright if generator or solar is running during a blackout!
+    if (this.playerHouseEntries) {
+      for (const entry of this.playerHouseEntries.values()) {
+        if (entry.wallsMat) {
+          const hasLocalPower = this.gridPowerOnline || this.playerGenActive;
+          entry.wallsMat.emissive = new THREE.Color(hasLocalPower ? 0xfef08a : 0x000000);
+          entry.wallsMat.emissiveIntensity = hasLocalPower && isNight ? 0.28 : 0.0;
+        }
+      }
+    }
+  }
+
+  // Feature #2: Physical Smart-Object Animations (Cook Indomie with steam, Sleep on bed with Zzz, Shower, Watch DSTV)
+  performSmartObjectAnimation(actionType = 'cook', label = 'Cooking Indomie...', durationMs = 3000) {
+    if (this.inVehicle) {
+      this.toggleVehicleMode();
+    }
+    const sec = Math.max(1.2, durationMs / 1000);
+    this.smartActionState = {
+      active: true,
+      type: actionType,
+      timer: sec,
+      maxTimer: sec,
+      label
+    };
+    const emojiMap = {
+      cook: '🍜',
+      sleep: '😴',
+      shower: '🚿',
+      tv: '📺',
+      gen: '⚡',
+      pray: '🤲🏾'
+    };
+    this.showThoughtBubble(emojiMap[actionType] || '✨', label, durationMs);
+  }
+
+  // Feature #3: Interactive 3D Build & Buy 1m×1m Placement Grid
+  _createBuildGridMesh(itemType = 'generator') {
+    const group = new THREE.Group();
+    if (itemType === 'generator') {
+      const canopy = new THREE.Mesh(
+        new THREE.BoxGeometry(2.6, 1.6, 1.3),
+        new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.4, metalness: 0.35 })
+      );
+      canopy.position.y = 0.8;
+      const pipe = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.12, 0.12, 0.9, 8),
+        new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.7 })
+      );
+      pipe.position.set(0.8, 1.9, 0);
+      group.add(canopy, pipe);
+    } else if (itemType === 'solar') {
+      const stand = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.18, 0.24, 1.6, 8),
+        new THREE.MeshStandardMaterial({ color: 0x475569 })
+      );
+      stand.position.y = 0.8;
+      const panel = new THREE.Mesh(
+        new THREE.BoxGeometry(3.2, 0.14, 2.1),
+        new THREE.MeshStandardMaterial({ color: 0x0284c7, emissive: 0x0369a1, emissiveIntensity: 0.5, metalness: 0.8, roughness: 0.15 })
+      );
+      panel.position.y = 1.65;
+      panel.rotation.x = 0.28;
+      group.add(stand, panel);
+    } else if (itemType === 'tank') {
+      const tower = new THREE.Mesh(
+        new THREE.BoxGeometry(1.8, 3.2, 1.8),
+        new THREE.MeshStandardMaterial({ color: 0x334155, wireframe: true })
+      );
+      tower.position.y = 1.6;
+      const tank = new THREE.Mesh(
+        new THREE.CylinderGeometry(1.05, 1.05, 2.2, 14),
+        new THREE.MeshStandardMaterial({ color: 0x1d4ed8, roughness: 0.3 })
+      );
+      tank.position.y = 4.2;
+      group.add(tower, tank);
+    } else if (itemType === 'suya') {
+      const drum = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.85, 0.85, 1.9, 12),
+        new THREE.MeshStandardMaterial({ color: 0x27272a, metalness: 0.6 })
+      );
+      drum.rotation.z = Math.PI / 2;
+      drum.position.y = 1.1;
+      const glow = new THREE.Mesh(
+        new THREE.BoxGeometry(1.6, 0.15, 1.2),
+        new THREE.MeshBasicMaterial({ color: 0xf97316 })
+      );
+      glow.position.y = 1.65;
+      group.add(drum, glow);
+    } else {
+      // Royal Outdoor Lounge Sofa / Gazebo
+      const base = new THREE.Mesh(
+        new THREE.BoxGeometry(2.8, 0.65, 1.3),
+        new THREE.MeshStandardMaterial({ color: 0x991b1b, roughness: 0.5 })
+      );
+      base.position.y = 0.35;
+      const back = new THREE.Mesh(
+        new THREE.BoxGeometry(2.8, 0.75, 0.3),
+        new THREE.MeshStandardMaterial({ color: 0x7f1d1d, roughness: 0.5 })
+      );
+      back.position.set(0, 0.9, -0.5);
+      group.add(base, back);
+    }
+    group.userData = { itemType };
+    return group;
+  }
+
+  toggleBuildBuyGridMode(itemType = 'generator', forceState = null) {
+    const nextActive = typeof forceState === 'boolean' ? forceState : !this.buildGridMode.active;
+    this.buildGridMode.active = nextActive;
+    this.buildGridMode.itemType = itemType || this.buildGridMode.itemType || 'generator';
+
+    if (!nextActive) {
+      if (this.buildGridMode.group) {
+        this.scene.remove(this.buildGridMode.group);
+        this._disposeObject3D(this.buildGridMode.group);
+        this.buildGridMode.group = null;
+      }
+      if (this.buildGridMode.ghost) {
+        this.scene.remove(this.buildGridMode.ghost);
+        this._disposeObject3D(this.buildGridMode.ghost);
+        this.buildGridMode.ghost = null;
+      }
+      if (this.buildGridMode.tile) {
+        this.scene.remove(this.buildGridMode.tile);
+        this._disposeObject3D(this.buildGridMode.tile);
+        this.buildGridMode.tile = null;
+      }
+      return false;
+    }
+
+    // Switch to Sims Dollhouse Cutaway view for effortless lot building!
+    this.cameraMode = 'dollhouse';
+    this.cameraDistance = 38;
+    this.cameraPitch = 0.66;
+    this.cycleWallCutaway('cutaway');
+
+    if (!this.buildGridMode.group) {
+      const gridHelper = new THREE.GridHelper(24, 24, 0x4ade80, 0x38bdf8);
+      gridHelper.position.set(Math.round(this.playerPos.x), 0.21, Math.round(this.playerPos.z));
+      this.scene.add(gridHelper);
+      this.buildGridMode.group = gridHelper;
+    } else {
+      this.buildGridMode.group.position.set(Math.round(this.playerPos.x), 0.21, Math.round(this.playerPos.z));
+    }
+
+    if (!this.buildGridMode.tile) {
+      const tileGeo = new THREE.RingGeometry(1.1, 1.5, 4);
+      tileGeo.rotateX(-Math.PI / 2);
+      tileGeo.rotateY(Math.PI / 4);
+      const tile = new THREE.Mesh(
+        tileGeo,
+        new THREE.MeshBasicMaterial({ color: 0x4ade80, side: THREE.DoubleSide })
+      );
+      tile.position.set(Math.round(this.playerPos.x + 3), 0.22, Math.round(this.playerPos.z + 3));
+      this.scene.add(tile);
+      this.buildGridMode.tile = tile;
+    }
+
+    this.setBuildPreviewItem(this.buildGridMode.itemType);
+    return true;
+  }
+
+  setBuildPreviewItem(itemType = 'generator') {
+    this.buildGridMode.itemType = itemType;
+    const prevPos = this.buildGridMode.ghost
+      ? this.buildGridMode.ghost.position.clone()
+      : new THREE.Vector3(Math.round(this.playerPos.x + 3), 0.25, Math.round(this.playerPos.z + 3));
+    if (this.buildGridMode.ghost) {
+      this.scene.remove(this.buildGridMode.ghost);
+      this._disposeObject3D(this.buildGridMode.ghost);
+    }
+    const ghost = this._createBuildGridMesh(itemType);
+    ghost.position.copy(prevPos);
+    ghost.rotation.y = this.buildGridMode.rotY || 0;
+    ghost.traverse((c) => {
+      if (c.material) {
+        c.material = c.material.clone();
+        c.material.transparent = true;
+        c.material.opacity = 0.72;
+      }
+    });
+    this.scene.add(ghost);
+    this.buildGridMode.ghost = ghost;
+  }
+
+  rotateBuildPreview() {
+    this.buildGridMode.rotY = ((this.buildGridMode.rotY || 0) + Math.PI / 2) % (Math.PI * 2);
+    if (this.buildGridMode.ghost) {
+      this.buildGridMode.ghost.rotation.y = this.buildGridMode.rotY;
+    }
+  }
+
+  placeBuildPreview() {
+    if (!this.buildGridMode.active || !this.buildGridMode.ghost) return null;
+    const itemType = this.buildGridMode.itemType || 'generator';
+    const placed = this._createBuildGridMesh(itemType);
+    placed.position.copy(this.buildGridMode.ghost.position);
+    placed.rotation.y = this.buildGridMode.rotY || 0;
+    this.scene.add(placed);
+    this.placedGridMeshes.push(placed);
+
+    // Offset ghost slightly to next grid cell for rapid placement
+    this.buildGridMode.ghost.position.x += 3;
+    if (this.buildGridMode.tile) this.buildGridMode.tile.position.x += 3;
+
+    if (typeof this.callbacks.onPlaceGridObject === 'function') {
+      this.callbacks.onPlaceGridObject({
+        itemType,
+        x: placed.position.x,
+        z: placed.position.z,
+        districtId: this.currentDistrictId
+      });
+    }
+    return placed;
+  }
+
+  // Feature #4: Emotional Emote Bubbles & Mood Aura VFX (Stink waves vs Gold Steeze sparks)
+  updatePlayerMoodVFX(mood = {}) {
+    this.playerMoodState = {
+      hygiene: mood.hygiene ?? 80,
+      steeze: mood.steeze ?? 80,
+      sanity: mood.sanity ?? 80,
+      energy: mood.energy ?? 80
+    };
+  }
+
+  // Feature #5: NPC Social Interaction Wheel & Relationship Affinity
+  findNearestPedestrian(maxDist = 11) {
+    let best = null;
+    let bestD = maxDist;
+    for (let i = 0; i < this.streetPedestrians.length; i++) {
+      const npc = this.streetPedestrians[i];
+      if (!npc.rig?.root?.visible) continue;
+      const d = Math.hypot(npc.rig.root.position.x - this.playerPos.x, npc.rig.root.position.z - this.playerPos.z);
+      if (d < bestD) {
+        bestD = d;
+        best = npc;
+      }
+    }
+    return best;
+  }
+
+  interactWithPedestrian(npcOrId, actionType = 'banter') {
+    let npc = typeof npcOrId === 'object' ? npcOrId : null;
+    if (!npc && typeof npcOrId === 'string') {
+      const idx = parseInt(npcOrId.replace('ped_', ''), 10);
+      if (!Number.isNaN(idx)) npc = this.streetPedestrians[idx];
+    }
+    if (!npc) npc = this.findNearestPedestrian(18);
+    if (!npc) return null;
+
+    // Turn pedestrian to face player
+    const dx = this.playerPos.x - npc.rig.root.position.x;
+    const dz = this.playerPos.z - npc.rig.root.position.z;
+    npc.rig.root.rotation.y = Math.atan2(dx, dz);
+
+    const replies = {
+      banter: [
+        'Omo! Abuja sun hot today o, how far na?',
+        'Chairman! Nothing spoil, we dey push inside FCT!',
+        'Abeg who get connection for Maitama plot?'
+      ],
+      flirt: [
+        'Awwn! Your steeze reach 100% wallahi 😍',
+        'See fine Senator outfit! Make we link up for Wuse 2 ❤️',
+        'Oya drop your 9jaChat handle na! ✨'
+      ],
+      spray: [
+        'TWALE CHAIRMAN!! Original Odogwu of Abuja! 💸🔥',
+        'Na you biko!! Fresh mint Naira notes! 🙌🏾',
+        'Blessings on your compound! You too much! 💰'
+      ],
+      negotiate: [
+        'Okay boss, I go link you with my guy for Ministry 🤝',
+        'Deal sealed! No wahala, I gat your back for FCT.',
+        'Sharp! Make we run the package together 📈'
+      ]
+    };
+
+    const deltaMap = { banter: 8, flirt: 14, spray: 22, negotiate: 10 };
+    const delta = deltaMap[actionType] || 8;
+    npc.affinity = Math.max(0, Math.min(100, (npc.affinity || 50) + delta));
+    const pool = replies[actionType] || replies.banter;
+    npc.banterText = pool[Math.floor(Math.random() * pool.length)];
+    npc.banterTimer = 5.5;
+
+    if (npc.labelEl) {
+      const heartIcon = npc.affinity >= 75 ? '💖' : npc.affinity >= 50 ? '❤️' : '🤝';
+      npc.labelEl.innerHTML = `
+        <div class="w3d-speech-bubble" style="background:rgba(15,23,42,0.95);border:1px solid #4ade80;color:#fef08a;padding:3px 7px;border-radius:6px;margin-bottom:3px;font-size:10px;white-space:nowrap;">${npc.banterText}</div>
+        <span class="w3d-dist-name" style="font-size:10px">${heartIcon} ${npc.name} • ❤️ ${npc.affinity}</span>
+      `;
+    }
+
+    if (actionType === 'spray') {
+      this.spawnNairaRain(14);
+    }
+    return { npc, affinity: npc.affinity, reply: npc.banterText };
+  }
+
+  // Feature #13: Find Nearest 3D Street Vendor (Mai Suya, Roasted Corn, OPay POS)
+  findNearestVendor(maxDist = 11.5) {
+    if (!this.streetVendors) return null;
+    let best = null;
+    let bestD = maxDist;
+    for (const v of this.streetVendors) {
+      const d = Math.hypot(v.x - this.playerPos.x, v.z - this.playerPos.z);
+      if (d < bestD) {
+        bestD = d;
+        best = v;
+      }
+    }
+    return best;
+  }
+
+  // Feature #8: Vehicle Carjacking & Green Cab Hailing
+  findNearestTrafficVehicle(maxDist = 13) {
+    if (!this.trafficCars) return null;
+    let best = null;
+    let bestD = maxDist;
+    for (const c of this.trafficCars) {
+      if (!c.group.visible) continue;
+      const d = Math.hypot(c.group.position.x - this.playerPos.x, c.group.position.z - this.playerPos.z);
+      if (d < bestD) {
+        bestD = d;
+        best = c;
+      }
+    }
+    return best;
+  }
+
+  hailOrCommandeerVehicle(car, mode = 'cab', targetDistrictId = null) {
+    if (!car) car = this.findNearestTrafficVehicle(18);
+    if (mode === 'hijack') {
+      if (car) {
+        this.playerPos.set(car.group.position.x, 0, car.group.position.z);
+        this.playerHeading = car.group.rotation.y;
+        if (car.color) this.setCarWrap(car.color, 'metallic');
+      }
+      if (!this.inVehicle) this.toggleVehicleMode();
+      this._triggerScreenShake(0.6);
+      this.showThoughtBubble('🚘', 'Commandeered FCT Ride!', 2800);
+      return true;
+    }
+
+    // Green Cab Automated Ride
+    const destId = targetDistrictId || this.gpsTargetDistrict || 'wuse2';
+    const d = DISTRICT_BY_ID[destId] || DISTRICT_BY_ID.wuse2;
+    this.setCarWrap(0x059669, 'metallic'); // Abuja Green Cab livery
+    if (!this.inVehicle) this.toggleVehicleMode();
+    this.showThoughtBubble('🚕', `Abuja Green Cab → ${d.short}`, 3200);
+    this.flyToDistrict(destId, false);
+    return true;
+  }
+
+  // Feature #7: 5-Star Wanted Level with Active 3D Police / VIO Hilux Pursuits
+  updateWantedPursuitLevel(stars = 0) {
+    const clamped = Math.max(0, Math.min(5, Math.floor(stars)));
+    this.wantedStars = clamped;
+    const desiredUnits = clamped === 0 ? 0 : Math.min(3, Math.ceil(clamped / 1.6));
+
+    while (this.pursuitUnits.length > desiredUnits) {
+      const u = this.pursuitUnits.pop();
+      this.scene.remove(u.group);
+      this._disposeObject3D(u.group);
+    }
+
+    while (this.pursuitUnits.length < desiredUnits) {
+      const idx = this.pursuitUnits.length;
+      const group = this._buildAmbientCarMesh(0x0f172a, 'police');
+      const angle = (idx * Math.PI * 2) / 3 + Math.random();
+      group.position.set(
+        this.playerPos.x + Math.cos(angle) * 58,
+        0,
+        this.playerPos.z + Math.sin(angle) * 58
+      );
+      this.scene.add(group);
+      this.pursuitUnits.push({
+        group,
+        speed: 44 + idx * 6,
+        flankOffset: (idx - 1) * 6.5,
+        heading: 0
+      });
+    }
+  }
+
+  // Feature #11: Stumble & Ragdoll Tumble Physics on High-Speed Impact
+  triggerPlayerRagdoll(dirX = 0, dirZ = 1, force = 16) {
+    if (this.inVehicle) return;
+    const len = Math.max(0.01, Math.hypot(dirX, dirZ));
+    this.ragdollState = {
+      active: true,
+      timer: 1.35,
+      vx: (dirX / len) * force,
+      vy: 8.5,
+      vz: (dirZ / len) * force
+    };
+    this._triggerScreenShake(0.75);
+    this.showThoughtBubble('💫', 'Omo! High-Speed Tumble!', 2200);
+  }
+
+  // Feature #9: Tire Smoke & Asphalt Skid Decals During Handbrake Drifts
+  _spawnTireSmoke() {
+    if (this.lowPowerMode) return;
+    for (const side of [-1.9, 1.9]) {
+      const puff = new THREE.Mesh(
+        new THREE.SphereGeometry(0.32 + Math.random() * 0.22, 6, 6),
+        new THREE.MeshBasicMaterial({
+          color: 0xf1f5f9,
+          transparent: true,
+          opacity: 0.55,
+          depthWrite: false
+        })
+      );
+      const h = this.playerHeading || 0;
+      const px = this.playerPos.x + Math.sin(h) * -2.9 + Math.cos(h) * side;
+      const pz = this.playerPos.z + Math.cos(h) * -2.9 - Math.sin(h) * side;
+      puff.position.set(px, 0.45, pz);
+      this.scene.add(puff);
+      this.nairaParticles.push({
+        mesh: puff,
+        life: 0.55,
+        vy: -1.1,
+        rx: Math.random() * 2,
+        rz: Math.random() * 2
+      });
+    }
+  }
+
+  _spawnSkidDecal() {
+    if (this.lowPowerMode) return;
+    const h = this.playerHeading || 0;
+    for (const side of [-1.85, 1.85]) {
+      const mark = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.42, 1.45),
+        new THREE.MeshBasicMaterial({
+          color: 0x090d16,
+          transparent: true,
+          opacity: 0.65,
+          depthWrite: false
+        })
+      );
+      mark.rotation.x = -Math.PI / 2;
+      mark.rotation.z = -h;
+      const px = this.playerPos.x + Math.sin(h) * -2.85 + Math.cos(h) * side;
+      const pz = this.playerPos.z + Math.cos(h) * -2.85 - Math.sin(h) * side;
+      mark.position.set(px, 0.22, pz);
+      this.scene.add(mark);
+      this.skidDecals.push(mark);
+    }
+    while (this.skidDecals.length > 60) {
+      const old = this.skidDecals.shift();
+      this.scene.remove(old);
+      this._disposeObject3D(old);
     }
   }
 
@@ -3675,6 +4612,129 @@ export class AbujaWorld3D {
         if (pb.red?.material) pb.red.material.color.setHex(flashPhase < 1 ? 0xff0000 : 0x450a0a);
         if (pb.blue?.material) pb.blue.material.color.setHex(flashPhase >= 1 ? 0x0066ff : 0x082f49);
       }
+
+      // Feature #11: High-speed traffic impact ragdoll check when player is on foot
+      if (!this.inVehicle && !this.ragdollState?.active && distCar < 3.6 && car.speed > 0.3) {
+        const pushX = this.playerPos.x - car.group.position.x;
+        const pushZ = this.playerPos.z - car.group.position.z;
+        this.triggerPlayerRagdoll(pushX, pushZ, 18);
+      }
+    }
+
+    // Feature #7: Animate Active 3D Police / VIO Hilux Pursuit Units chasing & flanking player
+    if (this.pursuitUnits && this.pursuitUnits.length > 0) {
+      const flashPhase = (this.elapsedTime * 11) % 2;
+      for (let i = 0; i < this.pursuitUnits.length; i++) {
+        const u = this.pursuitUnits[i];
+        const targetX = this.playerPos.x + Math.cos(this.elapsedTime * 1.2 + i) * u.flankOffset;
+        const targetZ = this.playerPos.z + Math.sin(this.elapsedTime * 1.2 + i) * u.flankOffset;
+        const dx = targetX - u.group.position.x;
+        const dz = targetZ - u.group.position.z;
+        const dist = Math.hypot(dx, dz);
+        if (dist > 4.2) {
+          const step = Math.min(dist, u.speed * dt);
+          u.group.position.x += (dx / dist) * step;
+          u.group.position.z += (dz / dist) * step;
+          u.group.rotation.y = Math.atan2(dx, dz);
+        } else if (this.inVehicle && Math.random() < 0.04) {
+          this._triggerScreenShake(0.35);
+          this._spawnCollisionSparks(this.playerPos.x, this.playerPos.z);
+        }
+        const pb = u.group.userData?.policeBeacons;
+        if (pb) {
+          if (pb.red?.material) pb.red.material.color.setHex(flashPhase < 1 ? 0xff0000 : 0x450a0a);
+          if (pb.blue?.material) pb.blue.material.color.setHex(flashPhase >= 1 ? 0x0066ff : 0x082f49);
+        }
+      }
+    }
+
+    // Feature #15: Animate Falling Rain Streaks, Harmattan Dust & Swaying Trees
+    if (this.rainLines && this.rainLines.visible) {
+      this.rainLines.position.set(this.playerPos.x, 0, this.playerPos.z);
+      const posAttr = this.rainLines.geometry.attributes.position;
+      const arr = posAttr.array;
+      for (let i = 0; i < arr.length; i += 6) {
+        arr[i + 1] -= 95 * dt;
+        arr[i + 4] -= 95 * dt;
+        if (arr[i + 4] < 0) {
+          const ny = 62 + Math.random() * 18;
+          arr[i + 1] = ny;
+          arr[i + 4] = ny - 3.8;
+        }
+      }
+      posAttr.needsUpdate = true;
+    }
+
+    if (this.harmattanPoints && this.harmattanPoints.visible) {
+      this.harmattanPoints.position.set(
+        this.playerPos.x + Math.sin(this.elapsedTime * 0.5) * 6,
+        Math.cos(this.elapsedTime * 0.4) * 1.5,
+        this.playerPos.z + Math.cos(this.elapsedTime * 0.5) * 6
+      );
+      this.harmattanPoints.rotation.y += dt * 0.12;
+    }
+
+    if (this.swayingTrees && !this.lowPowerMode) {
+      const windAmp = (this.weather === 'harmattan' || this.weather === 'storm' || this.weather === 'downpour') ? 0.11 : 0.03;
+      const windFreq = (this.weather === 'harmattan' || this.weather === 'storm') ? 3.8 : 1.6;
+      for (let i = 0; i < this.swayingTrees.length; i++) {
+        const tr = this.swayingTrees[i];
+        tr.rotation.z = Math.sin(this.elapsedTime * windFreq + i * 0.7) * windAmp;
+      }
+    }
+
+    // Feature #17: Animate Wuse 2 Volumetric Neon Pulse & Feature #13 Street Vendor Charcoal Smoke
+    if (this.neonPulses) {
+      for (let i = 0; i < this.neonPulses.length; i++) {
+        const np = this.neonPulses[i];
+        if (np.mat) {
+          np.mat.opacity = 0.78 + Math.sin(this.elapsedTime * 4.5 + i) * 0.2;
+        }
+      }
+    }
+
+    if (this.streetVendors && !this.lowPowerMode && Math.random() < 0.25) {
+      for (const v of this.streetVendors) {
+        if (v.type !== 'suya' && v.type !== 'corn') continue;
+        if (Math.hypot(v.x - this.playerPos.x, v.z - this.playerPos.z) < 95) {
+          const smoke = new THREE.Mesh(
+            new THREE.SphereGeometry(0.28 + Math.random() * 0.2, 6, 6),
+            new THREE.MeshBasicMaterial({ color: 0xd6d3d1, transparent: true, opacity: 0.42, depthWrite: false })
+          );
+          smoke.position.set(v.x + (Math.random() - 0.5) * 0.8, 1.8, v.z + (Math.random() - 0.5) * 0.8);
+          this.scene.add(smoke);
+          this.nairaParticles.push({ mesh: smoke, life: 1.1, vy: -1.8, rx: 0.5, rz: 0.5 });
+        }
+      }
+    }
+
+    // Feature #4: Emotional Emote Bubbles & Mood Aura VFX (Green Stink Waves vs Gold Steeze Sparks)
+    if (this.playerMoodState && !this.lowPowerMode && Math.random() < 0.18) {
+      if (this.playerMoodState.hygiene < 35) {
+        const stink = new THREE.Mesh(
+          new THREE.SphereGeometry(0.24, 6, 6),
+          new THREE.MeshBasicMaterial({ color: 0x84cc16, transparent: true, opacity: 0.55, depthWrite: false })
+        );
+        stink.position.set(
+          this.playerPos.x + (Math.random() - 0.5) * 1.4,
+          2.2 + Math.random() * 1.6,
+          this.playerPos.z + (Math.random() - 0.5) * 1.4
+        );
+        this.scene.add(stink);
+        this.nairaParticles.push({ mesh: stink, life: 0.9, vy: -1.5, rx: 1, rz: 1 });
+      } else if (this.playerMoodState.steeze >= 75) {
+        const spark = new THREE.Mesh(
+          new THREE.OctahedronGeometry(0.18, 0),
+          new THREE.MeshBasicMaterial({ color: 0xfacc15, transparent: true, opacity: 0.85 })
+        );
+        spark.position.set(
+          this.playerPos.x + (Math.random() - 0.5) * 2.2,
+          1.8 + Math.random() * 2.6,
+          this.playerPos.z + (Math.random() - 0.5) * 2.2
+        );
+        this.scene.add(spark);
+        this.nairaParticles.push({ mesh: spark, life: 0.75, vy: -1.4, rx: 3, rz: 3 });
+      }
     }
 
     // Animate street pedestrians walking along compounds (or knocked down like Image 4)
@@ -3685,10 +4745,24 @@ export class AbujaWorld3D {
         continue;
       }
       npc.rig.root.visible = true;
+      if (npc.banterTimer > 0) {
+        npc.banterTimer = Math.max(0, npc.banterTimer - dt);
+        if (npc.banterTimer === 0 && npc.labelEl) {
+          const heartIcon = npc.affinity >= 75 ? '💖' : npc.affinity >= 50 ? '❤️' : '🤝';
+          npc.labelEl.innerHTML = `<span class="w3d-dist-name" style="font-size:10px">${heartIcon} ${npc.name} • ❤️ ${npc.affinity}</span>`;
+        }
+      }
       if (npc.knockedTimer > 0) {
         npc.knockedTimer -= dt;
         npc.rig.root.rotation.x = -Math.PI / 2.1;
         npc.rig.root.position.y = 0.55;
+      } else if (npc.banterTimer > 0) {
+        // Pause walking while chatting with player
+        npc.rig.root.rotation.x = 0;
+        npc.rig.root.position.y = 0.2;
+        npc.rig.leftLegPivot.rotation.x = 0;
+        npc.rig.rightLegPivot.rotation.x = 0;
+        npc.rig.rightArmPivot.rotation.x = -0.45 + Math.sin(this.elapsedTime * 6) * 0.25;
       } else {
         npc.rig.root.rotation.x = 0;
         npc.rig.root.position.y = 0.2;
@@ -3892,12 +4966,26 @@ export class AbujaWorld3D {
       if (ud.frontLeftPivot) ud.frontLeftPivot.rotation.y = THREE.MathUtils.lerp(ud.frontLeftPivot.rotation.y, targetSteer, dt * 10);
       if (ud.frontRightPivot) ud.frontRightPivot.rotation.y = THREE.MathUtils.lerp(ud.frontRightPivot.rotation.y, targetSteer, dt * 10);
 
-      // Chassis suspension pitch (squat on accel, dive on brake) & roll into turns
+      //Chassis suspension pitch (squat on accel, dive on brake) & roll into turns + Feature #9 Drift Physics
+      const isDrifting = (this.keys.handbrake && Math.abs(this.playerSpeed) > 16) || (Math.abs(rightInput) > 0.65 && Math.abs(this.playerSpeed) > 46);
+      if (isDrifting) {
+        this.driftSlip = THREE.MathUtils.lerp(this.driftSlip || 0, rightInput * 0.45, dt * 8);
+        this.playerHeading += rightInput * dt * 1.45;
+        if (Math.random() < 0.65) this._spawnTireSmoke();
+        if (Math.random() < 0.48) this._spawnSkidDecal();
+        if (typeof this.callbacks.onVehicleDrift === 'function' && Math.random() < 0.15) {
+          this.callbacks.onVehicleDrift();
+        }
+      } else {
+        this.driftSlip = THREE.MathUtils.lerp(this.driftSlip || 0, 0, dt * 9);
+      }
+
       if (ud.chassisGroup) {
         const targetPitch = forwardInput > 0.1 ? -0.045 : (forwardInput < -0.1 ? 0.038 : 0);
         const targetRoll = rightInput * (this.playerSpeed / 75) * 0.06;
         ud.chassisGroup.rotation.x = THREE.MathUtils.lerp(ud.chassisGroup.rotation.x, targetPitch, dt * 8);
         ud.chassisGroup.rotation.z = THREE.MathUtils.lerp(ud.chassisGroup.rotation.z, targetRoll, dt * 8);
+        ud.chassisGroup.rotation.y = this.driftSlip || 0;
         ud.chassisGroup.position.y = 1.38 + (this.playerSpeed > 2 ? Math.sin(this.walkCycle * 2) * 0.025 : 0);
       }
 
@@ -3909,8 +4997,78 @@ export class AbujaWorld3D {
       }
     }
 
+    // Feature #11: Ragdoll Tumble Physics when hit by car or high-speed impact
+    if (this.ragdollState?.active) {
+      this.ragdollState.timer -= dt;
+      this.playerPos.x = Math.max(-680, Math.min(680, this.playerPos.x + this.ragdollState.vx * dt));
+      this.playerPos.z = Math.max(-680, Math.min(680, this.playerPos.z + this.ragdollState.vz * dt));
+      this.ragdollState.vx *= 0.92;
+      this.ragdollState.vz *= 0.92;
+      this.playerGroup.position.copy(this.playerPos);
+      if (this.playerPedMesh) {
+        this.playerPedMesh.position.y = 0.8 + Math.abs(Math.sin(this.ragdollState.timer * 7)) * 1.4;
+        this.playerPedMesh.rotation.x += dt * 11;
+        this.playerPedMesh.rotation.z = Math.sin(this.ragdollState.timer * 10) * 0.6;
+      }
+      if (this.ragdollState.timer <= 0) {
+        this.ragdollState.active = false;
+        if (this.playerPedMesh) {
+          this.playerPedMesh.position.y = 0.2;
+          this.playerPedMesh.rotation.set(0, 0, 0);
+        }
+      }
+    }
+
+    // Feature #2: Smart-Object Physical Pose & Particle Animations (Cooking steam, Sleeping Zzz, Shower droplets)
+    if (this.smartActionState?.active && this.playerHuman) {
+      this.smartActionState.timer -= dt;
+      const st = this.smartActionState.type;
+      if (st === 'sleep') {
+        this.playerPedMesh.rotation.x = -Math.PI / 2.1;
+        this.playerPedMesh.position.y = 1.05;
+      } else if (st === 'cook' || st === 'gen') {
+        this.playerHuman.leftArmPivot.rotation.x = -0.85 + Math.sin(this.elapsedTime * 8) * 0.35;
+        this.playerHuman.rightArmPivot.rotation.x = -0.85 - Math.sin(this.elapsedTime * 8) * 0.35;
+        if (Math.random() < 0.35) {
+          const steam = new THREE.Mesh(
+            new THREE.SphereGeometry(0.22, 6, 6),
+            new THREE.MeshBasicMaterial({ color: 0xf8fafc, transparent: true, opacity: 0.65 })
+          );
+          steam.position.set(this.playerPos.x + (Math.random() - 0.5), 2.8, this.playerPos.z + (Math.random() - 0.5));
+          this.scene.add(steam);
+          this.nairaParticles.push({ mesh: steam, life: 0.75, vy: -1.8, rx: 1, rz: 1 });
+        }
+      }
+      if (this.smartActionState.timer <= 0) {
+        this.smartActionState.active = false;
+        if (this.playerPedMesh) {
+          this.playerPedMesh.rotation.x = 0;
+          this.playerPedMesh.position.y = 0.2;
+        }
+      }
+    }
+
+    // Feature #1: Auto-Slice Compound Roofs into Sims Cutaway View when inside Owned Compound Plot!
+    if (!this.inVehicle && this.playerHouseEntries && this.playerHouseEntries.size > 0 && !this.buildGridMode?.active) {
+      let insideOwnedPlot = false;
+      for (const entry of this.playerHouseEntries.values()) {
+        const dPlot = Math.hypot(entry.group.position.x - this.playerPos.x, entry.group.position.z - this.playerPos.z);
+        if (dPlot < 13.5) {
+          insideOwnedPlot = true;
+          break;
+        }
+      }
+      if (insideOwnedPlot && !this._autoCutawayInside) {
+        this._autoCutawayInside = true;
+        this.cycleWallCutaway('cutaway');
+      } else if (!insideOwnedPlot && this._autoCutawayInside && this.cameraMode !== 'dollhouse') {
+        this._autoCutawayInside = false;
+        this.cycleWallCutaway('up');
+      }
+    }
+
     // ── SUPERB HUMANOID AVATAR ANIMATION ────────────────────────────────────
-    if (this.playerHuman) {
+    if (this.playerHuman && !this.ragdollState?.active && !this.smartActionState?.active) {
       const moving = this.playerSpeed > 1.2;
       const isSprinting = this.keys.shift && this.playerSpeed > 18;
 
@@ -3953,6 +5111,30 @@ export class AbujaWorld3D {
         this.playerHuman.rightArmPivot.rotation.z = 0;
         this.playerHuman.torso.rotation.y = 0;
       }
+    }
+
+    // Feature #18: First-Person Cockpit & Low Bumper Driving Camera Modes
+    if (this.cameraMode === 'cockpit' || this.cameraMode === 'bumper') {
+      const heading = this.playerHeading || 0;
+      const fwdOffset = this.cameraMode === 'bumper' ? (this.inVehicle ? 4.8 : 1.1) : (this.inVehicle ? 0.6 : 0.35);
+      const camY = this.cameraMode === 'bumper' ? (this.inVehicle ? 1.35 : 2.6) : (this.inVehicle ? 2.85 : 4.35);
+      const desiredCam = new THREE.Vector3(
+        this.playerPos.x + Math.sin(heading) * fwdOffset,
+        camY,
+        this.playerPos.z + Math.cos(heading) * fwdOffset
+      );
+      if (this._screenShakeIntensity > 0.001) {
+        desiredCam.x += (Math.random() - 0.5) * this._screenShakeIntensity;
+        desiredCam.y += (Math.random() - 0.5) * this._screenShakeIntensity;
+        this._screenShakeIntensity = THREE.MathUtils.lerp(this._screenShakeIntensity, 0, dt * 6.5);
+      }
+      this.camera.position.lerp(desiredCam, Math.min(1, dt * 18));
+      this.camera.lookAt(
+        this.playerPos.x + Math.sin(heading) * 38,
+        camY - 0.35,
+        this.playerPos.z + Math.cos(heading) * 38
+      );
+      return;
     }
 
     const horizDist = Math.cos(this.cameraPitch) * this.cameraDistance;
@@ -4108,18 +5290,25 @@ export class AbujaWorld3D {
           group.add(slab);
         }
 
-        // Stage >= 2: Hollow Blockwork Walls / Duplex Shell
+        // Stage >= 2: Hollow Blockwork Walls / Duplex Shell + Sims Interior Furniture
+        let wallsMat = null;
         if (plot.stage >= 2) {
           const wallH = plot.stage >= 3 ? 11 : 6;
           const wallColor = plot.stage >= 5 ? 0xfef3c7 : plot.stage >= 4 ? 0xe2e8f0 : 0x94a3b8;
+          wallsMat = new THREE.MeshStandardMaterial({ color: wallColor, roughness: 0.45 });
           const walls = new THREE.Mesh(
             new THREE.BoxGeometry(11.2, wallH, 11.2),
-            new THREE.MeshStandardMaterial({ color: wallColor, roughness: 0.45 })
+            wallsMat
           );
           walls.position.y = 2.0 + wallH / 2;
           walls.castShadow = true;
           walls.userData = { isWall: true, origHeight: wallH, origPosY: 2.0 + wallH / 2 };
           group.add(walls);
+
+          // Feature #1: Add Sims Interior Furniture inside player's owned compound
+          const interior = this._buildDuplexInteriorFurniture(10.5, 10.5);
+          interior.position.y = 1.9;
+          group.add(interior);
         }
 
         // Stage >= 3: Pitched Gerard Stone-Coated Roof
@@ -4180,6 +5369,7 @@ export class AbujaWorld3D {
           district: plot.district,
           stage: plot.stage,
           group,
+          wallsMat,
           labelEl
         };
         this.playerHouseEntries.set(plot.district, entry);
@@ -4238,6 +5428,34 @@ export class AbujaWorld3D {
       const y = (-(tempV.y * 0.5) + 0.5) * h;
       entry.labelEl.style.display = 'flex';
       entry.labelEl.style.transform = `translate(-50%, -100%) translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+    }
+
+    // Feature #5: Project NPC Affinity & Pidgin Banter Badges above nearby Street Pedestrians
+    if (this.streetPedestrians) {
+      for (const npc of this.streetPedestrians) {
+        if (!npc.labelEl || !npc.rig?.root?.visible) {
+          if (npc.labelEl) npc.labelEl.style.display = 'none';
+          continue;
+        }
+        const dNpc = Math.hypot(npc.rig.root.position.x - this.playerPos.x, npc.rig.root.position.z - this.playerPos.z);
+        if (dNpc > 46 && (!npc.banterTimer || npc.banterTimer <= 0)) {
+          npc.labelEl.style.display = 'none';
+          continue;
+        }
+        tempV.copy(npc.rig.root.position);
+        tempV.y += 5.4;
+        tempV.project(this.camera);
+        if (tempV.z > 1) {
+          npc.labelEl.style.display = 'none';
+          continue;
+        }
+        const x = (tempV.x * 0.5 + 0.5) * w;
+        const y = (-(tempV.y * 0.5) + 0.5) * h;
+        npc.labelEl.style.display = 'inline-flex';
+        npc.labelEl.style.flexDirection = 'column';
+        npc.labelEl.style.alignItems = 'center';
+        npc.labelEl.style.transform = `translate(-50%, -100%) translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+      }
     }
 
     if (this.playerHouseEntries) {

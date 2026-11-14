@@ -560,12 +560,36 @@ class AbujaClientApp {
         },
         onToggleVehicle: (inVehicle) => {
           this._syncDriveButtons(inVehicle);
+          if (this.afrobeats?.setExteriorMuffle) {
+            this.afrobeats.setExteriorMuffle(!inVehicle);
+          }
         },
         onCycleCamera: (camMode) => {
           const camBtn = document.getElementById('btn-toggle-cam');
           if (camBtn) {
-            camBtn.textContent = camMode === 'helicopter' ? '🚁 Chopper Cam (V)' : (camMode === 'dollhouse' ? '🏠 Dollhouse (V)' : '🎥 3rd-Person (V)');
+            const labels = {
+              chase: '🎥 3rd-Person (V)',
+              cockpit: '🛞 Cockpit Cam (V)',
+              bumper: '🏎️ Bumper Cam (V)',
+              dollhouse: '🏠 Dollhouse 45° (V)',
+              helicopter: '🚁 Chopper Cam (V)'
+            };
+            camBtn.textContent = labels[camMode] || '🎥 3rd-Person (V)';
           }
+        },
+        onSelectNpc: (npc) => {
+          if (!npc) return;
+          this.afrobeats?.playPidginChirp?.('greet');
+          if (this.uiExtras?.openPie) {
+            this.uiExtras.openPie(window.innerWidth / 2, window.innerHeight / 2, {
+              type: 'npc',
+              id: npc.id,
+              username: npc.name || 'FCT Resident'
+            });
+          }
+        },
+        onVehicleDrift: () => {
+          this.afrobeats?.playSfx?.('tire_screech');
         },
         onContextInteract: () => {
           if (typeof this.currentContextAction === 'function') {
@@ -841,9 +865,9 @@ class AbujaClientApp {
       const toRadarX = (x) => w / 2 + (x - pCoords.x) * scale;
       const toRadarY = (y) => h / 2 + (y - pCoords.y) * scale;
 
-      // Subtle GTA route lines overlay
-      ctx.strokeStyle = 'rgba(124, 58, 237, 0.55)';
-      ctx.lineWidth = 3;
+      // Subtle GTA road network lines overlay
+      ctx.strokeStyle = 'rgba(71, 85, 105, 0.55)';
+      ctx.lineWidth = 2.2;
       for (const e of EDGES) {
         const a = DISTRICT_BY_ID[e.a];
         const b = DISTRICT_BY_ID[e.b];
@@ -852,6 +876,39 @@ class AbujaClientApp {
         ctx.moveTo(toRadarX(a.x), toRadarY(a.y));
         ctx.lineTo(toRadarX(b.x), toRadarY(b.y));
         ctx.stroke();
+      }
+
+      // Feature #6: Illuminated Purple GPS Route Navigation Ribbon on Minimap Radar
+      if (this.world3d?.gpsPathPoints && this.world3d.gpsPathPoints.length >= 2) {
+        ctx.save();
+        ctx.strokeStyle = '#c084fc';
+        ctx.shadowColor = '#a855f7';
+        ctx.shadowBlur = 6;
+        ctx.lineWidth = 3.8;
+        ctx.beginPath();
+        ctx.moveTo(w / 2, h / 2);
+        for (let i = 1; i < this.world3d.gpsPathPoints.length; i++) {
+          const pt = this.world3d.gpsPathPoints[i];
+          ctx.lineTo(toRadarX(pt.x2d), toRadarY(pt.y2d));
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Feature #7: Flashing Red/Blue 3D Police Pursuit Blips on Radar
+      if (this.world3d?.pursuitUnits && this.world3d.pursuitUnits.length > 0) {
+        const flashRed = Math.floor(time / 180) % 2 === 0;
+        for (const u of this.world3d.pursuitUnits) {
+          const rx = w / 2 + ((u.group.position.x - this.world3d.playerPos.x) / 14) * scale;
+          const ry = h / 2 + ((u.group.position.z - this.world3d.playerPos.z) / 13) * scale;
+          ctx.fillStyle = flashRed ? '#ef4444' : '#3b82f6';
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.arc(rx, ry, 4.2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        }
       }
 
       for (const d of DISTRICTS) {
@@ -933,15 +990,99 @@ class AbujaClientApp {
       return;
     }
 
-    // 1. In Vehicle -> prompt to step out
+    // 1. In Vehicle -> prompt to step out or switch radio
     if (this.world3d.inVehicle) {
       promptEl.hidden = false;
       if (iconEl) iconEl.textContent = '🚶🏾';
-      labelEl.textContent = 'Step Out of Sports Car';
-      if (subEl) subEl.textContent = 'Press F or Tap to Walk';
+      labelEl.textContent = 'Step Out of Car (Space = Drift)';
+      if (subEl) subEl.textContent = 'Tap to Walk • R for Radio Wheel';
       this.currentContextAction = () => {
         const inCar = this.world3d.toggleVehicleMode();
         this._syncDriveButtons(inCar);
+      };
+      return;
+    }
+
+    // 1B. Feature #13: Near 3D Street Vendor (Mai Suya, Roasted Corn & Pear, OPay POS Kiosk)
+    const nearVendor = this.world3d.findNearestVendor?.(11.5);
+    if (nearVendor) {
+      promptEl.hidden = false;
+      if (nearVendor.type === 'suya') {
+        if (iconEl) iconEl.textContent = '🔥';
+        labelEl.textContent = 'Mai Suya Spot (₦2,500)';
+        if (subEl) subEl.textContent = 'Tap to Buy Spicy Beef Suya (+35 Hunger)';
+        this.currentContextAction = () => {
+          if (!this.game.canAfford(2500)) return this.showToast('⚠️ Need ₦2,500 cash for Mai Suya!');
+          this.game.pay(2500);
+          this.game.stat('energy', 14);
+          this.game.stat('sanity', 6);
+          if (this.game.s.sims?.motives) this.game.s.sims.motives.hunger = Math.min(100, (this.game.s.sims.motives.hunger || 50) + 35);
+          this.world3d.performSmartObjectAnimation('cook', 'Chopping Spicy Mai Suya! 🥩🔥', 2600);
+          this.afrobeats?.playSfx?.('cash');
+          this.showToast('🔥 Bought hot Mai Suya & Masa! (+35 Hunger, +14 Energy)');
+          this._renderAll();
+        };
+      } else if (nearVendor.type === 'corn') {
+        if (iconEl) iconEl.textContent = '🌽';
+        labelEl.textContent = 'Roasted Corn & Ube Pear (₦1,000)';
+        if (subEl) subEl.textContent = 'Tap to Buy Roadside Corn (+25 Hunger)';
+        this.currentContextAction = () => {
+          if (!this.game.canAfford(1000)) return this.showToast('⚠️ Need ₦1,000 cash for Corn & Pear!');
+          this.game.pay(1000);
+          this.game.stat('energy', 10);
+          if (this.game.s.sims?.motives) this.game.s.sims.motives.hunger = Math.min(100, (this.game.s.sims.motives.hunger || 50) + 25);
+          this.world3d.performSmartObjectAnimation('cook', 'Roasting Corn & Pear! 🌽🥑', 2400);
+          this.afrobeats?.playSfx?.('cash');
+          this.showToast('🌽 Fresh Roasted Corn & Ube Pear! (+25 Hunger, +10 Energy)');
+          this._renderAll();
+        };
+      } else {
+        if (iconEl) iconEl.textContent = '🏧';
+        labelEl.textContent = 'OPay / Moniepoint POS Kiosk';
+        if (subEl) subEl.textContent = 'Tap for Instant Cash Withdrawal / Deposit';
+        this.currentContextAction = () => {
+          this.uiExtras?.openPhone?.('opay');
+        };
+      }
+      return;
+    }
+
+    // 1C. Feature #5: Near Street Pedestrian -> Open NPC Social Interaction Wheel
+    const nearNpc = this.world3d.findNearestPedestrian?.(10.5);
+    if (nearNpc) {
+      promptEl.hidden = false;
+      if (iconEl) iconEl.textContent = '🗣️';
+      labelEl.textContent = `Chat with ${nearNpc.name} (❤️ ${nearNpc.affinity || 50})`;
+      if (subEl) subEl.textContent = 'Tap for Banter, Flirt, Spray ₦ or Negotiate';
+      this.currentContextAction = () => {
+        this.afrobeats?.playPidginChirp?.('greet');
+        this.uiExtras?.openPie?.(window.innerWidth / 2, window.innerHeight / 2, {
+          type: 'npc',
+          id: nearNpc.id,
+          username: nearNpc.name
+        });
+      };
+      return;
+    }
+
+    // 1D. Feature #8: Near Traffic Car / Green Cab -> Hail Cab or Commandeer Vehicle
+    const nearCar = this.world3d.findNearestTrafficVehicle?.(12.0);
+    if (nearCar) {
+      promptEl.hidden = false;
+      const isCab = nearCar.type === 'cab';
+      if (iconEl) iconEl.textContent = isCab ? '🚕' : '🚘';
+      labelEl.textContent = isCab ? 'Hail Abuja Green Cab (₦1,500)' : 'Hop Into Street Vehicle';
+      if (subEl) subEl.textContent = isCab ? 'Tap for Automated Metered Ride' : 'Tap to Drive Vehicle in 3D';
+      this.currentContextAction = () => {
+        if (isCab) {
+          if (this.game.canAfford(1500)) this.game.pay(1500);
+          this.world3d.hailOrCommandeerVehicle(nearCar, 'cab', this.selectedCommuteDest || 'wuse2');
+          this.showToast('🚕 Hopped into Abuja Green Cab!');
+        } else {
+          this.world3d.hailOrCommandeerVehicle(nearCar, 'hijack');
+          this.showToast('🚘 Commandeered street vehicle! Press Space to drift.');
+        }
+        this._renderAll();
       };
       return;
     }
@@ -1114,13 +1255,38 @@ class AbujaClientApp {
     document.getElementById('hud-clout-val').textContent = Math.round(s.clout);
     document.getElementById('hud-network-val').textContent = s.contacts.length;
 
-    // Synchronize 3D Sims Plumbob Emerald Diamond above player avatar with 8 motives
-    if (this.world3d && s.sims?.motives) {
-      const motives = Object.values(s.sims.motives);
-      const avg = motives.reduce((a, b) => a + b, 0) / Math.max(1, motives.length);
-      const minMotive = Math.min(...motives);
-      const score = minMotive < 30 ? minMotive : avg;
-      this.world3d.updatePlumbobMotive(score);
+    // Synchronize 3D Sims Plumbob Emerald Diamond, Wanted Pursuit Units, Power Blackout, Mood VFX & GPS Route
+    if (this.world3d) {
+      if (s.sims?.motives) {
+        const motives = Object.values(s.sims.motives);
+        const avg = motives.reduce((a, b) => a + b, 0) / Math.max(1, motives.length);
+        const minMotive = Math.min(...motives);
+        const score = minMotive < 30 ? minMotive : avg;
+        this.world3d.updatePlumbobMotive(score);
+      }
+      if (typeof this.world3d.updateWantedPursuitLevel === 'function') {
+        const prevStars = this.world3d.wantedStars || 0;
+        this.world3d.updateWantedPursuitLevel(activeStars);
+        if (activeStars >= 2 && activeStars > prevStars) {
+          this.afrobeats?.playSfx?.('siren');
+        }
+      }
+      if (typeof this.world3d.setPowerGridState === 'function') {
+        const gridOnline = s.sims?.utilities?.gridPower !== false;
+        const playerGenOn = Boolean(s.sims?.utilities?.generatorRunning || s.social?.solarInstalled);
+        this.world3d.setPowerGridState(gridOnline, playerGenOn);
+      }
+      if (typeof this.world3d.updatePlayerMoodVFX === 'function') {
+        this.world3d.updatePlayerMoodVFX({
+          hygiene: s.sims?.motives?.hygiene ?? 80,
+          steeze: s.social?.steeze ?? 80,
+          sanity: s.sanity,
+          energy: s.energy
+        });
+      }
+      if (typeof this.world3d.setGPSRouteDestination === 'function' && this.selectedCommuteDest) {
+        this.world3d.setGPSRouteDestination(this.selectedCommuteDest);
+      }
     }
 
     if (typeof this._renderMissionBanner === 'function') {
