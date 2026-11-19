@@ -478,6 +478,15 @@ class AbujaClientApp {
     if (mobBtn) mobBtn.classList.toggle('active', inCar);
     if (mobIco) mobIco.textContent = inCar ? '🚶🏾' : '🏎️';
     if (mobLbl) mobLbl.textContent = inCar ? 'EXIT' : 'CAR';
+
+    // Feature #9: Switch Circle (○) button between Street Punch (HIT) on foot and Handbrake (DRIFT) in vehicle
+    const punchBtn = document.getElementById('btn-mobile-punch');
+    if (punchBtn) {
+      const pIco = punchBtn.querySelector('.gmac-ico');
+      const pLbl = punchBtn.querySelector('.gmac-lbl');
+      if (pIco) pIco.textContent = inCar ? '💨' : '👊🏾';
+      if (pLbl) pLbl.textContent = inCar ? 'DRIFT' : 'HIT';
+    }
   }
 
   startRealTime(speed = 1) {
@@ -590,6 +599,18 @@ class AbujaClientApp {
         },
         onVehicleDrift: () => {
           this.afrobeats?.playSfx?.('tire_screech');
+        },
+        onPoliceBoxedIn: () => {
+          this.afrobeats?.playSfx?.('siren');
+          this.uiExtras?.showPhoneNotification?.('🚓', 'VIO / Police Checkpoint', 'Your vehicle is boxed in! Settle officer now.');
+          this.uiExtras?.openBribeSliderGame?.();
+        },
+        onWantedEvaded: () => {
+          this.game.s.heat = 0;
+          if (this.game.s.social) this.game.s.social.efccHeat = 0;
+          this.world3d?.updateWantedPursuitLevel?.(0);
+          this.showToast('🏁 Outran VIO/Police Patrol for 45s! Wanted Level Evaded (0★)!');
+          this._renderHUD();
         },
         onContextInteract: () => {
           if (typeof this.currentContextAction === 'function') {
@@ -1065,22 +1086,24 @@ class AbujaClientApp {
       return;
     }
 
-    // 1D. Feature #8: Near Traffic Car / Green Cab -> Hail Cab or Commandeer Vehicle
+    // 1D. Feature #8: Near Traffic Car / Green Cab / Keke NAPEP -> Hail Cab or Commandeer Vehicle
     const nearCar = this.world3d.findNearestTrafficVehicle?.(12.0);
     if (nearCar) {
       promptEl.hidden = false;
-      const isCab = nearCar.type === 'cab';
-      if (iconEl) iconEl.textContent = isCab ? '🚕' : '🚘';
-      labelEl.textContent = isCab ? 'Hail Abuja Green Cab (₦1,500)' : 'Hop Into Street Vehicle';
+      const isCab = nearCar.type === 'taxi' || nearCar.type === 'cab' || nearCar.type === 'keke';
+      const labelTitle = nearCar.type === 'keke' ? 'Hail Abuja Keke NAPEP (₦1,000)' : isCab ? 'Hail Abuja Green Cab (₦1,500)' : 'Hop Into Street Vehicle';
+      if (iconEl) iconEl.textContent = nearCar.type === 'keke' ? '🛺' : isCab ? '🚕' : '🚘';
+      labelEl.textContent = labelTitle;
       if (subEl) subEl.textContent = isCab ? 'Tap for Automated Metered Ride' : 'Tap to Drive Vehicle in 3D';
       this.currentContextAction = () => {
         if (isCab) {
-          if (this.game.canAfford(1500)) this.game.pay(1500);
+          const fare = nearCar.type === 'keke' ? 1000 : 1500;
+          if (this.game.canAfford(fare)) this.game.pay(fare);
           this.world3d.hailOrCommandeerVehicle(nearCar, 'cab', this.selectedCommuteDest || 'wuse2');
-          this.showToast('🚕 Hopped into Abuja Green Cab!');
+          this.showToast(nearCar.type === 'keke' ? '🛺 Hopped into Keke NAPEP!' : '🚕 Hopped into Abuja Green Cab!');
         } else {
           this.world3d.hailOrCommandeerVehicle(nearCar, 'hijack');
-          this.showToast('🚘 Commandeered street vehicle! Press Space to drift.');
+          this.showToast('🚘 Commandeered street vehicle! Hold Space or [○ DRIFT] to drift.');
         }
         this._renderAll();
       };
@@ -5099,13 +5122,30 @@ class AbujaClientApp {
     document.getElementById('btn-spray-naira')?.addEventListener('click', triggerSprayNaira);
     document.getElementById('btn-mobile-spray')?.addEventListener('click', triggerSprayNaira);
 
-    // Mobile 1-Tap Street Punch & Turbo Sprint Buttons
-    document.getElementById('btn-mobile-punch')?.addEventListener('click', () => {
-      if (this.world3d) {
-        this.world3d.triggerStreetPunch();
-        syncDriveButtons(this.world3d.inVehicle);
-      }
-    });
+    // Mobile 1-Tap Street Punch (on foot) & Handbrake Drift (in vehicle) Button
+    const punchOrDriftBtn = document.getElementById('btn-mobile-punch');
+    if (punchOrDriftBtn) {
+      punchOrDriftBtn.addEventListener('pointerdown', (e) => {
+        if (this.world3d?.inVehicle) {
+          e.preventDefault();
+          this.world3d.keys.handbrake = true;
+          punchOrDriftBtn.classList.add('active');
+        }
+      });
+      const releaseDrift = () => {
+        if (this.world3d) this.world3d.keys.handbrake = false;
+        punchOrDriftBtn.classList.remove('active');
+      };
+      punchOrDriftBtn.addEventListener('pointerup', releaseDrift);
+      punchOrDriftBtn.addEventListener('pointercancel', releaseDrift);
+      punchOrDriftBtn.addEventListener('pointerleave', releaseDrift);
+      punchOrDriftBtn.addEventListener('click', () => {
+        if (this.world3d && !this.world3d.inVehicle) {
+          this.world3d.triggerStreetPunch();
+          syncDriveButtons(this.world3d.inVehicle);
+        }
+      });
+    }
 
     const sprintBtn = document.getElementById('btn-mobile-sprint');
     if (sprintBtn) {

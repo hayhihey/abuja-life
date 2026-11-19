@@ -1024,6 +1024,24 @@ export function initUIExtras(app) {
           </button>
         `).join('')}
       `;
+    } else if (tab === 'agis') {
+      const plotsObj = s.social?.plots || {};
+      const plotKeys = Object.keys(plotsObj);
+      bodyHtml = `
+        <div style="font-size:11px;color:#38bdf8;font-weight:800">🏛️ AGIS PORTAL • FCT LAND REGISTRY</div>
+        <div style="font-size:10.5px;color:#94a3b8">Verified C-of-O Deeds & 3D Compound Plots (${plotKeys.length}):</div>
+        ${plotKeys.map((distId) => {
+          const pl = plotsObj[distId];
+          return `
+            <div style="background:#111c33;padding:8px 10px;border-radius:10px;border:1px solid rgba(56,189,248,.3)">
+              <div style="font-size:12px;font-weight:800;color:#fff">📍 ${distId.toUpperCase()} PLOT • Stage ${pl.stage || 1}/5</div>
+              <div style="font-size:10px;color:${pl.cofo ? '#4ade80' : '#facc15'}">${pl.cofo ? '✅ AGIS C-of-O Verified' : '⚠️ Pending C-of-O Approval'}</div>
+            </div>
+          `;
+        }).join('') || '<div style="font-size:11px;color:#64748b">No FCT land plots registered yet. Visit AGIS Land Registry to acquire a plot!</div>'}
+        <button class="ux-phone-btn" id="ph-agis-grid"><span>📐 Place 3D Items on Compound Lot</span><span>1m×1m Grid</span></button>
+        <button class="ux-phone-btn" id="ph-agis-open"><span>🏗️ Open AGIS Land & House Builder</span><span>Deeds</span></button>
+      `;
     } else {
       bodyHtml = `
         <div style="font-size:11px;color:#facc15;font-weight:800">🔥 CLOUTTOK & STREET ARCADE</div>
@@ -1041,11 +1059,13 @@ export function initUIExtras(app) {
         <span>9jaPhone OS</span>
         <span id="ph-close" style="cursor:pointer;color:#f87171;font-size:13px">✕</span>
       </div>
-      <div class="ux-phone-nav">
+      <div id="ux-phone-push" style="display:none;background:#065f46;color:#ecfdf5;padding:6px 10px;font-size:10.5px;font-weight:700;border-bottom:1px solid #34d399"></div>
+      <div class="ux-phone-nav" style="grid-template-columns:repeat(5,1fr)">
         <button class="ux-phone-tab ${tab === 'opay' ? 'active' : ''}" data-phtab="opay"><span>💚</span>OPay</button>
-        <button class="ux-phone-tab ${tab === 'chat' ? 'active' : ''}" data-phtab="chat"><span>💬</span>9jaChat</button>
-        <button class="ux-phone-tab ${tab === 'bolt' ? 'active' : ''}" data-phtab="bolt"><span>🚕</span>Bolt FCT</button>
-        <button class="ux-phone-tab ${tab === 'clout' ? 'active' : ''}" data-phtab="clout"><span>🔥</span>Arcade</button>
+        <button class="ux-phone-tab ${tab === 'chat' ? 'active' : ''}" data-phtab="chat"><span>💬</span>Chat</button>
+        <button class="ux-phone-tab ${tab === 'bolt' ? 'active' : ''}" data-phtab="bolt"><span>🚕</span>Bolt</button>
+        <button class="ux-phone-tab ${tab === 'agis' ? 'active' : ''}" data-phtab="agis"><span>🏛️</span>AGIS</button>
+        <button class="ux-phone-tab ${tab === 'clout' ? 'active' : ''}" data-phtab="clout"><span>🔥</span>Apps</button>
       </div>
       <div class="ux-phone-body">${bodyHtml}</div>
     `;
@@ -1119,6 +1139,14 @@ export function initUIExtras(app) {
       app.showToast('📸 CloutTok video went viral in Abuja! (+7 Clout, +8 Steeze)');
       app._renderAll();
     });
+    phoneEl.querySelector('#ph-agis-grid')?.addEventListener('click', () => {
+      phoneEl.classList.remove('open');
+      toggleBuildGrid('generator', true);
+    });
+    phoneEl.querySelector('#ph-agis-open')?.addEventListener('click', () => {
+      phoneEl.classList.remove('open');
+      app.switchTab?.('home', 'tab-housing');
+    });
     phoneEl.querySelector('#ph-hawker')?.addEventListener('click', () => {
       phoneEl.classList.remove('open');
       openTrafficHawkerGame();
@@ -1135,6 +1163,19 @@ export function initUIExtras(app) {
       phoneEl.classList.remove('open');
       openStudio();
     });
+  }
+
+  let pushTimer = null;
+  function showPhoneNotification(icon = '💚', title = 'OPay Alert', text = 'Credit received!') {
+    const pushEl = phoneEl.querySelector('#ux-phone-push');
+    if (pushEl) {
+      pushEl.style.display = 'block';
+      pushEl.innerHTML = `${icon} <b>${title}:</b> ${text}`;
+      clearTimeout(pushTimer);
+      pushTimer = setTimeout(() => {
+        if (pushEl) pushEl.style.display = 'none';
+      }, 4500);
+    }
   }
 
   function openPhone(tab = 'opay') {
@@ -1164,6 +1205,7 @@ export function initUIExtras(app) {
   // Expose UI Extras API on app instance for seamless integration
   app.uiExtras = {
     openPhone,
+    showPhoneNotification,
     openRadioWheel,
     openTrafficHawkerGame,
     openBribeSliderGame,
@@ -1171,6 +1213,44 @@ export function initUIExtras(app) {
     openPie,
     openStudio
   };
+
+  const closePspSubsDrawer = () => {
+    const subDrawer = document.getElementById('psp-supsub-drawer');
+    if (subDrawer) subDrawer.hidden = true;
+  };
+
+  document.getElementById('btn-sub-phone')?.addEventListener('click', () => {
+    closePspSubsDrawer();
+    openPhone('opay');
+  });
+  document.getElementById('btn-sub-socialwheel')?.addEventListener('click', () => {
+    closePspSubsDrawer();
+    const nearNpc = app.world3d?.findNearestPedestrian?.(40);
+    openPie(window.innerWidth / 2, window.innerHeight / 2, {
+      type: 'npc',
+      id: nearNpc?.id || 'ped_0',
+      username: nearNpc?.name || 'FCT Resident'
+    });
+  });
+  document.getElementById('btn-sub-hawker')?.addEventListener('click', () => {
+    closePspSubsDrawer();
+    openTrafficHawkerGame();
+  });
+  document.getElementById('btn-sub-bribe')?.addEventListener('click', () => {
+    closePspSubsDrawer();
+    openBribeSliderGame();
+  });
+  document.getElementById('btn-sub-3dgrid')?.addEventListener('click', () => {
+    closePspSubsDrawer();
+    toggleBuildGrid('generator', true);
+  });
+  document.getElementById('btn-sub-weather')?.addEventListener('click', () => {
+    const presets = ['sunny', 'rain', 'harmattan', 'sunset', 'night'];
+    const cur = app.world3d?.weatherPreset || 'sunny';
+    const next = presets[(presets.indexOf(cur) + 1) % presets.length];
+    app.world3d?.setWeatherPreset?.(next);
+    app.showToast(`🌤️ Abuja 3D Weather: ${next.toUpperCase()}`);
+  });
 
   document.getElementById('ux-btn-pie').addEventListener('click', () => {
     pieOpen ? closePie() : openPie(window.innerWidth / 2, window.innerHeight / 2);

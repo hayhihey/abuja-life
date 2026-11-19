@@ -2252,7 +2252,7 @@ export class AbujaWorld3D {
 
     for (let i = 0; i < bestPath.length; i++) {
       const d = DISTRICT_BY_ID[bestPath[i]];
-      if (d) this.gpsPathPoints.push({ x: d.x, y: d.y, id: d.id });
+      if (d) this.gpsPathPoints.push({ x: d.x, y: d.y, x2d: d.x, y2d: d.y, id: d.id });
       if (i < bestPath.length - 1) {
         const dA = DISTRICT_BY_ID[bestPath[i]];
         const dB = DISTRICT_BY_ID[bestPath[i + 1]];
@@ -2272,6 +2272,64 @@ export class AbujaWorld3D {
         this.gpsRouteGroup.add(segMesh);
       }
     }
+  }
+
+  // Feature #7: Procedural 3D Police / VIO Hilux Pursuit Pickup Mesh with Flashing Lightbar
+  _buildAmbientCarMesh(colorHex = 0x0f172a, type = 'police') {
+    const carGroup = new THREE.Group();
+    const w = 3.2;
+    const h = 2.2;
+    const l = 6.8;
+
+    const bodyMat = new THREE.MeshStandardMaterial({
+      color: colorHex,
+      roughness: 0.25,
+      metalness: 0.75
+    });
+    const cabinMat = new THREE.MeshStandardMaterial({
+      color: 0x020617,
+      roughness: 0.15,
+      metalness: 0.9
+    });
+    const wheelGeo = new THREE.CylinderGeometry(0.55, 0.55, 0.42, 12);
+    wheelGeo.rotateZ(Math.PI / 2);
+    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.75 });
+
+    const body = new THREE.Mesh(new THREE.BoxGeometry(w, h * 0.58, l), bodyMat);
+    body.position.y = h * 0.32 + 0.52;
+    body.castShadow = true;
+    carGroup.add(body);
+
+    const cabin = new THREE.Mesh(new THREE.BoxGeometry(w * 0.84, h * 0.46, l * 0.54), cabinMat);
+    cabin.position.set(0, h * 0.78 + 0.45, -l * 0.04);
+    carGroup.add(cabin);
+
+    const wOffX = w * 0.5;
+    const wOffZ = l * 0.32;
+    for (const [wx, wz] of [[-wOffX, wOffZ], [wOffX, wOffZ], [-wOffX, -wOffZ], [wOffX, -wOffZ]]) {
+      const wMesh = new THREE.Mesh(wheelGeo, wheelMat);
+      wMesh.position.set(wx, 0.55, wz);
+      carGroup.add(wMesh);
+    }
+
+    if (type === 'police') {
+      const beaconRed = new THREE.Mesh(
+        new THREE.BoxGeometry(0.85, 0.35, 0.55),
+        new THREE.MeshBasicMaterial({ color: 0xef4444 })
+      );
+      beaconRed.position.set(-0.48, h + 0.65, 0);
+      carGroup.add(beaconRed);
+
+      const beaconBlue = new THREE.Mesh(
+        new THREE.BoxGeometry(0.85, 0.35, 0.55),
+        new THREE.MeshBasicMaterial({ color: 0x3b82f6 })
+      );
+      beaconBlue.position.set(0.48, h + 0.65, 0);
+      carGroup.add(beaconBlue);
+      carGroup.userData.policeBeacons = { red: beaconRed, blue: beaconBlue };
+    }
+
+    return carGroup;
   }
 
   _buildTrafficSwarm() {
@@ -3751,7 +3809,21 @@ export class AbujaWorld3D {
     this.scene.traverse((obj) => {
       if (!obj.userData) return;
       if (obj.userData.isRoof) {
-        obj.visible = (mode === 'up');
+        if (mode === 'up') {
+          obj.visible = true;
+          if (obj.material) {
+            obj.material.transparent = false;
+            obj.material.opacity = 1.0;
+          }
+        } else if (mode === 'cutaway') {
+          obj.visible = true;
+          if (obj.material) {
+            obj.material.transparent = true;
+            obj.material.opacity = 0.15;
+          }
+        } else {
+          obj.visible = false;
+        }
       } else if (obj.userData.isWall && obj.userData.origHeight) {
         if (isDown) {
           obj.scale.y = 0.08;
@@ -3977,19 +4049,31 @@ export class AbujaWorld3D {
     }
   }
 
-  // Feature #2: Physical Smart-Object Animations (Cook Indomie with steam, Sleep on bed with Zzz, Shower, Watch DSTV)
+  // Feature #2: Physical Smart-Object Animations (Waypoints, Cook Indomie with steam, Sleep on bed with Zzz, Overhead Motive Progress Ring)
   performSmartObjectAnimation(actionType = 'cook', label = 'Cooking Indomie...', durationMs = 3000) {
     if (this.inVehicle) {
       this.toggleVehicleMode();
     }
     const sec = Math.max(1.2, durationMs / 1000);
-    this.smartActionState = {
-      active: true,
-      type: actionType,
-      timer: sec,
-      maxTimer: sec,
-      label
-    };
+    // Calculate target furniture waypoint inside nearby owned house or local offset
+    let targetPos = null;
+    if (this.playerHouseEntries && this.playerHouseEntries.size > 0) {
+      const localEntry = this.playerHouseEntries.get(this.currentDistrictId) || Array.from(this.playerHouseEntries.values())[0];
+      if (localEntry && Math.hypot(localEntry.group.position.x - this.playerPos.x, localEntry.group.position.z - this.playerPos.z) < 40) {
+        const offsets = {
+          cook: { x: 2.5, z: -2.0 },
+          sleep: { x: 2.2, z: 1.5 },
+          tv: { x: -2.2, z: -0.6 },
+          gen: { x: -4.2, z: 4.2 }
+        };
+        const off = offsets[actionType] || { x: 0, z: 0 };
+        targetPos = {
+          x: localEntry.group.position.x + off.x,
+          z: localEntry.group.position.z + off.z
+        };
+        this.cycleWallCutaway('cutaway');
+      }
+    }
     const emojiMap = {
       cook: '🍜',
       sleep: '😴',
@@ -3998,7 +4082,17 @@ export class AbujaWorld3D {
       gen: '⚡',
       pray: '🤲🏾'
     };
-    this.showThoughtBubble(emojiMap[actionType] || '✨', label, durationMs);
+    const emoji = emojiMap[actionType] || '✨';
+    this.smartActionState = {
+      active: true,
+      type: actionType,
+      timer: sec,
+      maxTimer: sec,
+      label,
+      emoji,
+      targetPos
+    };
+    this.showThoughtBubble(emoji, `${label} (0%)`, durationMs);
   }
 
   // Feature #3: Interactive 3D Build & Buy 1m×1m Placement Grid
@@ -4246,7 +4340,9 @@ export class AbujaWorld3D {
     };
 
     const deltaMap = { banter: 8, flirt: 14, spray: 22, negotiate: 10 };
+    const tagMap = { banter: 'Friend 💚', flirt: 'Crush ❤️', spray: 'Odogwu 💸', negotiate: 'Connect 🤝' };
     const delta = deltaMap[actionType] || 8;
+    const tag = tagMap[actionType] || 'Friend 💚';
     npc.affinity = Math.max(0, Math.min(100, (npc.affinity || 50) + delta));
     const pool = replies[actionType] || replies.banter;
     npc.banterText = pool[Math.floor(Math.random() * pool.length)];
@@ -4255,6 +4351,7 @@ export class AbujaWorld3D {
     if (npc.labelEl) {
       const heartIcon = npc.affinity >= 75 ? '💖' : npc.affinity >= 50 ? '❤️' : '🤝';
       npc.labelEl.innerHTML = `
+        <div style="color:#4ade80;font-weight:900;font-size:11px;text-shadow:0 2px 6px #000;margin-bottom:2px;">+${delta} ${tag}</div>
         <div class="w3d-speech-bubble" style="background:rgba(15,23,42,0.95);border:1px solid #4ade80;color:#fef08a;padding:3px 7px;border-radius:6px;margin-bottom:3px;font-size:10px;white-space:nowrap;">${npc.banterText}</div>
         <span class="w3d-dist-name" style="font-size:10px">${heartIcon} ${npc.name} • ❤️ ${npc.affinity}</span>
       `;
@@ -4621,9 +4718,10 @@ export class AbujaWorld3D {
       }
     }
 
-    // Feature #7: Animate Active 3D Police / VIO Hilux Pursuit Units chasing & flanking player
+    // Feature #7: Animate Active 3D Police / VIO Hilux Pursuit Units chasing & flanking player + Evasion / Box-In Logic
     if (this.pursuitUnits && this.pursuitUnits.length > 0) {
       const flashPhase = (this.elapsedTime * 11) % 2;
+      let minPoliceDist = 999;
       for (let i = 0; i < this.pursuitUnits.length; i++) {
         const u = this.pursuitUnits[i];
         const targetX = this.playerPos.x + Math.cos(this.elapsedTime * 1.2 + i) * u.flankOffset;
@@ -4631,6 +4729,9 @@ export class AbujaWorld3D {
         const dx = targetX - u.group.position.x;
         const dz = targetZ - u.group.position.z;
         const dist = Math.hypot(dx, dz);
+        const trueDist = Math.hypot(this.playerPos.x - u.group.position.x, this.playerPos.z - u.group.position.z);
+        if (trueDist < minPoliceDist) minPoliceDist = trueDist;
+
         if (dist > 4.2) {
           const step = Math.min(dist, u.speed * dt);
           u.group.position.x += (dx / dist) * step;
@@ -4646,9 +4747,32 @@ export class AbujaWorld3D {
           if (pb.blue?.material) pb.blue.material.color.setHex(flashPhase >= 1 ? 0x0066ff : 0x082f49);
         }
       }
+
+      // 3.5s Box-In Arrest/Checkpoint Trigger OR 45s Line-of-Sight Evasion Cooldown
+      if (minPoliceDist < 7.5 && Math.abs(this.playerSpeed || 0) < 12) {
+        this._policeBoxInTimer = (this._policeBoxInTimer || 0) + dt;
+        this._policeEvasionTimer = 0;
+        if (this._policeBoxInTimer >= 3.5) {
+          this._policeBoxInTimer = 0;
+          if (typeof this.callbacks.onPoliceBoxedIn === 'function') {
+            this.callbacks.onPoliceBoxedIn();
+          }
+        }
+      } else if (minPoliceDist > 34) {
+        this._policeBoxInTimer = 0;
+        this._policeEvasionTimer = (this._policeEvasionTimer || 0) + dt;
+        if (this._policeEvasionTimer >= 45) {
+          this._policeEvasionTimer = 0;
+          if (typeof this.callbacks.onWantedEvaded === 'function') {
+            this.callbacks.onWantedEvaded();
+          }
+        }
+      } else {
+        this._policeBoxInTimer = Math.max(0, (this._policeBoxInTimer || 0) - dt * 0.5);
+      }
     }
 
-    // Feature #15: Animate Falling Rain Streaks, Harmattan Dust & Swaying Trees
+    // Feature #15: Animate Falling Rain Streaks, Lightning Flashes, Harmattan Dust & Swaying Trees
     if (this.rainLines && this.rainLines.visible) {
       this.rainLines.position.set(this.playerPos.x, 0, this.playerPos.z);
       const posAttr = this.rainLines.geometry.attributes.position;
@@ -4663,6 +4787,13 @@ export class AbujaWorld3D {
         }
       }
       posAttr.needsUpdate = true;
+      // Occasional tropical lightning sky flash during heavy downpours
+      if (this.sunLight && Math.random() < 0.006) {
+        this.sunLight.intensity = 3.8;
+        setTimeout(() => {
+          if (this.sunLight) this.sunLight.intensity = (this.hourOfDay >= 20 || this.hourOfDay < 6) ? 0.45 : 1.5;
+        }, 110);
+      }
     }
 
     if (this.harmattanPoints && this.harmattanPoints.visible) {
@@ -5019,10 +5150,31 @@ export class AbujaWorld3D {
       }
     }
 
-    // Feature #2: Smart-Object Physical Pose & Particle Animations (Cooking steam, Sleeping Zzz, Shower droplets)
+    // Feature #2: Smart-Object Physical Waypoint Walk, Pose & Particle Animations (Cooking steam, Sleeping Zzz, Progress %)
     if (this.smartActionState?.active && this.playerHuman) {
       this.smartActionState.timer -= dt;
       const st = this.smartActionState.type;
+      const pct = Math.min(100, Math.max(0, Math.round((1 - this.smartActionState.timer / Math.max(0.1, this.smartActionState.maxTimer)) * 100)));
+
+      if (this.smartActionState.targetPos) {
+        const dx = this.smartActionState.targetPos.x - this.playerPos.x;
+        const dz = this.smartActionState.targetPos.z - this.playerPos.z;
+        const dWay = Math.hypot(dx, dz);
+        if (dWay > 0.6) {
+          const step = Math.min(dWay, 14 * dt);
+          this.playerPos.x += (dx / dWay) * step;
+          this.playerPos.z += (dz / dWay) * step;
+          this.playerHeading = Math.atan2(dx, dz);
+          this.playerGroup.position.copy(this.playerPos);
+          this.playerGroup.rotation.y = this.playerHeading;
+        }
+      }
+
+      if (Math.floor(this.elapsedTime * 4) !== this.smartActionState._lastPctTick) {
+        this.smartActionState._lastPctTick = Math.floor(this.elapsedTime * 4);
+        this.showThoughtBubble(this.smartActionState.emoji || '✨', `${this.smartActionState.label} (${pct}%)`, 1200);
+      }
+
       if (st === 'sleep') {
         this.playerPedMesh.rotation.x = -Math.PI / 2.1;
         this.playerPedMesh.position.y = 1.05;
