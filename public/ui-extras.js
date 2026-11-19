@@ -7,7 +7,7 @@
 //  • Quick dock with touch targets & wall cutaway toggle
 // ============================================================================
 
-import { evaluateAutonomousActions, runSmartObjectAction } from '/src/core/sims.js';
+import { evaluateAutonomousActions, planGOAPSequence, runSmartObjectAction } from '/src/core/sims.js';
 
 const LOOK_KEY = 'abuja_life_look_v1';
 
@@ -342,17 +342,23 @@ export function initUIExtras(app) {
     if (!s) return;
 
     const sims = s.sims;
-    const candidates = typeof evaluateAutonomousActions === 'function' ? evaluateAutonomousActions(app.game) : [];
+    const goapPlan = typeof planGOAPSequence === 'function' ? planGOAPSequence(app.game) : [];
+    const candidates = goapPlan.length > 0
+      ? goapPlan
+      : (typeof evaluateAutonomousActions === 'function' ? evaluateAutonomousActions(app.game) : []);
 
     if (candidates && candidates.length > 0) {
       const top = candidates[0];
       const act = top.interaction;
-      if (app.world3d && typeof app.world3d.showThoughtBubble === 'function') {
+      const animKind = top.objectId?.includes('bed') ? 'sleep' : top.objectId?.includes('gen') ? 'gen' : 'cook';
+      if (app.world3d?.performSmartObjectAnimation) {
+        app.world3d.performSmartObjectAnimation(animKind, act.label, 2800);
+      } else if (app.world3d?.showThoughtBubble) {
         app.world3d.showThoughtBubble(act.icon || '💡', act.label, 3200);
       }
-      const res = runSmartObjectAction(app.game, top.objectId, top.actionId);
+      const res = runSmartObjectAction(app.game, top.objectId, top.actionId || act.id);
       if (res && res.ok) {
-        app.showToast(`🤖 Autopilot: ${act.label}`);
+        app.showToast(`🤖 GOAP Autopilot: ${top.reason ? `${top.reason} → ` : ''}${act.label}`);
         app._renderAll();
       }
     } else if (sims?.motives) {

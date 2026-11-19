@@ -492,11 +492,11 @@ export function tickSimsState(game, elapsedMinutes = 60) {
       decay *= 1.45; // Heat debuff without power
     }
     if (motive === 'environment' && harmattan) {
-      decay *= 1.8; // Harmattan dust degrades room aura
-      sims.utilities.dustLevel = clamp(sims.utilities.dustLevel + 4 * hours, 0, 100);
+      decay *= 1.35; // Point 18 Fix: Moderate Harmattan dust so home aura doesn't instantly collapse
+      sims.utilities.dustLevel = clamp(sims.utilities.dustLevel + 1.2 * hours, 0, 100);
     }
     if (motive === 'hygiene' && harmattan) {
-      decay *= 1.35;
+      decay *= 1.18;
     }
 
     sims.motives[motive] = clamp(sims.motives[motive] - decay, 0, 100);
@@ -521,9 +521,13 @@ export function tickSimsState(game, elapsedMinutes = 60) {
     }
   }
 
-  // 3. Water Tank Baseline Depletion (evaporation/standby)
+  // 3. Water Tank Baseline Depletion & Point 17 Smart Borehole Auto-Pump
   if (sims.utilities.tankWaterLiters > 0) {
-    sims.utilities.tankWaterLiters = Math.max(0, sims.utilities.tankWaterLiters - 2 * hours);
+    sims.utilities.tankWaterLiters = Math.max(0, sims.utilities.tankWaterLiters - 0.4 * hours);
+  }
+  // Point 17 Fix: If borehole is working and power is on, automatically maintain water reserve
+  if (sims.utilities.boreholeWorking && sims.utilities.tankWaterLiters < 450 && (sims.utilities.gridAvailable || sims.utilities.generatorRunning || sims.utilities.solarInstalled)) {
+    sims.utilities.tankWaterLiters = Math.min(sims.utilities.tankCapacity || 2000, sims.utilities.tankWaterLiters + 250 * hours);
   }
 
   // 4. Estate Levy Check
@@ -540,8 +544,14 @@ export function tickSimsState(game, elapsedMinutes = 60) {
 }
 
 // ----------------------------------------------------------------------------
-// Utility AI: Score & Choose Smart Object Interactions
+// Algorithm #5: Utility AI with Non-Linear Response Curves + GOAP Planner
 // ----------------------------------------------------------------------------
+function motiveUrgencyCurve(currentValue) {
+  // Quadratic + logistic urgency curve: critical needs (<25%) spike non-linearly
+  const deficit = clamp(100 - (currentValue ?? 50), 0, 100) / 100;
+  return 0.35 * deficit + 0.65 * deficit * deficit + (deficit > 0.75 ? 0.35 : 0);
+}
+
 export function evaluateAutonomousActions(game) {
   const sims = game.s.sims;
   if (!sims) return [];
@@ -552,34 +562,95 @@ export function evaluateAutonomousActions(game) {
   for (const objId of sims.installedObjects) {
     const interactions = SMART_OBJECT_INTERACTIONS[objId] || [];
     for (const action of interactions) {
-      // Check resource prerequisites
       if (action.requires?.power && !powerActive) continue;
       if (action.requires?.waterLiters && sims.utilities.tankWaterLiters < action.requires.waterLiters) continue;
+      if (action.costNgn && !game.canAfford(action.costNgn)) continue;
 
-      // Calculate utility score based on lowest motives
       let score = 0;
       if (action.needDeltas) {
         for (const [motive, delta] of Object.entries(action.needDeltas)) {
           if (delta > 0) {
-            const current = sims.motives[motive] ?? 50;
             const weight = MOTIVE_CONFIG[motive]?.defaultWeight || 1.0;
-            const needUrgency = Math.max(0, 100 - current);
-            score += (needUrgency / 100) * delta * weight;
+            const urgency = motiveUrgencyCurve(sims.motives[motive]);
+            score += urgency * delta * weight;
           }
         }
       }
 
       candidates.push({
         objectId: objId,
+        actionId: action.id,
         interaction: action,
         score: Math.round(score * 10) / 10
       });
     }
   }
 
-  // Sort highest utility first
   candidates.sort((a, b) => b.score - a.score);
   return candidates;
+}
+
+/**
+ * Multi-step Goal-Oriented Action Planner (GOAP):
+ * Resolves prerequisite utility chains (Refuel Gen -> Start Gen -> Pump Water -> Goal Action)
+ * when the highest-value domestic action is blocked by blackout or dry pipes.
+ */
+export function planGOAPSequence(game) {
+  const sims = game.s.sims;
+  if (!sims) return [];
+
+  const powerActive = !game.isPowerOut(game.s.loc.district) || sims.utilities.generatorRunning || sims.utilities.solarInstalled;
+  let bestGoal = null;
+  let bestScore = -1;
+
+  for (const objId of sims.installedObjects) {
+    for (const action of (SMART_OBJECT_INTERACTIONS[objId] || [])) {
+      let score = 0;
+      if (action.needDeltas) {
+        for (const [motive, delta] of Object.entries(action.needDeltas)) {
+          if (delta > 0) {
+            const weight = MOTIVE_CONFIG[motive]?.defaultWeight || 1.0;
+            score += motiveUrgencyCurve(sims.motives[motive]) * delta * weight;
+          }
+        }
+      }
+      if (score > bestScore) {
+        bestScore = score;
+        bestGoal = { objectId: objId, actionId: action.id, interaction: action, score: Math.round(score * 10) / 10 };
+      }
+    }
+  }
+
+  if (!bestGoal) return [];
+  const plan = [];
+  const needsPower = Boolean(bestGoal.interaction.requires?.power) ||
+    (Boolean(bestGoal.interaction.requires?.waterLiters) && sims.utilities.tankWaterLiters < bestGoal.interaction.requires.waterLiters);
+
+  // Backwards-chain prerequisite #1: Restore Power (Refuel -> Start Generator)
+  if (needsPower && !powerActive) {
+    const genId = sims.installedObjects.find((id) => id === 'gen_soundproof' || id === 'gen_tiger');
+    if (genId) {
+      const genActs = SMART_OBJECT_INTERACTIONS[genId] || [];
+      if (sims.utilities.genFuelLiters < 1.5) {
+        const refuel = genActs.find((a) => a.id === 'refuel_gen');
+        if (refuel) plan.push({ objectId: genId, actionId: refuel.id, interaction: refuel, reason: 'GOAP: Refuel generator before starting' });
+      }
+      const startAct = genActs.find((a) => a.id === 'toggle_diesel_gen' || a.id === 'start_tiger_gen');
+      if (startAct) plan.push({ objectId: genId, actionId: startAct.id, interaction: startAct, reason: 'GOAP: Start generator during NEPA blackout' });
+    }
+  }
+
+  // Backwards-chain prerequisite #2: Pump Borehole Water into Overhead Geepee Tank
+  if (bestGoal.interaction.requires?.waterLiters && sims.utilities.tankWaterLiters < bestGoal.interaction.requires.waterLiters) {
+    const tankActs = SMART_OBJECT_INTERACTIONS.overhead_tank_2000l || [];
+    const pump = tankActs.find((a) => a.id === 'pump_borehole_water');
+    if (pump && sims.installedObjects.includes('overhead_tank_2000l')) {
+      plan.push({ objectId: 'overhead_tank_2000l', actionId: pump.id, interaction: pump, reason: 'GOAP: Pump borehole water to refill Geepee tank' });
+    }
+  }
+
+  plan.push(bestGoal);
+  return plan;
 }
 
 // ----------------------------------------------------------------------------

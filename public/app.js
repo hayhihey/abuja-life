@@ -743,31 +743,13 @@ class AbujaClientApp {
   }
 
   _initNigeriaGPSRadar() {
+    // Graphics Fix #50: Use 1:1 3D-synced offline vector minimap instead of mismatched live OSM tiles on the small radar.
+    // (Full interactive Leaflet Nigeria GPS map remains available on-demand via openNigeriaGPSModal().)
     const radarEl = document.getElementById('gta-leaflet-radar');
-    if (!radarEl || !window.L || this.leafletRadarMap) return;
-
-    try {
-      const startGps = this._getNigeriaDistrictGPS(this.game.s.loc.district);
-      this.leafletRadarMap = window.L.map(radarEl, {
-        center: [startGps.lat, startGps.lng],
-        zoom: 16,
-        zoomControl: false,
-        attributionControl: false,
-        dragging: false,
-        scrollWheelZoom: false,
-        doubleClickZoom: false,
-        boxZoom: false,
-        keyboard: false
-      });
-
-      window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19
-      }).addTo(this.leafletRadarMap);
-
-      this.leafletRadarReady = true;
-    } catch (err) {
-      this.leafletRadarReady = false;
+    if (radarEl) {
+      radarEl.style.display = 'none';
     }
+    this.leafletRadarReady = false;
   }
 
   openNigeriaGPSModal() {
@@ -861,20 +843,19 @@ class AbujaClientApp {
       const h = canvas.height;
       ctx.clearRect(0, 0, w, h);
 
-      // High-contrast authentic dark radar disc that matches 3D world offline (Problem 24/25)
-      ctx.fillStyle = '#060d1a';
+      // High-contrast 1:1 3D-synced dark vector radar disc (Fix #50: clipped cleanly inside circular bezel)
+      ctx.save();
       ctx.beginPath();
       ctx.arc(w / 2, h / 2, w / 2 - 2, 0, Math.PI * 2);
+      ctx.fillStyle = '#060d1a';
       ctx.fill();
+      ctx.clip();
 
       // Radar range rings
-      ctx.strokeStyle = 'rgba(56, 189, 248, 0.2)';
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.18)';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.arc(w / 2, h / 2, (w / 2 - 2) * 0.5, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(w / 2, h / 2, w / 2 - 2, 0, Math.PI * 2);
       ctx.stroke();
 
       const curD = this.game.district || DISTRICT_BY_ID.cbd;
@@ -886,26 +867,46 @@ class AbujaClientApp {
       const toRadarX = (x) => w / 2 + (x - pCoords.x) * scale;
       const toRadarY = (y) => h / 2 + (y - pCoords.y) * scale;
 
-      // Subtle GTA road network lines overlay
-      ctx.strokeStyle = 'rgba(71, 85, 105, 0.55)';
-      ctx.lineWidth = 2.2;
+      // Water bodies synced with 3D terrain (Jabi Lake & Mpape Quarry Lake)
+      const jabiD = DISTRICT_BY_ID.jabi;
+      if (jabiD) {
+        ctx.fillStyle = 'rgba(2, 132, 199, 0.45)';
+        ctx.beginPath();
+        ctx.arc(toRadarX(jabiD.x - 5), toRadarY(jabiD.y + 3), 13.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // 1:1 3D Road & Abuja Metro Rail network overlay
       for (const e of EDGES) {
         const a = DISTRICT_BY_ID[e.a];
         const b = DISTRICT_BY_ID[e.b];
         if (!a || !b) continue;
+        ctx.save();
+        if (e.type === 'rail') {
+          ctx.strokeStyle = 'rgba(16, 185, 129, 0.65)';
+          ctx.setLineDash([4, 3]);
+          ctx.lineWidth = 1.8;
+        } else if (e.type === 'expressway') {
+          ctx.strokeStyle = 'rgba(148, 163, 184, 0.72)';
+          ctx.lineWidth = 3.2;
+        } else {
+          ctx.strokeStyle = 'rgba(71, 85, 105, 0.65)';
+          ctx.lineWidth = 2.2;
+        }
         ctx.beginPath();
         ctx.moveTo(toRadarX(a.x), toRadarY(a.y));
         ctx.lineTo(toRadarX(b.x), toRadarY(b.y));
         ctx.stroke();
+        ctx.restore();
       }
 
-      // Feature #6: Illuminated Purple GPS Route Navigation Ribbon on Minimap Radar
+      // Feature #6 + Algorithm #1: Illuminated Purple Weighted A* GPS Route Navigation Ribbon on Minimap Radar
       if (this.world3d?.gpsPathPoints && this.world3d.gpsPathPoints.length >= 2) {
         ctx.save();
         ctx.strokeStyle = '#c084fc';
         ctx.shadowColor = '#a855f7';
         ctx.shadowBlur = 6;
-        ctx.lineWidth = 3.8;
+        ctx.lineWidth = 3.6;
         ctx.beginPath();
         ctx.moveTo(w / 2, h / 2);
         for (let i = 1; i < this.world3d.gpsPathPoints.length; i++) {
@@ -914,6 +915,19 @@ class AbujaClientApp {
         }
         ctx.stroke();
         ctx.restore();
+      }
+
+      // 3D Street Vendors (Suya / Corn / OPay POS) synced with 3D world coordinates
+      if (this.world3d?.streetVendors) {
+        for (const v of this.world3d.streetVendors) {
+          const rx = w / 2 + ((v.x - this.world3d.playerPos.x) / 14) * scale;
+          const ry = h / 2 + ((v.z - this.world3d.playerPos.z) / 13) * scale;
+          if (rx < -4 || rx > w + 4 || ry < -4 || ry > h + 4) continue;
+          ctx.fillStyle = v.type === 'pos' ? '#22d3ee' : '#fb923c';
+          ctx.beginPath();
+          ctx.arc(rx, ry, 2.2, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
 
       // Feature #7: Flashing Red/Blue 3D Police Pursuit Blips on Radar
@@ -938,12 +952,12 @@ class AbujaClientApp {
         if (rx < -10 || rx > w + 10 || ry < -10 || ry > h + 10) continue;
 
         ctx.fillStyle = d.id === this.game.s.loc.district
-          ? '#2563eb'
+          ? '#38bdf8'
           : (d.zone === 1 ? '#d97706' : '#059669');
         ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = 1.4;
         ctx.beginPath();
-        ctx.arc(rx, ry, d.id === this.game.s.loc.district ? 5 : 3.5, 0, Math.PI * 2);
+        ctx.arc(rx, ry, d.id === this.game.s.loc.district ? 4.8 : 3.4, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
       }
@@ -961,15 +975,15 @@ class AbujaClientApp {
         ctx.strokeStyle = '#000';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.arc(rx, ry, 3.8, 0, Math.PI * 2);
+        ctx.arc(rx, ry, 3.6, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
       }
 
-      // Center GTA Player Arrow on the Nigerian street map
+      // Center GTA Player Arrow aligned 1:1 with 3D world heading (PI - playerHeading)
       ctx.save();
       ctx.translate(w / 2, h / 2);
-      const heading = this.world3d ? -this.world3d.playerHeading : 0;
+      const heading = this.world3d ? (Math.PI - this.world3d.playerHeading) : 0;
       ctx.rotate(heading);
       ctx.fillStyle = '#ffffff';
       ctx.strokeStyle = '#000000';
@@ -983,6 +997,15 @@ class AbujaClientApp {
       ctx.fill();
       ctx.stroke();
       ctx.restore();
+
+      ctx.restore(); // End circular radar clip
+
+      // Crisp radar outer bezel ring
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(w / 2, h / 2, w / 2 - 2, 0, Math.PI * 2);
+      ctx.stroke();
 
       this._updateContextualPrompt();
     };
