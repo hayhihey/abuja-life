@@ -15,7 +15,7 @@
 
         body {
             /* Vibrant, comforting gradient synonymous with life simulators */
-            background: linear-gradient(135px, #4facfe 0%, #00f2fe 100%);
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -375,11 +375,6 @@
                 </div>
             </div>
 
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" autocomplete="current-password" placeholder="••••••••" value="abujalife2026" required>
-            </div>
-
             <div id="passport-preview" class="passport-banner">
                 <strong style="color: #15803d;">🇳🇬 Resident Passport Ready</strong>
                 <div style="font-size: 0.8rem; color: #64748b; margin-top: 2px;">
@@ -392,7 +387,7 @@
             </button>
 
             <p class="footer-text">
-                Already registered? <a href="/" id="btn-load-game">Load Saved Game</a>
+                Already registered? <a href="/?start=1" id="btn-load-game">Load Saved Game</a>
             </p>
         </form>
     </div>
@@ -407,8 +402,7 @@
                 lifestyle: 'alhaji',
                 gender: 'male',
                 lifeStage: 'adult',
-                prevProperty: 'default',
-                password: 'abujalife2026'
+                prevProperty: 'default'
             },
             chioma: {
                 name: 'Chioma Gold',
@@ -418,8 +412,7 @@
                 lifestyle: 'baddie',
                 gender: 'female',
                 lifeStage: 'young_adult',
-                prevProperty: 'default',
-                password: 'abujalife2026'
+                prevProperty: 'default'
             },
             tunde: {
                 name: 'Tunde Ade',
@@ -429,8 +422,7 @@
                 lifestyle: 'techbro',
                 gender: 'male',
                 lifeStage: 'young_adult',
-                prevProperty: 'default',
-                password: 'abujalife2026'
+                prevProperty: 'default'
             },
             musa: {
                 name: 'Alhaji Musa',
@@ -440,8 +432,7 @@
                 lifestyle: 'hustler',
                 gender: 'male',
                 lifeStage: 'adult',
-                prevProperty: 'default',
-                password: 'abujalife2026'
+                prevProperty: 'default'
             }
         };
 
@@ -496,15 +487,14 @@
                 lifestyle: document.getElementById('lifestyle').value || 'alhaji',
                 gender: document.getElementById('gender').value || 'male',
                 lifeStage: 'adult',
-                prevProperty: 'default',
-                password: document.getElementById('password').value || 'abujalife2026'
+                prevProperty: 'default'
             };
             launchProfile(profile);
         });
 
         document.getElementById('btn-load-game').addEventListener('click', (e) => {
             e.preventDefault();
-            window.location.href = '/';
+            window.location.href = '/?start=1';
         });
     </script>
 </body>

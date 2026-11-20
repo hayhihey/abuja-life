@@ -403,7 +403,7 @@ function readBody(req) {
     try {
       return Promise.resolve(JSON.parse(req.body));
     } catch (_) {
-      return Promise.resolve({});
+      return Promise.reject(new Error('Invalid JSON payload'));
     }
   }
   return new Promise((resolve, reject) => {
@@ -419,7 +419,7 @@ function readBody(req) {
       try {
         resolve(body ? JSON.parse(body) : {});
       } catch (_) {
-        resolve({});
+        reject(new Error('Invalid JSON payload'));
       }
     });
     req.on('error', reject);
@@ -1026,10 +1026,20 @@ export async function requestHandler(req, res, overridePath = null) {
       const body = await readBody(req);
       const poll = activePolls.find((p) => p.id === body.pollId);
       if (poll) {
+        const voterId = String(body.voterId || body.playerId || '');
+        if (!poll._voters) poll._voters = new Set();
+        if (voterId && poll._voters.has(voterId)) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, error: 'You have already voted on this poll.' }));
+          return;
+        }
         const opt = typeof body.optionIndex === 'number'
           ? poll.options[body.optionIndex]
           : poll.options.find((o) => o.id === body.optionId);
-        if (opt) opt.votes++;
+        if (opt) {
+          opt.votes++;
+          if (voterId) poll._voters.add(voterId);
+        }
       }
       broadcastSSE('polls', activePolls);
       res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -1135,9 +1145,15 @@ export async function requestHandler(req, res, overridePath = null) {
   if (pathname === '/api/spray' && req.method === 'POST') {
     try {
       const body = await readBody(req);
-      const amount = Math.round(Number(body.amount) || 5000);
-      const playerName = body.playerName || body.author || 'Oga at the Top';
-      const district = body.district || 'wuse2';
+      const rawAmount = body.amount !== undefined ? Number(body.amount) : 5000;
+      const amount = Math.round(rawAmount);
+      if (!Number.isFinite(amount) || amount <= 0 || amount > 50000000) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: 'Invalid spray amount (must be between ₦1 and ₦50,000,000).' }));
+        return;
+      }
+      const playerName = String(body.playerName || body.author || 'Oga at the Top').slice(0, 60);
+      const district = String(body.district || 'wuse2').slice(0, 30);
 
       broadcastSSE('world_event', { type: 'naira_spray', playerName, district, amount });
 

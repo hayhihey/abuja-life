@@ -9,8 +9,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,500;0,600;0,700;1,700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
   <!-- Virtual Nigeria Street GIS & OpenStreetMap Reference -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" media="print" onload="this.media='all'" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="" defer></script>
   <link rel="stylesheet" href="/style.css" />
   <script type="importmap">
     {
@@ -977,10 +977,6 @@
                 <label class="btn-secondary" style="flex:1; text-align:center; cursor:pointer; border-color:#38bdf8; color:#7dd3fc; margin:0; display:flex; align-items:center; justify-content:center;">
                   📤 Import Save
                   <input type="file" id="file-import-save" accept=".json" style="display:none;" />
-                </label>
-                <button type="button" id="btn-reset-save" class="btn-xs" style="border-color:#ef4444; color:#f87171;">⚠️ Reset Game</button>
-              </div>
-            </div>
                 </label>
                 <button type="button" id="btn-reset-save" class="btn-xs" style="border-color:#ef4444; color:#f87171;">⚠️ Reset Game</button>
               </div>

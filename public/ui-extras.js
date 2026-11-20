@@ -597,8 +597,8 @@ export function initUIExtras(app) {
             const s = app.game.s;
             const sims = s.sims;
             if (!sims?.utilities) return app.showToast('No compound utilities installed yet.');
-            const genObj = sims.installedObjects.find((id) => id.startsWith('gen_')) || 'gen_tiger';
-            const actionId = sims.utilities.generatorRunning ? 'turn_off_gen' : 'turn_on_gen';
+            const genObj = sims.installedObjects.includes('gen_soundproof') ? 'gen_soundproof' : 'gen_tiger';
+            const actionId = genObj === 'gen_soundproof' ? 'toggle_diesel_gen' : 'start_tiger_gen';
             const res = runSmartObjectAction(app.game, genObj, actionId);
             app.world3d?.performSmartObjectAnimation?.('gen', 'Checking Compound Gen...', 2400);
             app.showToast(res.ok ? (sims.utilities.generatorRunning ? '⚡ Generator humming!' : 'Generator stopped.') : `⚠️ ${res.reason}`);
@@ -714,7 +714,7 @@ export function initUIExtras(app) {
         if (app.afrobeats) {
           const picked = app.afrobeats.selectStation(idx);
           app.afrobeats.setExteriorMuffle(!app.world3d?.inVehicle);
-          const lbl = document.getElementById('hud-music-label');
+          const lbl = document.getElementById('top-music-label');
           if (lbl) lbl.textContent = picked.freq;
           app.showToast(`📻 Tuned to ${picked.name} (${picked.freq}) — ${picked.dj}`);
         }
@@ -725,7 +725,7 @@ export function initUIExtras(app) {
       label: 'Radio OFF',
       run: () => {
         if (app.afrobeats?.isPlaying) app.afrobeats.stop();
-        const lbl = document.getElementById('hud-music-label');
+        const lbl = document.getElementById('top-music-label');
         if (lbl) lbl.textContent = 'Radio Off';
         app.showToast('🔇 Car Radio Muted');
       }
@@ -806,7 +806,10 @@ export function initUIExtras(app) {
   miniModal.className = 'ux-modal';
   document.body.appendChild(miniModal);
 
+  let activeMiniGameCleanup = null;
+
   function openTrafficHawkerGame() {
+    if (typeof activeMiniGameCleanup === 'function') activeMiniGameCleanup();
     let lane = 1; // 0 = Left, 1 = Middle, 2 = Right
     let earnings = 0;
     let timeLeft = 18;
@@ -854,17 +857,19 @@ export function initUIExtras(app) {
     const stopGame = (msg) => {
       if (!active) return;
       active = false;
+      activeMiniGameCleanup = null;
       clearInterval(loop);
       clearInterval(clock);
       miniModal.classList.remove('open');
       if (earnings > 0) {
-        app.game.earn(earnings);
+        app.game.earn(earnings, { cash: true });
         app.game.stat('clout', 4);
         app.afrobeats?.playSfx?.('cash');
       }
       app.showToast(msg || `🥨 Traffic Hawking finished! Pocketed ₦${earnings.toLocaleString()}`);
       app._renderAll();
     };
+    activeMiniGameCleanup = () => stopGame();
     miniModal.querySelector('#ux-hawk-close').onclick = () => stopGame();
 
     const loop = setInterval(() => {
@@ -918,6 +923,7 @@ export function initUIExtras(app) {
 
   // ---- Feature #14B: VIO / Police Checkpoint Bribe Timing Slider ----
   function openBribeSliderGame() {
+    if (typeof activeMiniGameCleanup === 'function') activeMiniGameCleanup();
     let pos = 50;
     let dir = 1;
     let active = true;
@@ -946,9 +952,11 @@ export function initUIExtras(app) {
 
     const close = () => {
       active = false;
+      activeMiniGameCleanup = null;
       clearInterval(anim);
       miniModal.classList.remove('open');
     };
+    activeMiniGameCleanup = close;
     miniModal.querySelector('#ux-bribe-close').onclick = close;
     miniModal.querySelector('#ux-bribe-hit').onclick = () => {
       const won = pos >= 38 && pos <= 67;
@@ -1019,7 +1027,7 @@ export function initUIExtras(app) {
         <button class="ux-phone-btn" id="ph-open-mp"><span>🌍 Open Live FCT Multiplayer Chat</span><span>💬</span></button>
       `;
     } else if (tab === 'bolt') {
-      const dists = ['wuse2', 'maitama', 'asokoro', 'gwarinpa', 'jabi', 'cbd', 'lugbe', 'kubwa', 'nyanya'];
+      const dists = ['wuse2', 'maitama', 'asokoro', 'garki', 'jabi', 'cbd', 'lugbe', 'kubwa', 'nyanya'];
       bodyHtml = `
         <div style="font-size:11px;color:#4ade80;font-weight:800">🚕 BOLT FCT • GREEN CAB & GPS</div>
         <div style="font-size:10.5px;color:#94a3b8">Tap any district to draw the 3D purple GPS route & hail an automated Green Cab:</div>
@@ -1082,8 +1090,8 @@ export function initUIExtras(app) {
     });
 
     phoneEl.querySelector('#ph-dep-50k')?.addEventListener('click', () => {
-      if (!app.game.canAfford(50000)) return app.showToast('⚠️ Need ₦50,000 pocket cash!');
-      app.game.pay(50000);
+      if ((app.game.s.cash || 0) < 50000) return app.showToast('⚠️ Need ₦50,000 pocket cash!');
+      app.game.s.cash -= 50000;
       app.game.s.bank = (app.game.s.bank || 0) + 50000;
       app.afrobeats?.playSfx?.('cash');
       app.showToast('💚 Saved ₦50,000 into OPay Wallet!');
@@ -1093,7 +1101,7 @@ export function initUIExtras(app) {
     phoneEl.querySelector('#ph-wit-50k')?.addEventListener('click', () => {
       if ((app.game.s.bank || 0) < 50000) return app.showToast('⚠️ Need ₦50,000 in OPay bank!');
       app.game.s.bank -= 50000;
-      app.game.earn(50000);
+      app.game.earn(50000, { cash: true });
       app.afrobeats?.playSfx?.('cash');
       app.showToast('💵 Withdrew ₦50,000 cash from OPay!');
       app._renderAll();
@@ -1102,7 +1110,7 @@ export function initUIExtras(app) {
     phoneEl.querySelector('#ph-dep-all')?.addEventListener('click', () => {
       const amt = Math.floor((app.game.s.cash || 0) * 0.5);
       if (amt < 1000) return app.showToast('⚠️ Pocket cash too low!');
-      app.game.pay(amt);
+      app.game.s.cash -= amt;
       app.game.s.bank = (app.game.s.bank || 0) + amt;
       app.showToast(`🔒 Locked ₦${amt.toLocaleString()} safely in OPay!`);
       app._renderAll();
@@ -1115,7 +1123,7 @@ export function initUIExtras(app) {
 
     phoneEl.querySelectorAll('[data-ph-checkin]').forEach((btn) => {
       btn.onclick = () => {
-        app.checkInContact?.(btn.dataset.phCheckin);
+        (app.checkInContact || app._checkInContact)?.call(app, btn.dataset.phCheckin);
         renderPhone('chat');
       };
     });
@@ -1127,8 +1135,11 @@ export function initUIExtras(app) {
     phoneEl.querySelectorAll('[data-ph-bolt]').forEach((btn) => {
       btn.onclick = () => {
         const dest = btn.dataset.phBolt;
-        if (app.game.canAfford(1500)) app.game.pay(1500);
+        if (!app.game.canAfford(1500)) return app.showToast('⚠️ Need ₦1,500 for Bolt Green Cab!');
+        app.game.pay(1500);
         app.selectedCommuteDest = dest;
+        app.game.arrive(dest);
+        app._checkMissionProgress?.('commute');
         app.world3d?.setGPSRouteDestination?.(dest);
         app.world3d?.hailOrCommandeerVehicle?.(null, 'cab', dest);
         phoneEl.classList.remove('open');
@@ -1138,6 +1149,12 @@ export function initUIExtras(app) {
     });
 
     phoneEl.querySelector('#ph-clout-post')?.addEventListener('click', () => {
+      const now = Date.now();
+      if (app._lastCloutTokTime && now - app._lastCloutTokTime < 15000) {
+        const rem = Math.ceil((15000 - (now - app._lastCloutTokTime)) / 1000);
+        return app.showToast(`⏳ CloutTok algorithm cooling down (${rem}s left)!`);
+      }
+      app._lastCloutTokTime = now;
       app.game.stat('clout', 7);
       if (app.game.s.social) app.game.s.social.steeze = Math.min(100, (app.game.s.social.steeze || 60) + 8);
       app.afrobeats?.playPidginChirp?.('steeze');
@@ -1199,6 +1216,7 @@ export function initUIExtras(app) {
   document.addEventListener('keydown', (e) => {
     if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return;
     if (e.key === 'Escape') {
+      if (typeof activeMiniGameCleanup === 'function') activeMiniGameCleanup();
       closePie();
       studio.classList.remove('open');
       phoneEl.classList.remove('open');

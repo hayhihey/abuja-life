@@ -55,6 +55,15 @@ import { MEGA_ESTATES, HOUSING_UNIT_BY_ID } from '/src/data/mega_housing.js';
 const STORAGE_KEY = 'abuja_life_save_v3';
 const PLAYER_ID_KEY = 'abuja_life_player_id';
 
+function escapeHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function getOrCreatePlayerId() {
   let pid = sessionStorage.getItem(PLAYER_ID_KEY);
   if (!pid) {
@@ -530,8 +539,8 @@ class AbujaClientApp {
           this.selectedCommuteDest = districtId;
           const dName = DISTRICT_BY_ID[districtId]?.name || districtId;
           // Problem 10 Fix: Don't pop open the big drawer unexpectedly on casual 3D taps
-          const deck = document.getElementById('command-deck-drawer');
-          if (deck && deck.classList.contains('open')) {
+          const deck = document.getElementById('command-deck-panel');
+          if (deck && !deck.classList.contains('is-drawer-closed')) {
             if (districtId === this.game.s.loc.district) {
               this.openDeckTab('actions');
             } else {
@@ -548,8 +557,8 @@ class AbujaClientApp {
         onSelectPlayer: (player) => {
           if (!player) return;
           // Problem 10 Fix: Show quick hint instead of forcefully opening drawer
-          const deck = document.getElementById('command-deck-drawer');
-          if (deck && deck.classList.contains('open')) {
+          const deck = document.getElementById('command-deck-panel');
+          if (deck && !deck.classList.contains('is-drawer-closed')) {
             this.openDeckTab('multiplayer');
             this.openDirectMessage(player.id, player.name);
           } else {
@@ -1707,6 +1716,7 @@ class AbujaClientApp {
     const list = document.getElementById('housing-list');
     if (!statusBox || !list) return;
 
+    this._checkMissionProgress('estate');
     this._renderHouseBuilderSection();
 
     const h = this.game.s.home;
@@ -2033,7 +2043,7 @@ class AbujaClientApp {
         this.switchTab('network');
         const sel = document.getElementById('task-type-select');
         if (sel) sel.value = 'haul_granite';
-        const note = document.getElementById('task-note-input');
+        const note = document.getElementById('task-title-input');
         if (note) note.value = `Deliver 30T Mpape granite to my ${DISTRICT_BY_ID[btn.dataset.id]?.name} site`;
         const form = document.getElementById('assign-task-form');
         if (form) form.scrollIntoView({ behavior: 'smooth' });
@@ -2431,6 +2441,21 @@ class AbujaClientApp {
     });
   }
 
+  async checkInContact(contactId) {
+    if (!contactId) return;
+    const res = await this.game.exclusive(() => checkIn(this.game, contactId));
+    if (res && !res.ok) {
+      this.showToast(`⚠️ ${res.reason}`);
+    } else if (res && res.ok) {
+      this.showToast('📲 Checked in with contact! (+Affinity)');
+    }
+    this._renderAll();
+  }
+
+  async _checkInContact(contactId) {
+    return this.checkInContact(contactId);
+  }
+
   _renderP2PTasksSection() {
     const list = document.getElementById('p2p-tasks-list');
     const assigneeSel = document.getElementById('task-assignee-select');
@@ -2469,21 +2494,21 @@ class AbujaClientApp {
         <div class="game-card" style="border-left: 3px solid ${isMine ? '#38bdf8' : '#10b981'};">
           <div class="card-top">
             <div>
-              <span class="card-title">${t.title}</span>
+              <span class="card-title">${escapeHtml(t.title)}</span>
               <div style="font-size:11px; color:#94a3b8; margin-top:2px;">
-                Posted by <strong>${t.creatorName}</strong> • Target: <strong>${t.assigneeName || 'Any FCT Player'}</strong>
+                Posted by <strong>${escapeHtml(t.creatorName)}</strong> • Target: <strong>${escapeHtml(t.assigneeName || 'Any FCT Player')}</strong>
               </div>
             </div>
             <div style="text-align:right;">
               <span class="card-badge" style="background:#065f46; color:#4ade80; font-weight:700; font-size:12px;">
                 💰 ${formatNairaFull(t.reward)}
               </span>
-              <div style="font-size:10px; color:#64748b; margin-top:2px;">📍 ${distName}</div>
+              <div style="font-size:10px; color:#64748b; margin-top:2px;">📍 ${escapeHtml(distName)}</div>
             </div>
           </div>
           <div class="card-meta-row" style="margin-top:6px;">
             <div class="meta-pills">
-              <span class="meta-pill pos">🎁 Employer Benefit: ${t.employerBenefit || 'Clout & Progress'}</span>
+              <span class="meta-pill pos">🎁 Employer Benefit: ${escapeHtml(t.employerBenefit || 'Clout & Progress')}</span>
             </div>
             <div>
               ${isMine ? `
@@ -3591,11 +3616,11 @@ class AbujaClientApp {
       return `
         <div class="game-card" style="border-color:${isSettled ? 'rgba(148,163,184,0.3)' : '#f59e0b'};">
           <div class="card-top">
-            <span class="card-title">⚖️ ${c.plaintiff} vs. ${c.defendant}</span>
+            <span class="card-title">⚖️ ${escapeHtml(c.plaintiff)} vs. ${escapeHtml(c.defendant)}</span>
             <span class="card-badge">${isSettled ? '🔨 VERDICT DELIVERED' : `CLAIM: ${formatNairaFull(c.claimAmount)}`}</span>
           </div>
-          <p class="card-desc">Charge: <strong>${c.charge}</strong> (${DISTRICT_BY_ID[c.district]?.name || 'Maitama'})</p>
-          ${c.verdictText ? `<p class="card-desc" style="color:#4ade80; font-weight:700;">📜 ${c.verdictText}</p>` : ''}
+          <p class="card-desc">Charge: <strong>${escapeHtml(c.charge)}</strong> (${DISTRICT_BY_ID[c.district]?.name || 'Maitama'})</p>
+          ${c.verdictText ? `<p class="card-desc" style="color:#4ade80; font-weight:700;">📜 ${escapeHtml(c.verdictText)}</p>` : ''}
           <div class="card-meta-row">
             <div class="meta-pills">
               <span class="meta-pill pos">👍 Plaintiff Jury: ${c.votesFor}</span>
@@ -3689,7 +3714,7 @@ class AbujaClientApp {
         fetch('/api/polls/vote', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pollId, optionIndex })
+          body: JSON.stringify({ pollId, optionIndex, voterId: this.playerId })
         }).catch(() => {});
         this.showToast('🗳️ Policy vote cast! (+1 Protocol Clout)');
         this._renderHUD();
@@ -4061,8 +4086,9 @@ class AbujaClientApp {
     setInterval(() => this._sendHeartbeat(), 8000);
 
     this._fetchInitialMultiplayerState();
-    // Fallback polling for serverless deployments
+    // Fallback polling for serverless deployments (only when SSE is not actively open)
     setInterval(() => {
+      if (this.eventSource && this.eventSource.readyState === EventSource.OPEN) return;
       fetch('/api/players')
         .then((r) => (r.ok ? r.json() : null))
         .then((data) => {
@@ -4142,6 +4168,7 @@ class AbujaClientApp {
     if (isVercel) {
       this._setNetworkState('live');
       this._fetchInitialMultiplayerState();
+      this._startFallbackChatPolling();
       return;
     }
 
@@ -4176,20 +4203,7 @@ class AbujaClientApp {
           if (!this.onlinePlayers || !this.onlinePlayers.length) {
             this._updateOnlinePlayers(this._getSimulatedCitizens());
           }
-          if (!this._fallbackPollInterval) {
-            this._fallbackPollInterval = setInterval(async () => {
-              try {
-                const res = await fetch('/api/chat?limit=25');
-                if (res.ok) {
-                  const data = await res.json();
-                  if (Array.isArray(data) && data.length > 0) {
-                    this.chatMessages = data;
-                    this._renderChatMessages();
-                  }
-                }
-              } catch (_) {}
-            }, 10000);
-          }
+          this._startFallbackChatPolling();
         }
       };
 
@@ -4277,7 +4291,26 @@ class AbujaClientApp {
       if (!this.onlinePlayers || !this.onlinePlayers.length) {
         this._updateOnlinePlayers(this._getSimulatedCitizens());
       }
+      this._startFallbackChatPolling();
     }
+  }
+
+  _startFallbackChatPolling() {
+    if (this._fallbackPollInterval) return;
+    this._fallbackPollInterval = setInterval(async () => {
+      if (this.eventSource && this.eventSource.readyState === EventSource.OPEN) return;
+      try {
+        const res = await fetch('/api/chat?limit=30');
+        if (res.ok) {
+          const data = await res.json();
+          const msgs = Array.isArray(data?.messages) ? data.messages : (Array.isArray(data) ? data : []);
+          if (msgs.length > 0) {
+            this.chatMessages = msgs;
+            this._renderChatMessages({ preserveScroll: true });
+          }
+        }
+      } catch (_) {}
+    }, 10000);
   }
 
   _setNetworkState(state, info = null) {
@@ -4435,20 +4468,21 @@ class AbujaClientApp {
     container.innerHTML = others.map((p) => {
       const distName = DISTRICT_BY_ID[p.district]?.short || p.district;
       const isConnected = this.connectedPlayerIds.has(p.id);
+      const safeName = escapeHtml(p.name);
       return `
         <div class="mp-player-card ${p.isBot ? 'is-bot' : 'is-human'}">
           <div class="mp-p-top">
-            <span class="mp-p-name">${p.isBot ? '🤖 ' : '🟢 '}${p.name}</span>
-            <span class="mp-p-loc">📍 ${distName}</span>
+            <span class="mp-p-name">${p.isBot ? '🤖 ' : '🟢 '}${safeName}</span>
+            <span class="mp-p-loc">📍 ${escapeHtml(distName)}</span>
           </div>
           <div class="mp-p-worth">${formatNairaFull(p.netWorth || 0)} • 🏛️ ${p.clout || 10}</div>
           <div class="mp-p-actions">
-            <button class="btn-secondary btn-mp-connect" data-id="${p.id}" data-name="${p.name}" data-district="${p.district}" data-career="${p.career}">
+            <button class="btn-secondary btn-mp-connect" data-id="${escapeHtml(p.id)}" data-name="${safeName}" data-district="${escapeHtml(p.district)}" data-career="${escapeHtml(p.career)}">
               ${isConnected ? '✓ Linked' : '🤝 Connect'}
             </button>
-            <button class="btn-xs btn-mp-task" data-id="${p.id}" data-name="${p.name}">📋 Hire</button>
-            <button class="btn-xs btn-mp-dm" data-id="${p.id}" data-name="${p.name}">💬 DM</button>
-            <button class="btn-xs btn-mp-wire" data-id="${p.id}" data-name="${p.name}">💸 ₦</button>
+            <button class="btn-xs btn-mp-task" data-id="${escapeHtml(p.id)}" data-name="${safeName}">📋 Hire</button>
+            <button class="btn-xs btn-mp-dm" data-id="${escapeHtml(p.id)}" data-name="${safeName}">💬 DM</button>
+            <button class="btn-xs btn-mp-wire" data-id="${escapeHtml(p.id)}" data-name="${safeName}">💸 ₦</button>
           </div>
         </div>
       `;
@@ -4595,7 +4629,7 @@ class AbujaClientApp {
     const preview = document.getElementById('quick-chat-preview');
     if (preview) {
       const distLabel = DISTRICT_BY_ID[msg.district]?.short || 'FCT';
-      preview.innerHTML = `<strong style="color:#fde047">${senderName} [${distLabel}]:</strong> ${msg.text}`;
+      preview.innerHTML = `<strong style="color:#fde047">${escapeHtml(senderName)} [${escapeHtml(distLabel)}]:</strong> ${escapeHtml(msg.text)}`;
     }
 
     // Track unread counts per channel & thread when player isn't actively viewing that channel
@@ -4798,12 +4832,12 @@ class AbujaClientApp {
       return `
         <div class="chat-msg-bubble ${isSelf ? 'is-self' : ''} ${isDM ? 'is-dm' : ''} ${isSys ? 'is-system' : ''}">
           <div class="chat-msg-head">
-            <span class="chat-sender" data-id="${m.senderId}" data-name="${senderName}">
-              ${isDM ? '🔒 ' : ''}${senderName} ${m.toName ? `→ ${m.toName}` : ''}
+            <span class="chat-sender" data-id="${escapeHtml(m.senderId)}" data-name="${escapeHtml(senderName)}">
+              ${isDM ? '🔒 ' : ''}${escapeHtml(senderName)} ${m.toName ? `→ ${escapeHtml(m.toName)}` : ''}
             </span>
-            <span class="chat-meta">📍 ${distShort} • ${timeStr}</span>
+            <span class="chat-meta">📍 ${escapeHtml(distShort)} • ${timeStr}</span>
           </div>
-          <div class="chat-text">${m.text}</div>
+          <div class="chat-text">${escapeHtml(m.text)}</div>
         </div>
       `;
     }).join('');
@@ -4953,6 +4987,18 @@ class AbujaClientApp {
 
     document.getElementById('btn-play-ludo')?.addEventListener('click', () => {
       this._startLudoGame();
+    });
+
+    // FCT High Court Lawsuit Toggle Button
+    document.getElementById('btn-toggle-lawsuit-form')?.addEventListener('click', (e) => {
+      const form = document.getElementById('court-file-form');
+      if (!form) return;
+      const isHidden = form.style.display === 'none';
+      form.style.display = isHidden ? 'flex' : 'none';
+      e.currentTarget.textContent = isHidden ? '✕ Hide Form' : '+ File New Suit';
+      if (isHidden) {
+        document.getElementById('court-defendant-input')?.focus();
+      }
     });
 
     // FCT High Court Lawsuit Filing Form
@@ -5491,7 +5537,7 @@ class AbujaClientApp {
       const assigneeSel = document.getElementById('task-assignee-select');
       const typeSel = document.getElementById('task-type-select');
       const rewardInp = document.getElementById('task-reward-input');
-      const noteInp = document.getElementById('task-title-input') || document.getElementById('task-note-input');
+      const noteInp = document.getElementById('task-title-input');
 
       const assigneeId = assigneeSel?.value || null;
       const assigneeName = assigneeSel?.selectedOptions[0]?.dataset.name || 'Open to Any FCT Player';
@@ -6044,12 +6090,6 @@ class AbujaClientApp {
     document.getElementById('btn-close-tutorial')?.addEventListener('click', () => {
       this._closeTutorialModal();
     });
-    document.getElementById('btn-skip-tutorial')?.addEventListener('click', () => {
-      this._closeTutorialModal();
-    });
-    document.getElementById('btn-start-playing-tutorial')?.addEventListener('click', () => {
-      this._closeTutorialModal();
-    });
 
     // Problem 30 Fix: WhatsApp Viral Share Handler
     document.getElementById('btn-share-whatsapp')?.addEventListener('click', () => {
@@ -6078,8 +6118,8 @@ class AbujaClientApp {
     if (modal) {
       modal.hidden = true;
       try { localStorage.setItem('abuja_tutorial_done', '1'); } catch (_) {}
-      const deck = document.getElementById('command-deck-drawer');
-      if (!deck || !deck.classList.contains('open')) {
+      const deck = document.getElementById('command-deck-panel');
+      if (!deck || deck.classList.contains('is-drawer-closed')) {
         this.startRealTime(this.simSpeed);
       }
     }

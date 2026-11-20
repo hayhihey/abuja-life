@@ -33,6 +33,11 @@ export function hourlyTick(game) {
       if (id === s.loc.district || id === s.home.district) game.log(`Network down in ${D.name}. ISP says "we are working on it".`, 'warn', '📶');
     }
   }
+
+  // Point 33 Fix: Natural police heat cooldown during peaceful play
+  if (s.heat > 0) {
+    s.heat = Math.max(0, s.heat - 1.5);
+  }
 }
 
 // ---------------------------------------------------------------- tenders
@@ -169,16 +174,24 @@ export async function dailyTick(game) {
     }
   }
 
-  // payroll / subscriptions
-  if (track === 'civil' && dom === 25) {
-    const base = TRACKS.civil.levels[s.career.level - 1].salary;
-    const frac = Math.min(1, s.career.attendance / 16);
-    const salary = Math.round(base * frac);
-    const allowance = frac >= 0.6 ? Math.round(base * 0.15) : 0;
-    game.earn(salary + allowance);
-    game.log(`Salary credited: ₦${(salary + allowance).toLocaleString()} (${Math.round(frac * 100)}% attendance${allowance ? ', incl. housing allowance' : ''}).`,
-      frac < 1 ? 'warn' : 'good', '💳');
-    s.career.attendance = 0;
+  // payroll / daily allowance
+  if (track === 'civil') {
+    // Point 26 Fix: Daily civil service duty & transit voucher on weekdays so players stay solvent
+    if (Clock.isWeekday(t)) {
+      const dailyVoucher = Math.round((TRACKS.civil.levels[s.career.level - 1].salary || 120000) * 0.022);
+      game.earn(dailyVoucher, { cash: true });
+      game.log(`Civil Service duty & transport allowance credited: ₦${dailyVoucher.toLocaleString()}.`, 'good', '💼');
+    }
+    if (dom === 25) {
+      const base = TRACKS.civil.levels[s.career.level - 1].salary;
+      const frac = Math.min(1, (s.career.attendance || 16) / 16);
+      const salary = Math.round(base * frac);
+      const allowance = frac >= 0.6 ? Math.round(base * 0.15) : 0;
+      game.earn(salary + allowance);
+      game.log(`Salary credited: ₦${(salary + allowance).toLocaleString()} (${Math.round(frac * 100)}% attendance${allowance ? ', incl. housing allowance' : ''}).`,
+        frac < 1 ? 'warn' : 'good', '💳');
+      s.career.attendance = 0;
+    }
   }
   if (track === 'tech' && dom === 1) {
     const bill = 35_000;

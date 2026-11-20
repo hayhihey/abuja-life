@@ -27,11 +27,11 @@ export class AbujaAfrobeatsEngine {
     this.volume = 0.28;
     this.stationIndex = 0;
     this.stations = [
-      { name: 'WAZOBIA 99.5 FM ABUJA', style: 'Afrobeats Street Anthem', bassFreq: 55, tempo: 114, vibe: '🔥 Street Banger' },
-      { name: 'COOL 96.9 FM FCT', style: 'Amapiano Gbedu Fusion', bassFreq: 46, tempo: 112, vibe: '🎹 Log-Drum Piano' },
-      { name: 'OWAMBE PARTY FM', style: 'Live Highlife & Juju Celebration', bassFreq: 64, tempo: 118, vibe: '🎉 Owambe Vibes' },
-      { name: 'STREET GBEDU 101.3 FM', style: 'Lagos-Abuja Fast Rave', bassFreq: 58, tempo: 122, vibe: '⚡ High Energy' },
-      { name: 'PALMWINE CHILL 88.5 FM', style: 'Calm Acoustic Highlife & Shekere', bassFreq: 50, tempo: 104, vibe: '🌴 Chill Steeze' }
+      { name: 'WAZOBIA 99.5 FM ABUJA', freq: '99.5 FM', dj: 'DJ Big N & Ratata', style: 'Afrobeats Street Anthem', bassFreq: 55, tempo: 114, vibe: '🔥 Street Banger' },
+      { name: 'COOL 96.9 FM FCT', freq: '96.9 FM', dj: 'DJ Kaywise & Do2dtun', style: 'Amapiano Gbedu Fusion', bassFreq: 46, tempo: 112, vibe: '🎹 Log-Drum Piano' },
+      { name: 'OWAMBE PARTY FM', freq: '104.5 FM', dj: 'Chief Commander Live', style: 'Live Highlife & Juju Celebration', bassFreq: 64, tempo: 118, vibe: '🎉 Owambe Vibes' },
+      { name: 'STREET GBEDU 101.3 FM', freq: '101.3 FM', dj: 'DJ YK Mule & Poco', style: 'Lagos-Abuja Fast Rave', bassFreq: 58, tempo: 122, vibe: '⚡ High Energy' },
+      { name: 'PALMWINE CHILL 88.5 FM', freq: '88.5 FM', dj: 'Cavemen & Show Dem', style: 'Calm Acoustic Highlife & Shekere', bassFreq: 50, tempo: 104, vibe: '🌴 Chill Steeze' }
     ];
   }
 
@@ -154,6 +154,7 @@ export class AbujaAfrobeatsEngine {
 
   _tick() {
     if (!this.ctx || !this.isPlaying) return;
+    if (typeof document !== 'undefined' && document.hidden) return;
     const now = this.ctx.currentTime;
     const s = this.step % 16;
     const station = this.stations[this.stationIndex];

@@ -81,9 +81,9 @@ export const START_PRESETS = {
     blurb: 'Laptop, UPS, and a landlord who swears the light will be stable.',
   },
   trader: {
-    district: 'nyanya', cash: 38_000, bank: 22_000, clout: 3, energy: 95, sanity: 65, heat: 2,
-    rentDays: 75, contacts: ['dispatcher', 'dispatcher'],
-    blurb: 'A back-room in Mararaba, a bag of stock and a very early start.',
+    district: 'nyanya', cash: 120_000, bank: 130_000, clout: 4, energy: 95, sanity: 70, heat: 1,
+    rentDays: 100, contacts: ['dispatcher', 'dispatcher'],
+    blurb: 'A shop in Nyanya, initial trade float, goods in stock, and an early morning hustle.',
   },
 };
 

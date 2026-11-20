@@ -84,9 +84,9 @@ export class AbujaWorld3D {
     this.isMobileDevice = isMobileDevice;
     this.maxAniso = Math.min(8, this.renderer.capabilities?.getMaxAnisotropy?.() || 4);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobileDevice ? 1.25 : 1.6));
-    // Graphics Fix #2: Soft PCF Shadows instead of jagged BasicShadowMap
+    // Graphics Fix #2: PCF Shadows instead of deprecated PCFSoftShadowMap
     this.renderer.shadowMap.enabled = !isMobileDevice;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
     // PBR tone mapping & color space for GTA-quality visuals
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.08;
@@ -6818,6 +6818,10 @@ export class AbujaWorld3D {
       }
       const x = Math.round((tempV.x * 0.5 + 0.5) * w);
       const y = Math.round((-(tempV.y * 0.5) + 0.5) * h);
+      if (x < -80 || x > w + 80 || y < -80 || y > h + 80) {
+        this._applyCachedLabelStyle(label, key, 'none');
+        continue;
+      }
       this._applyCachedLabelStyle(label, key, 'inline-flex', `translate(-50%, -50%) translate3d(${x}px, ${y}px, 0)`);
       label.classList.toggle('is-current', id === this.currentDistrictId);
     }
@@ -6834,6 +6838,10 @@ export class AbujaWorld3D {
       }
       const x = Math.round((tempV.x * 0.5 + 0.5) * w);
       const y = Math.round((-(tempV.y * 0.5) + 0.5) * h);
+      if (x < -80 || x > w + 80 || y < -80 || y > h + 80) {
+        this._applyCachedLabelStyle(entry.labelEl, key, 'none');
+        continue;
+      }
       this._applyCachedLabelStyle(entry.labelEl, key, 'flex', `translate(-50%, -100%) translate3d(${x}px, ${y}px, 0)`);
     }
 
@@ -6859,6 +6867,10 @@ export class AbujaWorld3D {
         }
         const x = Math.round((tempV.x * 0.5 + 0.5) * w);
         const y = Math.round((-(tempV.y * 0.5) + 0.5) * h);
+        if (x < -80 || x > w + 80 || y < -80 || y > h + 80) {
+          this._applyCachedLabelStyle(npc.labelEl, key, 'none');
+          continue;
+        }
         npc.labelEl.style.flexDirection = 'column';
         npc.labelEl.style.alignItems = 'center';
         this._applyCachedLabelStyle(npc.labelEl, key, 'inline-flex', `translate(-50%, -100%) translate3d(${x}px, ${y}px, 0)`);
@@ -6878,6 +6890,10 @@ export class AbujaWorld3D {
         }
         const x = Math.round((tempV.x * 0.5 + 0.5) * w);
         const y = Math.round((-(tempV.y * 0.5) + 0.5) * h);
+        if (x < -80 || x > w + 80 || y < -80 || y > h + 80) {
+          this._applyCachedLabelStyle(entry.labelEl, key, 'none');
+          continue;
+        }
         this._applyCachedLabelStyle(entry.labelEl, key, 'inline-flex', `translate(-50%, -100%) translate3d(${x}px, ${y}px, 0)`);
       }
     }
